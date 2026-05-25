@@ -1,0 +1,2391 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Salario — Gestión de Clientes</title>
+
+    <!-- Tipografía -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Estilos -->
+    <link rel="stylesheet" href="css/styles.css" />
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Aplica el tema guardado ANTES del render para evitar flash de tema claro -->
+    <script>
+      (function () {
+        try {
+          if (localStorage.getItem("salario.theme") === "dark") {
+            document.documentElement.setAttribute("data-theme", "dark");
+          }
+        } catch (e) {
+          /* localStorage bloqueado, sin tema */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="toast">Marcada como vigente</div>
+
+    <!-- ════════════════════════════════════
+     LOGIN OVERLAY
+     Se muestra mientras el usuario no esta autenticado.
+════════════════════════════════════ -->
+    <div id="login-overlay" class="login-overlay" style="display: none">
+      <!-- Fondo atmosferico (mesh, grid, orbes, ruido). Siempre presente.
+           En desktop es visible solo en el panel izquierdo (el form-panel
+           blanco lo cubre). En mobile cubre toda la pantalla. -->
+      <div class="login-bg">
+        <div class="login-mesh"></div>
+        <div class="login-grid"></div>
+        <div class="login-orb login-orb--1"></div>
+        <div class="login-orb login-orb--2"></div>
+        <div class="login-orb login-orb--3"></div>
+        <div class="login-noise"></div>
+      </div>
+
+      <div class="login-split">
+        <!-- ─── Panel de branding (visible solo en desktop) ─── -->
+        <div class="login-brand-panel">
+          <div class="login-brand-content">
+            <div class="login-brand-top">
+              <div class="login-brand-dot"></div>
+              <span class="login-brand-pill">Equipo Salario</span>
+            </div>
+
+            <div class="login-brand-name">
+              <span class="login-brand-name__main">Salario</span>
+              <span class="login-brand-name__sub">Gestión</span>
+            </div>
+            <div class="login-brand-tagline">
+              Gestión inteligente de clientes para equipos que se mueven en
+              tiempo real.
+            </div>
+
+            <div class="login-features">
+              <div class="login-feature">
+                <div class="login-feature-icon">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                  </svg>
+                </div>
+                <div>
+                  <div class="login-feature-title">
+                    Tiempo real con tu equipo
+                  </div>
+                  <div class="login-feature-sub">
+                    Pendientes, consultas y soluciones se sincronizan al
+                    instante.
+                  </div>
+                </div>
+              </div>
+              <div class="login-feature">
+                <div class="login-feature-icon">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0110 0v4" />
+                  </svg>
+                </div>
+                <div>
+                  <div class="login-feature-title">Acceso restringido</div>
+                  <div class="login-feature-sub">
+                    Solo miembros autorizados pueden acceder a los datos del
+                    equipo.
+                  </div>
+                </div>
+              </div>
+              <div class="login-feature">
+                <div class="login-feature-icon">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M3 3v18h18" />
+                    <path d="M7 14l4-4 4 4 5-5" />
+                  </svg>
+                </div>
+                <div>
+                  <div class="login-feature-title">Métricas que importan</div>
+                  <div class="login-feature-sub">
+                    Dashboard claro de pendientes, consultas y rendimiento del
+                    equipo.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="login-brand-foot">
+              <div class="login-brand-version">v1.0 · build interno</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── Panel del formulario (visible siempre) ─── -->
+        <div class="login-form-panel">
+          <div class="login-form-content">
+            <!-- Brand integrado dentro de la card (visible solo en mobile) -->
+            <div class="login-mobile-brand">
+              <div class="login-brand-top">
+                <div class="login-brand-dot"></div>
+                <span class="login-brand-pill">Equipo Salario</span>
+              </div>
+              <div class="login-mobile-brand-name">
+                <span class="login-mobile-brand-name__main">Salario</span>
+                <span class="login-mobile-brand-name__sub">Gestión</span>
+              </div>
+            </div>
+
+            <div class="login-form-header">
+              <div class="login-form-eyebrow">Iniciar sesión</div>
+              <div class="login-form-title">Bienvenido de vuelta</div>
+              <div class="login-form-subtitle">
+                Accedé con tu cuenta autorizada del equipo.
+              </div>
+            </div>
+
+            <button
+              class="login-btn login-btn--google"
+              onclick="signInWithGoogle()"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 18 18"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
+                  fill="#4285F4"
+                />
+                <path
+                  d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.26c-.806.54-1.836.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+                  fill="#34A853"
+                />
+                <path
+                  d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
+                  fill="#FBBC05"
+                />
+                <path
+                  d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
+                  fill="#EA4335"
+                />
+              </svg>
+              Continuar con Google
+            </button>
+
+            <div class="login-divider"><span>o continuá con</span></div>
+
+            <form
+              class="login-form"
+              onsubmit="
+                event.preventDefault();
+                signInWithEmail();
+              "
+            >
+              <div class="login-field">
+                <label for="login-email">Email</label>
+                <input
+                  type="email"
+                  id="login-email"
+                  placeholder="email@salario.local"
+                  autocomplete="username"
+                  required
+                />
+              </div>
+              <div class="login-field">
+                <label for="login-password">Contraseña</label>
+                <input
+                  type="password"
+                  id="login-password"
+                  placeholder="••••••••"
+                  autocomplete="current-password"
+                  required
+                />
+              </div>
+              <div
+                id="login-error"
+                class="login-error"
+                style="display: none"
+              ></div>
+              <button type="submit" class="login-btn login-btn--primary">
+                <span>Entrar</span>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.4"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M5 12h14M13 5l7 7-7 7" />
+                </svg>
+              </button>
+            </form>
+
+            <p class="login-foot">
+              Acceso restringido al equipo de Salario. Si no tenés credenciales,
+              pedíselas al admin.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="app-root" style="display: none">
+      <div class="shell">
+        <!-- ════════════════════════════════════
+       SIDEBAR
+  ════════════════════════════════════ -->
+        <nav class="sidebar">
+          <div class="sidebar-logo">
+            <div class="brand">Salario</div>
+            <div class="sub">Gestión de clientes</div>
+          </div>
+
+          <div id="user-chip" class="user-chip"></div>
+
+          <div class="sidebar-section">
+            <div class="sidebar-section-label">Principal</div>
+            <button class="nav-item active" onclick="goTo(this, 'dashboard')">
+              <svg
+                class="icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <rect x="1" y="1" width="6" height="6" rx="1.5"></rect>
+                <rect x="9" y="1" width="6" height="6" rx="1.5"></rect>
+                <rect x="1" y="9" width="6" height="6" rx="1.5"></rect>
+                <rect x="9" y="9" width="6" height="6" rx="1.5"></rect>
+              </svg>
+              <span>Panel general</span>
+            </button>
+            <button class="nav-item" onclick="goTo(this, 'clientes')">
+              <svg
+                class="icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <circle cx="6" cy="5" r="3"></circle>
+                <path d="M1 14c0-3 2-5 5-5s5 2 5 5"></path>
+                <circle cx="12" cy="5" r="2"></circle>
+                <path d="M14 13c0-2-1-3.5-2-4"></path>
+              </svg>
+              <span>Clientes</span>
+            </button>
+            <button class="nav-item" onclick="goTo(this, 'registrar')">
+              <svg
+                class="icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path d="M8 1v14M1 8h14"></path>
+              </svg>
+              <span>Registrar consulta</span>
+            </button>
+            <button class="nav-item" onclick="goTo(this, 'pendientes')">
+              <svg
+                class="icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <circle cx="8" cy="8" r="6.5"></circle>
+                <path d="M8 4.5v4l2.5 2"></path>
+              </svg>
+              <span>Pendientes</span>
+              <span class="nav-badge warn" id="pend-nav-badge">3</span>
+            </button>
+          </div>
+
+          <div class="sidebar-section">
+            <div class="sidebar-section-label">Gestión</div>
+            <button class="nav-item" onclick="goTo(this, 'implementacion')">
+              <svg
+                class="icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path d="M1 4h14M1 8h10M1 12h7"></path>
+                <circle cx="13" cy="12" r="2"></circle>
+              </svg>
+              <span>Implementación</span>
+            </button>
+            <button class="nav-item" onclick="goTo(this, 'equipo')">
+              <svg
+                class="icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <circle cx="8" cy="4" r="2.5"></circle>
+                <path d="M3 14c0-2.8 2.2-5 5-5s5 2.2 5 5"></path>
+              </svg>
+              <span>Equipo</span>
+            </button>
+            <button class="nav-item" onclick="goTo(this, 'biblioteca')">
+              <svg
+                class="icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path
+                  d="M3 2h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z"
+                ></path>
+                <path d="M5 6h6M5 9h4"></path>
+              </svg>
+              <span>Base de soluciones</span>
+            </button>
+          </div>
+
+          <div class="sidebar-section" style="margin-top: auto">
+            <div class="sidebar-section-label">Sistema</div>
+            <button class="nav-item" onclick="goTo(this, 'alertas')">
+              <svg
+                class="icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path
+                  d="M8 1a5 5 0 015 5c0 4 1 5 1 5H2s1-1 1-5a5 5 0 015-5z"
+                ></path>
+                <path d="M6.5 13a1.5 1.5 0 003 0"></path>
+              </svg>
+              <span>Alertas</span>
+              <span class="nav-badge" id="alert-nav-badge">5</span>
+            </button>
+            <button class="nav-item" onclick="goTo(this, 'configuracion')">
+              <svg
+                class="icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="3"></circle>
+                <path
+                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+                ></path>
+              </svg>
+              <span>Configuración</span>
+            </button>
+          </div>
+        </nav>
+
+        <main class="main">
+          <!-- ════════════════════════════════════
+         PANEL GENERAL
+    ════════════════════════════════════ -->
+          <div id="dashboard" class="page active">
+            <div class="page-header">
+              <div>
+                <div class="page-title">Panel general</div>
+                <div class="page-sub">Mayo 2026 — datos en tiempo real</div>
+              </div>
+              <button
+                class="btn-primary"
+                onclick="
+                  goTo(
+                    document.querySelector('.nav-item[onclick*=registrar]'),
+                    'registrar',
+                  )
+                "
+              >
+                + Registrar consulta
+              </button>
+            </div>
+
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-label">Clientes activos</div>
+                <div class="metric-value" style="color: var(--accent)">214</div>
+                <div class="metric-sub">8 en implementación</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Consultas este mes</div>
+                <div class="metric-value">47</div>
+                <div class="metric-sub trend-dn">+12 vs mes anterior</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">% consultas repetidas</div>
+                <div class="metric-value" style="color: var(--red)">34%</div>
+                <div class="metric-sub">Meta: &lt; 20%</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Tiempo prom. resolución</div>
+                <div class="metric-value" style="color: var(--blue)">
+                  2.4 hs
+                </div>
+                <div class="metric-sub trend-up">Mejor que abril</div>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-title">Autonomía de clientes</div>
+                <div
+                  style="
+                    display: flex;
+                    gap: 14px;
+                    margin-bottom: 16px;
+                    align-items: center;
+                  "
+                >
+                  <div style="text-align: center">
+                    <div
+                      class="score-ring"
+                      style="
+                        background: var(--red-bg);
+                        color: var(--red-text);
+                        margin: 0 auto 4px;
+                      "
+                    >
+                      38%
+                    </div>
+                    <div style="font-size: 11px; color: var(--text3)">Baja</div>
+                  </div>
+                  <div style="text-align: center">
+                    <div
+                      class="score-ring"
+                      style="
+                        background: var(--amber-bg);
+                        color: var(--amber-text);
+                        margin: 0 auto 4px;
+                      "
+                    >
+                      44%
+                    </div>
+                    <div style="font-size: 11px; color: var(--text3)">
+                      Media
+                    </div>
+                  </div>
+                  <div style="text-align: center">
+                    <div
+                      class="score-ring"
+                      style="
+                        background: var(--green-bg);
+                        color: var(--green-text);
+                        margin: 0 auto 4px;
+                      "
+                    >
+                      18%
+                    </div>
+                    <div style="font-size: 11px; color: var(--text3)">Alta</div>
+                  </div>
+                </div>
+                <div class="bar-wrap">
+                  <div class="bar-label">
+                    <span>Baja autonomía</span><span>81 clientes</span>
+                  </div>
+                  <div class="bar-track">
+                    <div
+                      class="bar-fill"
+                      style="width: 38%; background: var(--red)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="bar-wrap">
+                  <div class="bar-label">
+                    <span>Media autonomía</span><span>94 clientes</span>
+                  </div>
+                  <div class="bar-track">
+                    <div
+                      class="bar-fill"
+                      style="width: 44%; background: var(--amber)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="bar-wrap">
+                  <div class="bar-label">
+                    <span>Alta autonomía</span><span>39 clientes</span>
+                  </div>
+                  <div class="bar-track">
+                    <div
+                      class="bar-fill"
+                      style="width: 18%; background: var(--green)"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-title">Consultas por categoría</div>
+                <div class="bar-wrap">
+                  <div class="bar-label">
+                    <span>Liquidación de sueldos</span><span>22</span>
+                  </div>
+                  <div class="bar-track">
+                    <div
+                      class="bar-fill"
+                      style="width: 72%; background: var(--accent)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="bar-wrap">
+                  <div class="bar-label">
+                    <span>Errores del sistema</span><span>11</span>
+                  </div>
+                  <div class="bar-track">
+                    <div
+                      class="bar-fill"
+                      style="width: 36%; background: var(--blue)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="bar-wrap">
+                  <div class="bar-label">
+                    <span>Configuración</span><span>8</span>
+                  </div>
+                  <div class="bar-track">
+                    <div
+                      class="bar-fill"
+                      style="width: 26%; background: var(--green)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="bar-wrap">
+                  <div class="bar-label">
+                    <span>Actualizaciones</span><span>4</span>
+                  </div>
+                  <div class="bar-track">
+                    <div
+                      class="bar-fill"
+                      style="width: 13%; background: var(--amber)"
+                    ></div>
+                  </div>
+                </div>
+                <div class="bar-wrap">
+                  <div class="bar-label">
+                    <span>Fuera del sistema</span><span>2</span>
+                  </div>
+                  <div class="bar-track">
+                    <div
+                      class="bar-fill"
+                      style="width: 7%; background: var(--red)"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">
+                Tendencia mensual — consultas totales vs repetidas
+              </div>
+              <div style="position: relative; height: 200px">
+                <canvas
+                  id="chartTend"
+                  role="img"
+                  aria-label="Tendencia de consultas enero a mayo"
+                  >Tendencia de consultas.</canvas
+                >
+              </div>
+              <div
+                style="
+                  display: flex;
+                  gap: 16px;
+                  margin-top: 10px;
+                  font-size: 12px;
+                  color: var(--text3);
+                "
+              >
+                <span style="display: flex; align-items: center; gap: 5px"
+                  ><span
+                    style="
+                      width: 12px;
+                      height: 3px;
+                      background: var(--accent);
+                      display: inline-block;
+                      border-radius: 2px;
+                    "
+                  ></span
+                  >Total consultas</span
+                >
+                <span style="display: flex; align-items: center; gap: 5px"
+                  ><span
+                    style="
+                      width: 12px;
+                      height: 3px;
+                      background: var(--red);
+                      display: inline-block;
+                      border-radius: 2px;
+                      border-top: 2px dashed var(--red);
+                      height: 0;
+                    "
+                  ></span
+                  >Repetidas</span
+                >
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">Consultas por cliente este mes</div>
+              <div style="position: relative; height: 240px">
+                <canvas
+                  id="chartClientes"
+                  role="img"
+                  aria-label="Consultas por cliente este mes"
+                  >Gráfico de consultas por cliente.</canvas
+                >
+              </div>
+              <div
+                style="
+                  display: flex;
+                  gap: 16px;
+                  margin-top: 10px;
+                  font-size: 12px;
+                  color: var(--text3);
+                "
+              >
+                <span style="display: flex; align-items: center; gap: 5px"
+                  ><span
+                    style="
+                      width: 10px;
+                      height: 10px;
+                      border-radius: 2px;
+                      background: #2d2d8e;
+                      display: inline-block;
+                    "
+                  ></span
+                  >Soporte</span
+                >
+                <span style="display: flex; align-items: center; gap: 5px"
+                  ><span
+                    style="
+                      width: 10px;
+                      height: 10px;
+                      border-radius: 2px;
+                      background: #1a5fa5;
+                      display: inline-block;
+                    "
+                  ></span
+                  >Implementación</span
+                >
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">Score de riesgo — clientes a atender</div>
+              <div class="tbl-wrap">
+                <table class="tbl">
+                  <thead>
+                    <tr>
+                      <th style="width: 30%">Cliente</th>
+                      <th style="width: 10%">Score</th>
+                      <th style="width: 13%">Repetición</th>
+                      <th style="width: 13%">Autonomía</th>
+                      <th style="width: 13%">Adopción</th>
+                      <th style="width: 12%">Área</th>
+                      <th style="width: 9%"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr onclick="goClienteDetail('nina')">
+                      <td style="font-weight: 500">
+                        Nina
+                        <span
+                          class="tipo-tag tipo-empresa"
+                          style="font-size: 9px"
+                          >Empresa</span
+                        >
+                      </td>
+                      <td><span class="badge b-red">8/10</span></td>
+                      <td style="color: var(--red)">44%</td>
+                      <td><span class="badge b-red">Baja</span></td>
+                      <td style="color: var(--red)">50%</td>
+                      <td><span class="badge b-gray">Soporte</span></td>
+                      <td>
+                        <button
+                          class="btn-sm"
+                          onclick="
+                            event.stopPropagation();
+                            goClienteDetail('nina');
+                          "
+                        >
+                          Ver
+                        </button>
+                      </td>
+                    </tr>
+                    <tr onclick="goClienteDetail('noetinger')">
+                      <td style="font-weight: 500">
+                        Noetinger
+                        <span
+                          class="tipo-tag tipo-municipalidad"
+                          style="font-size: 9px"
+                          >Mun.</span
+                        >
+                      </td>
+                      <td><span class="badge b-red">7/10</span></td>
+                      <td style="color: var(--amber)">—</td>
+                      <td><span class="badge b-red">Baja</span></td>
+                      <td style="color: var(--amber)">27%</td>
+                      <td><span class="badge b-blue">Impl.</span></td>
+                      <td>
+                        <button
+                          class="btn-sm"
+                          onclick="
+                            event.stopPropagation();
+                            goClienteDetail('noetinger');
+                          "
+                        >
+                          Ver
+                        </button>
+                      </td>
+                    </tr>
+                    <tr onclick="goClienteDetail('marktwain')">
+                      <td style="font-weight: 500">
+                        Mark Twain
+                        <span
+                          class="tipo-tag tipo-colegio"
+                          style="font-size: 9px"
+                          >Colegio</span
+                        >
+                      </td>
+                      <td><span class="badge b-amber">6/10</span></td>
+                      <td style="color: var(--amber)">—</td>
+                      <td><span class="badge b-amber">Baja</span></td>
+                      <td style="color: var(--amber)">20%</td>
+                      <td><span class="badge b-blue">Impl.</span></td>
+                      <td>
+                        <button
+                          class="btn-sm"
+                          onclick="
+                            event.stopPropagation();
+                            goClienteDetail('marktwain');
+                          "
+                        >
+                          Ver
+                        </button>
+                      </td>
+                    </tr>
+                    <tr onclick="goClienteDetail('m3')">
+                      <td style="font-weight: 500">
+                        m3
+                        <span
+                          class="tipo-tag tipo-empresa"
+                          style="font-size: 9px"
+                          >Empresa</span
+                        >
+                      </td>
+                      <td><span class="badge b-green">2/10</span></td>
+                      <td style="color: var(--green)">0%</td>
+                      <td><span class="badge b-green">Alta</span></td>
+                      <td style="color: var(--green)">95%</td>
+                      <td><span class="badge b-gray">Soporte</span></td>
+                      <td>
+                        <button
+                          class="btn-sm"
+                          onclick="
+                            event.stopPropagation();
+                            goClienteDetail('m3');
+                          "
+                        >
+                          Ver
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════
+         CLIENTES
+    ════════════════════════════════════ -->
+          <div id="clientes" class="page">
+            <div class="page-header">
+              <div>
+                <div class="page-title">Clientes</div>
+                <div class="page-sub">214 clientes activos</div>
+              </div>
+              <div class="btn-row">
+                <button
+                  class="btn-secondary"
+                  onclick="
+                    goTo(
+                      document.querySelector('.nav-item[onclick*=registrar]'),
+                      'registrar',
+                    )
+                  "
+                >
+                  + Registrar consulta
+                </button>
+                <button class="btn-primary" onclick="showClienteForm()">
+                  + Agregar cliente
+                </button>
+              </div>
+            </div>
+
+            <div
+              id="cliente-form"
+              class="card"
+              style="
+                display: none;
+                border: 1px solid var(--accent);
+                background: var(--accent-light);
+              "
+            >
+              <div class="card-title" style="color: var(--accent-text)">
+                Nuevo cliente
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">Nombre del cliente</label>
+                  <input
+                    type="text"
+                    id="cf-nombre"
+                    placeholder="Ej: Empresa XYZ"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="fl">Tipo</label>
+                  <select id="cf-tipo">
+                    <option value="empresa">Empresa</option>
+                    <option value="estudio">Estudio contable</option>
+                    <option value="colegio">Colegio</option>
+                    <option value="municipalidad">Municipalidad</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">Area</label>
+                  <select id="cf-area">
+                    <option value="soporte">Soporte</option>
+                    <option value="impl">Implementación</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="fl">Asesor responsable</label>
+                  <select id="cf-asesor">
+                    <option>Ignacio</option>
+                    <option>Matias</option>
+                    <option>Daniel</option>
+                    <option>Renzo</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">Autonomía inicial</label>
+                  <select id="cf-autonomia">
+                    <option value="media">Media (default para nuevos)</option>
+                    <option value="baja">Baja</option>
+                    <option value="alta">Alta</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="fl">Nota inicial</label>
+                  <input
+                    type="text"
+                    id="cf-nota"
+                    placeholder="Opcional: contexto del cliente"
+                  />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group" style="flex: 1">
+                  <label class="fl">Link de Whaticket (opcional)</label>
+                  <input
+                    type="text"
+                    id="cf-whaticket"
+                    placeholder="Pega la URL del chat: https://app.whaticket.com/tickets/..."
+                  />
+                </div>
+              </div>
+              <div class="btn-row">
+                <button class="btn-primary" onclick="guardarCliente()">
+                  Guardar cliente
+                </button>
+                <button
+                  class="btn-secondary"
+                  onclick="
+                    document.getElementById('cliente-form').style.display =
+                      'none'
+                  "
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+
+            <div class="filter-row">
+              <input
+                type="text"
+                placeholder="Buscar cliente..."
+                style="width: 200px; margin-bottom: 0"
+                oninput="filterClientes(this.value)"
+              />
+              <button class="filter-chip active" onclick="filtAct(this, '')">
+                Todos
+              </button>
+              <button class="filter-chip" onclick="filtAct(this, 'soporte')">
+                Soporte
+              </button>
+              <button class="filter-chip" onclick="filtAct(this, 'impl')">
+                Implementación
+              </button>
+              <select
+                style="width: 145px; margin-bottom: 0"
+                onchange="filtTipo(this.value)"
+              >
+                <option value="">Todo tipo</option>
+                <option value="empresa">Empresa</option>
+                <option value="estudio">Est. contable</option>
+                <option value="colegio">Colegio</option>
+                <option value="municipalidad">Municipalidad</option>
+              </select>
+              <select
+                style="width: 145px; margin-bottom: 0"
+                onchange="filtAut(this.value)"
+              >
+                <option value="">Toda autonomía</option>
+                <option value="baja">Baja</option>
+                <option value="media">Media</option>
+                <option value="alta">Alta</option>
+              </select>
+              <select
+                style="width: 145px; margin-bottom: 0"
+                onchange="sortClientes(this.value)"
+              >
+                <option value="score">Ordenar: riesgo</option>
+                <option value="nombre">Nombre</option>
+                <option value="consultas">Consultas</option>
+              </select>
+            </div>
+
+            <div id="client-cards">
+              <!-- Render dinamico desde js/clientes.js (Supabase) -->
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════
+         PENDIENTES
+    ════════════════════════════════════ -->
+          <div id="pendientes" class="page">
+            <div class="page-header">
+              <div>
+                <div class="page-title">Pendientes</div>
+                <div class="page-sub">
+                  Lo que quedó sin cerrar — visible para todo el equipo
+                </div>
+              </div>
+              <button class="btn-primary" onclick="showPendForm()">
+                + Agregar pendiente
+              </button>
+            </div>
+
+            <div
+              class="info-box"
+              style="
+                background: #fff8e8;
+                color: #7c3a06;
+                border-left: 3px solid var(--amber);
+                border-radius: 0 var(--radius) var(--radius) 0;
+                padding: 10px 14px;
+              "
+            >
+              Estos casos quedaron abiertos del día anterior. Revisalos al
+              arrancar la jornada y cerrá los que ya resolviste.
+            </div>
+
+            <div
+              class="metrics-grid"
+              style="grid-template-columns: repeat(3, 1fr)"
+            >
+              <div class="metric-card">
+                <div class="metric-label">Pendientes activos</div>
+                <div
+                  class="metric-value"
+                  style="color: var(--amber)"
+                  id="pend-count"
+                >
+                  3
+                </div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Más antiguo</div>
+                <div
+                  class="metric-value"
+                  style="font-size: 16px; color: var(--red)"
+                >
+                  2 días
+                </div>
+                <div class="metric-sub">Nina — error liquidación</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Cerrados este mes</div>
+                <div class="metric-value" style="color: var(--green)">12</div>
+              </div>
+            </div>
+
+            <div
+              id="pend-form"
+              class="card"
+              style="
+                display: none;
+                border: 1px solid var(--amber);
+                background: var(--amber-bg);
+              "
+            >
+              <div class="card-title" style="color: var(--amber-text)">
+                Nuevo pendiente
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">Tipo de trabajo</label>
+                  <select id="pf-tipo" onchange="onTipoPendienteChange()">
+                    <option value="soporte">
+                      Soporte (consulta del cliente)
+                    </option>
+                    <option value="implementacion">
+                      Implementacion (cliente nuevo / onboarding)
+                    </option>
+                    <option value="bug">
+                      Bug (problema tecnico para programacion)
+                    </option>
+                    <option value="comercial">
+                      Comercial (renovacion / venta / retencion)
+                    </option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="fl">Cliente</label>
+                  <select id="pf-cliente">
+                    <option>ESTIN</option>
+                    <option>Ispova</option>
+                    <option>Estudio Bocco</option>
+                    <option>Noetinger</option>
+                    <option>Mark Twain</option>
+                    <option>Taborin</option>
+                    <option>Sartori</option>
+                    <option>Zarazaga</option>
+                    <option>Nina</option>
+                    <option>m3</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="fl">Asesor responsable</label>
+                  <select id="pf-asesor">
+                    <option>Ignacio</option>
+                    <option>Matias</option>
+                    <option>Daniel</option>
+                    <option>Daniel Ferro</option>
+                    <option>Renzo</option>
+                    <option>Alfred</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">Categoría</label>
+                  <select id="pf-cat">
+                    <option>Liquidación de sueldos</option>
+                    <option>Errores del sistema</option>
+                    <option>Configuración</option>
+                    <option>Actualizaciones</option>
+                    <option>Fuera del sistema</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="fl">Prioridad</label>
+                  <select id="pf-prio">
+                    <option value="alta">Alta — resolver hoy</option>
+                    <option value="media" selected>
+                      Media — resolver esta semana
+                    </option>
+                    <option value="baja">Baja — cuando se pueda</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="fl"
+                  >¿Qué quedó pendiente? Describilo en detalle</label
+                >
+                <textarea
+                  id="pf-desc"
+                  style="min-height: 80px"
+                  placeholder="Ej: El cliente no pudo generar el F931. Se revisó la configuración pero el botón sigue sin aparecer. Hay que volver a conectarse y revisar los permisos de usuario..."
+                  oninput="actualizarSugerenciasKB()"
+                ></textarea>
+                <div
+                  id="kb-suggestions"
+                  class="kb-suggestions"
+                  style="display: none"
+                ></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">¿Qué se intentó hasta ahora?</label>
+                  <textarea
+                    id="pf-intento"
+                    style="min-height: 60px"
+                    placeholder="Ej: Se reinició el servicio, se verificó la licencia, se revisaron los permisos..."
+                  ></textarea>
+                </div>
+                <div class="form-group">
+                  <label class="fl">Próximo paso sugerido</label>
+                  <textarea
+                    id="pf-prox"
+                    style="min-height: 60px"
+                    placeholder="Ej: Conectarse mañana temprano y revisar los permisos del usuario administrador..."
+                  ></textarea>
+                </div>
+              </div>
+              <div style="display: flex; gap: 10px">
+                <button class="btn-primary" onclick="guardarPendiente()">
+                  Guardar pendiente
+                </button>
+                <button
+                  class="btn-secondary"
+                  onclick="
+                    document.getElementById('pend-form').style.display = 'none'
+                  "
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+
+            <div class="filter-row" style="margin-bottom: 10px">
+              <button
+                class="filter-chip pend-filter active"
+                data-mode="mis"
+                onclick="setViewMode('mis')"
+              >
+                Mis pendientes
+                <span id="pend-mis-count" class="filter-count">0</span>
+              </button>
+              <button
+                class="filter-chip pend-filter"
+                data-mode="equipo"
+                onclick="setViewMode('equipo')"
+              >
+                Todos del equipo
+                <span id="pend-equipo-count" class="filter-count">0</span>
+              </button>
+              <input
+                type="text"
+                placeholder="Buscar (cliente, descripcion, asesor)..."
+                style="flex: 1; min-width: 200px; margin-bottom: 0"
+                oninput="setSearchText(this.value)"
+              />
+              <button
+                id="group-by-cliente-btn"
+                class="filter-chip"
+                onclick="toggleGroupByCliente()"
+                title="Agrupar pendientes por cliente"
+              >
+                Agrupar por cliente
+              </button>
+            </div>
+
+            <div class="filter-row" style="margin-bottom: 14px; gap: 6px">
+              <span class="text-meta-sm" style="margin-right: 4px"
+                >Categoria:</span
+              >
+              <button
+                class="filter-chip pend-cat pend-cat--sm active"
+                onclick="setCatFilter('', this)"
+              >
+                Todas
+              </button>
+              <button
+                class="filter-chip pend-cat pend-cat--sm"
+                onclick="setCatFilter('liquidac', this)"
+              >
+                Liquidacion
+              </button>
+              <button
+                class="filter-chip pend-cat pend-cat--sm"
+                onclick="setCatFilter('error', this)"
+              >
+                Errores
+              </button>
+              <button
+                class="filter-chip pend-cat pend-cat--sm"
+                onclick="setCatFilter('config', this)"
+              >
+                Configuracion
+              </button>
+              <button
+                class="filter-chip pend-cat pend-cat--sm"
+                onclick="setCatFilter('actualiz', this)"
+              >
+                Actualizaciones
+              </button>
+              <button
+                class="filter-chip pend-cat pend-cat--sm"
+                onclick="setCatFilter('fuera', this)"
+              >
+                Fuera del sistema
+              </button>
+            </div>
+
+            <div id="pend-list">
+              <!-- Render dinamico desde js/pendientes.js -->
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════
+         REGISTRAR CONSULTA
+    ════════════════════════════════════ -->
+          <div id="registrar" class="page">
+            <div class="page-header">
+              <div>
+                <div class="page-title">Registrar consulta</div>
+                <div class="page-sub">
+                  Completá después de cada atención por WhatsApp
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div id="reg-ok" style="display: none" class="alert alert-green">
+                <strong>Consulta guardada.</strong>La solución fue agregada a la
+                base de conocimiento del equipo.
+              </div>
+
+              <div class="info-box">
+                Si el cliente repite la misma consulta, marcala como repetida.
+                Eso alimenta el score de riesgo automáticamente.
+              </div>
+
+              <div class="form-row">
+                <div class="form-group" style="max-width: 50%; flex: 1">
+                  <label class="fl">Cliente</label>
+                  <select id="r-cliente">
+                    <option>ESTIN</option>
+                    <option>Ispova</option>
+                    <option>Estudio Bocco</option>
+                    <option>Noetinger</option>
+                    <option>Mark Twain</option>
+                    <option>Taborin</option>
+                    <option>Sartori</option>
+                    <option>Zarazaga</option>
+                    <option>Nina</option>
+                    <option>m3</option>
+                    <option>Otro cliente</option>
+                  </select>
+                </div>
+                <!-- "Asesor que atendió" se asigna automáticamente al usuario logueado -->
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">Categoría</label>
+                  <select id="r-cat" onchange="updateRegSubtemas()">
+                    <option value="">Seleccioná...</option>
+                    <option value="liquidacion">Liquidación de sueldos</option>
+                    <option value="errores">Errores del sistema</option>
+                    <option value="configuracion">Configuración</option>
+                    <option value="actualizaciones">Actualizaciones</option>
+                    <option value="fuera">Fuera del sistema</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="fl">Subtema</label>
+                  <select id="r-sub">
+                    <option>Primero elegí categoría</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">¿Es consulta repetida?</label>
+                  <select id="r-rep">
+                    <option value="no">No, es nueva</option>
+                    <option value="si">Sí, ya lo consultó antes</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="fl">¿Quedó resuelto?</label>
+                  <select>
+                    <option>Sí, confirmado por el cliente</option>
+                    <option>Parcialmente</option>
+                    <option>No resuelto / derivado</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">Tiempo de resolución (hs)</label>
+                  <input type="number" placeholder="Ej: 1.5" step="0.5" />
+                </div>
+                <div class="form-group">
+                  <label class="fl">Material enviado</label>
+                  <select>
+                    <option>Ninguno</option>
+                    <option>Video</option>
+                    <option>PDF / imagen</option>
+                    <option>Varios materiales</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">Autonomía percibida</label>
+                  <select>
+                    <option>Baja — necesitó mucha guía</option>
+                    <option>Media — siguió con ayuda</option>
+                    <option>Alta — casi lo resolvió solo</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="fl">¿Se conectó remotamente?</label>
+                  <select>
+                    <option>Sí, conexión remota</option>
+                    <option>No, solo por chat</option>
+                    <option>Llamada de voz</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="fl">Descripción del problema</label>
+                <textarea
+                  id="r-desc"
+                  placeholder="Ej: El cliente no sabía liquidar las horas extras en feriado. Intentó el proceso pero el sistema le daba diferente..."
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label class="fl"
+                  >¿Aplicaste una solución de la base? (opcional)</label
+                >
+                <div
+                  id="r-sol-elegida"
+                  class="sol-elegida"
+                  style="display: none"
+                ></div>
+                <button
+                  type="button"
+                  class="btn-sm"
+                  onclick="elegirSolucionConsulta()"
+                >
+                  🔗 Elegir solución de la base
+                </button>
+                <div
+                  style="font-size: 11px; color: var(--text3); margin-top: 6px"
+                >
+                  Si elegís una de la base, al guardar le suma 1 al contador de
+                  usos.
+                </div>
+              </div>
+
+              <div class="form-group" id="r-sol-group">
+                <label class="fl">Solución aplicada (paso a paso)</label>
+                <textarea
+                  id="r-sol"
+                  placeholder="Paso 1: Se fue a Configuración &gt; Parámetros &gt; Feriados
+Paso 2: Se verificó que el porcentaje estuviera en 100%
+Paso 3: Se reprocesó la liquidación..."
+                ></textarea>
+                <div
+                  style="font-size: 11px; color: var(--text3); margin-top: 6px"
+                >
+                  <strong>Obligatorio.</strong> Al guardar la consulta, los
+                  pasos se agregan automáticamente como nueva solución a la base
+                  (usando la "Descripción del problema" como título).
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 10px; flex-wrap: wrap">
+                <button class="btn-primary" onclick="guardarConsulta()">
+                  Guardar consulta
+                </button>
+                <button class="btn-secondary">Guardar y registrar otra</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════
+         IMPLEMENTACIÓN — render dinamico desde js/implementacion.js
+    ════════════════════════════════════ -->
+          <div id="implementacion" class="page">
+            <div class="page-header">
+              <div>
+                <div class="page-title">Implementación</div>
+                <div class="page-sub">
+                  Seguimiento de clientes en proceso de onboarding
+                </div>
+              </div>
+            </div>
+
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-label">En implementación</div>
+                <div
+                  class="metric-value"
+                  id="impl-m-total"
+                  style="color: var(--accent)"
+                >
+                  —
+                </div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Tareas completadas</div>
+                <div
+                  class="metric-value"
+                  id="impl-m-completas"
+                  style="color: var(--green)"
+                >
+                  —
+                </div>
+                <div class="metric-sub" id="impl-m-completas-sub">
+                  de — totales
+                </div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Vencidas</div>
+                <div
+                  class="metric-value"
+                  id="impl-m-demoradas"
+                  style="color: var(--red)"
+                >
+                  —
+                </div>
+                <div class="metric-sub">tareas con fecha vencida</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Progreso promedio</div>
+                <div
+                  class="metric-value"
+                  id="impl-m-progreso"
+                  style="color: var(--amber)"
+                >
+                  —
+                </div>
+              </div>
+            </div>
+
+            <div class="filter-row">
+              <input
+                type="text"
+                id="impl-buscador"
+                placeholder="Buscar cliente en implementación..."
+                style="flex: 1; max-width: 360px; margin-bottom: 0"
+                oninput="filterImplementacion(this.value)"
+              />
+              <span
+                id="impl-buscador-count"
+                style="font-size: 12px; color: var(--text3); margin-left: 8px"
+              ></span>
+              <button
+                class="btn-sm"
+                style="margin-left: auto"
+                onclick="abrirModalReasignarMasivo()"
+                title="Reasignar todas las tareas de una persona a otra de una vez"
+              >
+                👥 Reasignar masivamente
+              </button>
+            </div>
+
+            <div class="impl-filters">
+              <div class="impl-filter-group">
+                <span class="impl-filter-group__label">Asesor</span>
+                <div class="impl-filter-segmented">
+                  <button
+                    class="filter-chip active"
+                    data-impl-filter="asesor"
+                    data-value=""
+                    onclick="setImplFiltroAsesor(this, '')"
+                  >
+                    Todos
+                  </button>
+                  <button
+                    class="filter-chip"
+                    data-impl-filter="asesor"
+                    data-value="mis"
+                    onclick="setImplFiltroAsesor(this, 'mis')"
+                  >
+                    Mis tareas
+                  </button>
+                </div>
+              </div>
+
+              <div class="impl-filter-group">
+                <span class="impl-filter-group__label">Estado</span>
+                <div class="impl-filter-segmented">
+                  <button
+                    class="filter-chip active"
+                    data-impl-filter="estado"
+                    data-value=""
+                    onclick="setImplFiltroEstado(this, '')"
+                  >
+                    Todos
+                  </button>
+                  <button
+                    class="filter-chip"
+                    data-impl-filter="estado"
+                    data-value="pendiente"
+                    onclick="setImplFiltroEstado(this, 'pendiente')"
+                  >
+                    Pendientes
+                  </button>
+                  <button
+                    class="filter-chip"
+                    data-impl-filter="estado"
+                    data-value="en_progreso"
+                    onclick="setImplFiltroEstado(this, 'en_progreso')"
+                  >
+                    En progreso
+                  </button>
+                  <button
+                    class="filter-chip"
+                    data-impl-filter="estado"
+                    data-value="vencida"
+                    onclick="setImplFiltroEstado(this, 'vencida')"
+                  >
+                    ⏰ Vencidas
+                  </button>
+                  <button
+                    class="filter-chip"
+                    data-impl-filter="estado"
+                    data-value="completada"
+                    onclick="setImplFiltroEstado(this, 'completada')"
+                  >
+                    Completadas
+                  </button>
+                </div>
+              </div>
+
+              <div class="impl-filter-group">
+                <span class="impl-filter-group__label">Esperando a</span>
+                <div class="impl-filter-segmented">
+                  <button
+                    class="filter-chip active"
+                    data-impl-filter="resp"
+                    data-value=""
+                    onclick="setImplFiltroResp(this, '')"
+                  >
+                    Todos
+                  </button>
+                  <button
+                    class="filter-chip"
+                    data-impl-filter="resp"
+                    data-value="cliente"
+                    onclick="setImplFiltroResp(this, 'cliente')"
+                  >
+                    Cliente
+                  </button>
+                  <button
+                    class="filter-chip"
+                    data-impl-filter="resp"
+                    data-value="equipo"
+                    onclick="setImplFiltroResp(this, 'equipo')"
+                  >
+                    Equipo
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div id="impl-clientes-list">
+              <div
+                class="card"
+                style="text-align: center; color: var(--text3); padding: 40px"
+              >
+                Cargando clientes en implementación…
+              </div>
+            </div>
+
+            <div
+              class="card"
+              id="impl-metricas-avanzadas"
+              style="margin-top: 16px"
+            >
+              <div class="card-title">Métricas avanzadas</div>
+              <div class="info-box" style="margin-bottom: 12px">
+                Estadísticas calculadas sobre todas las implementaciones (en
+                curso y terminadas).
+              </div>
+              <div id="impl-metricas-avanzadas-body">
+                <div
+                  style="text-align: center; color: var(--text3); padding: 20px"
+                >
+                  Calculando métricas...
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════
+         EQUIPO
+    ════════════════════════════════════ -->
+          <div id="equipo" class="page">
+            <div class="page-header">
+              <div>
+                <div class="page-title">Equipo</div>
+                <div class="page-sub">Carga y rendimiento por asesor</div>
+              </div>
+            </div>
+
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-label">Total asesores</div>
+                <div class="metric-value">5</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Consultas sin asignar</div>
+                <div class="metric-value" style="color: var(--amber)">3</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Prom. resolución equipo</div>
+                <div class="metric-value">2.8 hs</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Más cargado</div>
+                <div
+                  class="metric-value"
+                  style="font-size: 18px; color: var(--red)"
+                >
+                  Ignacio
+                </div>
+                <div class="metric-sub">18 consultas</div>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="card">
+                <div class="card-title">Carga por asesor (este mes)</div>
+                <div class="asesor-row">
+                  <div
+                    class="av"
+                    style="
+                      background: var(--accent-light);
+                      color: var(--accent-text);
+                    "
+                  >
+                    IG
+                  </div>
+                  <div style="flex: 1">
+                    <div style="font-weight: 500; font-size: 13px">Ignacio</div>
+                    <div style="font-size: 11px; color: var(--text3)">
+                      Implementación + Soporte
+                    </div>
+                  </div>
+                  <div style="text-align: right">
+                    <div
+                      style="
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: var(--red);
+                      "
+                    >
+                      18 consultas
+                    </div>
+                    <div style="font-size: 11px; color: var(--text3)">
+                      Prom: 2.1 hs · 6 clientes
+                    </div>
+                  </div>
+                </div>
+                <div class="asesor-row">
+                  <div
+                    class="av"
+                    style="
+                      background: var(--green-bg);
+                      color: var(--green-text);
+                    "
+                  >
+                    MA
+                  </div>
+                  <div style="flex: 1">
+                    <div style="font-weight: 500; font-size: 13px">Matías</div>
+                    <div style="font-size: 11px; color: var(--text3)">
+                      Implementación + Soporte
+                    </div>
+                  </div>
+                  <div style="text-align: right">
+                    <div style="font-size: 13px; font-weight: 600">
+                      12 consultas
+                    </div>
+                    <div style="font-size: 11px; color: var(--text3)">
+                      Prom: 3.2 hs · 4 clientes
+                    </div>
+                  </div>
+                </div>
+                <div class="asesor-row">
+                  <div
+                    class="av"
+                    style="
+                      background: var(--amber-bg);
+                      color: var(--amber-text);
+                    "
+                  >
+                    DA
+                  </div>
+                  <div style="flex: 1">
+                    <div style="font-weight: 500; font-size: 13px">Daniel</div>
+                    <div style="font-size: 11px; color: var(--text3)">
+                      Soporte
+                    </div>
+                  </div>
+                  <div style="text-align: right">
+                    <div style="font-size: 13px; font-weight: 600">
+                      9 consultas
+                    </div>
+                    <div style="font-size: 11px; color: var(--text3)">
+                      Prom: 2.8 hs · 3 clientes
+                    </div>
+                  </div>
+                </div>
+                <div class="asesor-row">
+                  <div
+                    class="av"
+                    style="background: var(--red-bg); color: var(--red-text)"
+                  >
+                    RE
+                  </div>
+                  <div style="flex: 1">
+                    <div style="font-weight: 500; font-size: 13px">Renzo</div>
+                    <div style="font-size: 11px; color: var(--text3)">
+                      Soporte
+                    </div>
+                  </div>
+                  <div style="text-align: right">
+                    <div style="font-size: 13px; font-weight: 600">
+                      8 consultas
+                    </div>
+                    <div style="font-size: 11px; color: var(--text3)">
+                      Prom: 2.4 hs · 5 clientes
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title">Consultas por asesor</div>
+                <div style="position: relative; height: 220px">
+                  <canvas
+                    id="chartEquipo"
+                    role="img"
+                    aria-label="Consultas por asesor"
+                    >Gráfico de carga por asesor.</canvas
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════
+         BASE DE SOLUCIONES
+    ════════════════════════════════════ -->
+          <div id="biblioteca" class="page">
+            <div class="page-header">
+              <div>
+                <div class="page-title">Base de soluciones</div>
+                <div class="page-sub">Conocimiento compartido del equipo</div>
+              </div>
+              <button class="btn-primary" onclick="showKbForm()">
+                + Nueva solución
+              </button>
+            </div>
+
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-label">Soluciones cargadas</div>
+                <div class="metric-value" style="color: var(--accent)">38</div>
+                <div class="metric-sub">en 5 categorías</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Más consultada</div>
+                <div
+                  class="metric-value"
+                  style="
+                    font-size: 15px;
+                    line-height: 1.3;
+                    margin-top: 4px;
+                    color: var(--blue);
+                  "
+                >
+                  Horas extras en feriado
+                </div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Para revisar</div>
+                <div class="metric-value" style="color: var(--amber)">3</div>
+                <div class="metric-sub">pueden estar desactualizadas</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Agregadas este mes</div>
+                <div class="metric-value" style="color: var(--green)">5</div>
+              </div>
+            </div>
+
+            <div class="info-box">
+              El título de cada solución describe el
+              <strong>problema del cliente</strong>, no la solución. Ej: "El
+              cliente no puede generar el recibo en PDF".
+            </div>
+
+            <div class="filter-row">
+              <input
+                type="text"
+                placeholder="Buscar problema..."
+                style="flex: 1; min-width: 180px; margin-bottom: 0"
+                oninput="buscarKB(this.value)"
+              />
+              <button class="filter-chip active" onclick="filtKB(this, '')">
+                Todas
+              </button>
+              <button class="filter-chip" onclick="filtKB(this, 'liquidacion')">
+                Liquidación
+              </button>
+              <button class="filter-chip" onclick="filtKB(this, 'errores')">
+                Errores
+              </button>
+              <button
+                class="filter-chip"
+                onclick="filtKB(this, 'configuracion')"
+              >
+                Configuración
+              </button>
+              <button
+                class="filter-chip"
+                onclick="filtKB(this, 'actualizaciones')"
+              >
+                Actualizaciones
+              </button>
+              <button class="filter-chip" onclick="filtKB(this, 'fuera')">
+                Fuera del sistema
+              </button>
+            </div>
+
+            <div id="kb-detail" class="detail-panel"></div>
+
+            <div class="card" style="padding: 0; overflow: hidden">
+              <table class="tbl" id="kb-table">
+                <thead>
+                  <tr>
+                    <th style="width: 36%; padding-left: 20px">
+                      Problema del cliente
+                    </th>
+                    <th style="width: 14%">Categoría</th>
+                    <th style="width: 14%">Subtema</th>
+                    <th style="width: 7%">Usos</th>
+                    <th style="width: 11%">Actualizado</th>
+                    <th style="width: 8%">Por</th>
+                    <th style="width: 10%; padding-right: 20px"></th>
+                  </tr>
+                </thead>
+                <tbody id="kb-body">
+                  <!-- Las filas se renderizan desde js/kb.js usando los datos de js/data.js -->
+                </tbody>
+              </table>
+            </div>
+
+            <div id="kb-form" class="card" style="display: none; margin-top: 0">
+              <div class="card-title">Nueva solución</div>
+              <div
+                id="kb-ok"
+                class="alert alert-green"
+                style="display: none; margin-bottom: 14px"
+              >
+                <strong>Guardado.</strong>Disponible para todo el equipo.
+              </div>
+              <div class="form-group">
+                <label class="fl"
+                  >Título — describí el problema del cliente</label
+                >
+                <input
+                  type="text"
+                  id="kb-titulo"
+                  placeholder="El cliente no puede / no sabe / le da error..."
+                />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">Categoría</label>
+                  <select id="kb-cat" onchange="updateKBSubtemas()">
+                    <option value="">Seleccioná...</option>
+                    <option value="liquidacion">Liquidación</option>
+                    <option value="errores">Errores del sistema</option>
+                    <option value="configuracion">Configuración</option>
+                    <option value="actualizaciones">Actualizaciones</option>
+                    <option value="fuera">Fuera del sistema</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="fl">Subtema</label>
+                  <select id="kb-sub">
+                    <option>Primero elegí categoría</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="fl">Pasos de la solución (uno por línea)</label>
+                <textarea
+                  id="kb-pasos"
+                  style="min-height: 110px"
+                  placeholder="Paso 1: Ir a Configuración &gt; Parámetros
+Paso 2: ..."
+                ></textarea>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">Material de apoyo</label>
+                  <select>
+                    <option>Sin material</option>
+                    <option>Video</option>
+                    <option>PDF paso a paso</option>
+                    <option>Imagen / captura</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="fl">¿Aplica a todos los clientes?</label>
+                  <select>
+                    <option>Sí, todos</option>
+                    <option>Solo módulo RRHH</option>
+                    <option>Solo con convenio colectivo</option>
+                    <option>Solo versión 3.x+</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">Quién la carga</label>
+                  <select>
+                    <option>Ignacio</option>
+                    <option>Matías</option>
+                    <option>Daniel</option>
+                    <option>Renzo</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="fl">Revisar en</label>
+                  <select>
+                    <option>1 mes</option>
+                    <option>3 meses</option>
+                    <option>6 meses</option>
+                    <option>Con cada actualización</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display: flex; gap: 10px">
+                <button
+                  class="btn-primary"
+                  id="kb-form-submit"
+                  onclick="guardarKB()"
+                >
+                  Guardar solución
+                </button>
+                <button
+                  class="btn-secondary"
+                  onclick="
+                    document.getElementById('kb-form').style.display = 'none'
+                  "
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════
+         ALERTAS
+    ════════════════════════════════════ -->
+          <div id="alertas" class="page">
+            <div class="page-header">
+              <div>
+                <div class="page-title">Alertas</div>
+                <div class="page-sub">
+                  5 alertas activas — revisá estas situaciones hoy
+                </div>
+              </div>
+            </div>
+
+            <div class="alert alert-red">
+              <div style="flex: 1">
+                <strong>Nina — repetición elevada</strong>44% de consultas
+                repetidas este mes. Score de riesgo: 8/10. Además hay un
+                pendiente abierto de hace 2 días.
+              </div>
+              <button
+                class="btn-sm"
+                onclick="
+                  goTo(
+                    document.querySelector('.nav-item[onclick*=clientes]'),
+                    'clientes',
+                  )
+                "
+              >
+                Ver cliente
+              </button>
+            </div>
+            <div class="alert alert-red">
+              <div style="flex: 1">
+                <strong>Noetinger — demora en implementación</strong>Tarea
+                "Carga de empleados" lleva 5 días sin respuesta del cliente.
+                Límite: 4 días. Riesgo de atraso en todo el cronograma.
+              </div>
+              <button
+                class="btn-sm"
+                onclick="
+                  goTo(
+                    document.querySelector(
+                      '.nav-item[onclick*=implementacion]',
+                    ),
+                    'implementacion',
+                  )
+                "
+              >
+                Ver cronograma
+              </button>
+            </div>
+            <div class="alert alert-amber">
+              <div style="flex: 1">
+                <strong>ESTIN — adopción estancada</strong>60% de adopción de
+                herramientas. Llevan 3 meses en soporte y todavía no usan
+                reportes ni exportaciones.
+              </div>
+              <button
+                class="btn-sm"
+                onclick="
+                  goTo(
+                    document.querySelector('.nav-item[onclick*=clientes]'),
+                    'clientes',
+                  )
+                "
+              >
+                Ver cliente
+              </button>
+            </div>
+            <div class="alert alert-amber">
+              <div style="flex: 1">
+                <strong>5 clientes sin encuesta de satisfacción</strong>Llevan
+                más de 3 meses en soporte sin completar la encuesta de
+                devolución. Sin feedback no podés mejorar el servicio.
+              </div>
+            </div>
+            <div class="alert alert-blue">
+              <div style="flex: 1">
+                <strong>Sobrecarga detectada — Ignacio</strong>18 consultas este
+                mes vs promedio del equipo de 11. Revisá la distribución de
+                clientes entre asesores.
+              </div>
+              <button
+                class="btn-sm"
+                onclick="
+                  goTo(
+                    document.querySelector('.nav-item[onclick*=equipo]'),
+                    'equipo',
+                  )
+                "
+              >
+                Ver equipo
+              </button>
+            </div>
+            <div class="alert alert-green">
+              <div style="flex: 1">
+                <strong>m3 e Ispova — casos modelo</strong>Alta autonomía, 0%
+                repetición y adopción mayor al 88%. Documentalos como benchmark
+                para clientes nuevos.
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">
+                Soluciones de la base pendientes de revisión
+              </div>
+              <div
+                style="padding: 12px 0; border-bottom: 1px solid var(--border)"
+              >
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                  "
+                >
+                  <div>
+                    <div style="font-size: 13px; font-weight: 500">
+                      El cliente no sabe liquidar vacaciones proporcionales
+                    </div>
+                    <div
+                      style="
+                        font-size: 11px;
+                        color: var(--text3);
+                        margin-top: 3px;
+                      "
+                    >
+                      Liquidación · Cargada hace 4 meses · Por: Ignacio
+                    </div>
+                  </div>
+                  <span class="badge b-amber">Revisar</span>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 10px">
+                  <button
+                    class="btn-sm"
+                    onclick="toast('Marcada como vigente')"
+                  >
+                    Sigue vigente
+                  </button>
+                  <button class="btn-sm">Editar</button>
+                </div>
+              </div>
+              <div
+                style="padding: 12px 0; border-bottom: 1px solid var(--border)"
+              >
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                  "
+                >
+                  <div>
+                    <div style="font-size: 13px; font-weight: 500">
+                      Error al importar empleados desde Excel
+                    </div>
+                    <div
+                      style="
+                        font-size: 11px;
+                        color: var(--text3);
+                        margin-top: 3px;
+                      "
+                    >
+                      Errores del sistema · Cargada hace 3 meses · Por: Matías
+                    </div>
+                  </div>
+                  <span class="badge b-red">Puede estar desactualizada</span>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 10px">
+                  <button
+                    class="btn-sm"
+                    onclick="toast('Marcada como vigente')"
+                  >
+                    Sigue vigente
+                  </button>
+                  <button class="btn-sm">Editar</button>
+                </div>
+              </div>
+              <div style="padding: 12px 0">
+                <div
+                  style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                  "
+                >
+                  <div>
+                    <div style="font-size: 13px; font-weight: 500">
+                      No aparece el botón de generar F931
+                    </div>
+                    <div
+                      style="
+                        font-size: 11px;
+                        color: var(--text3);
+                        margin-top: 3px;
+                      "
+                    >
+                      Errores del sistema · Cargada hace 2 meses · Por: Matías
+                    </div>
+                  </div>
+                  <span class="badge b-amber">Revisar</span>
+                </div>
+                <div style="display: flex; gap: 8px; margin-top: 10px">
+                  <button
+                    class="btn-sm"
+                    onclick="toast('Marcada como vigente')"
+                  >
+                    Sigue vigente
+                  </button>
+                  <button class="btn-sm">Editar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════
+         CONFIGURACIÓN
+    ════════════════════════════════════ -->
+          <div id="configuracion" class="page">
+            <div class="page-header" id="config-page-header">
+              <div>
+                <div class="page-title" id="config-page-title">
+                  Configuración
+                </div>
+                <div class="page-sub" id="config-page-sub">
+                  Preferencias personales de tu sesión
+                </div>
+              </div>
+            </div>
+
+            <!-- Menú principal de categorías -->
+            <div id="config-menu" class="config-menu">
+              <button
+                class="config-menu-item"
+                onclick="abrirConfigSeccion('apariencia')"
+              >
+                <div class="config-menu-item__icon">🎨</div>
+                <div class="config-menu-item__body">
+                  <div class="config-menu-item__title">Apariencia</div>
+                  <div class="config-menu-item__sub">
+                    Tema oscuro y preferencias visuales
+                  </div>
+                </div>
+                <div class="config-menu-item__chevron">›</div>
+              </button>
+
+              <button
+                class="config-menu-item"
+                onclick="abrirConfigSeccion('implementacion')"
+              >
+                <div class="config-menu-item__icon">📋</div>
+                <div class="config-menu-item__body">
+                  <div class="config-menu-item__title">Implementación</div>
+                  <div class="config-menu-item__sub">
+                    Editar la plantilla de etapas del proceso de onboarding
+                  </div>
+                </div>
+                <div class="config-menu-item__chevron">›</div>
+              </button>
+            </div>
+
+            <!-- Sub-sección: Apariencia -->
+            <div
+              id="config-section-apariencia"
+              class="config-section"
+              style="display: none"
+            >
+              <button class="config-back" onclick="abrirConfigSeccion(null)">
+                ← Volver a Configuración
+              </button>
+              <div class="card">
+                <div class="config-row">
+                  <div class="config-row__info">
+                    <div class="config-row__title">Tema oscuro</div>
+                    <div class="config-row__sub">
+                      Cambia toda la interfaz a un esquema de colores oscuro. La
+                      preferencia se guarda en este navegador.
+                    </div>
+                  </div>
+                  <label class="switch">
+                    <input
+                      type="checkbox"
+                      id="cfg-dark-toggle"
+                      onchange="toggleDarkMode(this.checked)"
+                    />
+                    <span class="switch-slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sub-sección: Implementación -->
+            <div
+              id="config-section-implementacion"
+              class="config-section"
+              style="display: none"
+            >
+              <button class="config-back" onclick="abrirConfigSeccion(null)">
+                ← Volver a Configuración
+              </button>
+              <div class="card">
+                <div class="info-box">
+                  Estas son las etapas que se aplican a cada cliente nuevo en
+                  implementación. Modificar la plantilla NO afecta a los
+                  clientes que ya están en proceso — solo a los que se agreguen
+                  después.
+                </div>
+                <div
+                  id="plantilla-list"
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                    margin-top: 12px;
+                  "
+                >
+                  <div
+                    style="
+                      text-align: center;
+                      color: var(--text3);
+                      padding: 20px;
+                    "
+                  >
+                    Cargando plantilla…
+                  </div>
+                </div>
+                <div class="btn-row" style="margin-top: 12px">
+                  <button
+                    class="btn-primary btn-primary--sm"
+                    onclick="agregarEtapaPlantilla()"
+                  >
+                    + Agregar etapa
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+    <!-- /#app-root -->
+
+    <!-- ════════════════════════════════════
+     SCRIPTS — el orden importa
+     data.js define las constantes que usan los demás módulos.
+     charts.js corre al final y dispara el render inicial.
+════════════════════════════════════ -->
+    <script src="js/config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/storage.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/clientes.js"></script>
+    <script src="js/pendientes.js"></script>
+    <script src="js/consultas.js"></script>
+    <script src="js/kb.js"></script>
+    <script src="js/implementacion.js"></script>
+    <script src="js/charts.js"></script>
+  </body>
+</html>
