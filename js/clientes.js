@@ -61,6 +61,8 @@ async function initClientes() {
 
     renderClientes();
     refrescarSelectsCliente(clientes.map(c => c.nombre));
+    // Actualizar métricas del panel con el conteo real de clientes
+    if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
     suscribirClientes();
   } catch (e) {
     console.error('Error cargando clientes', e);
@@ -90,6 +92,37 @@ function refrescarSelectsCliente(nombres) {
   });
 }
 
+// ────────── Stats por cliente (desde array global de consultas) ──────────
+
+function getStatsCliente(nombre) {
+  const ahora = new Date();
+  const todas = (typeof consultas !== 'undefined') ? consultas : [];
+
+  // Consultas de este mes para este cliente
+  const estesMes = todas.filter(c => {
+    const d = new Date(c.timestamp);
+    return c.cliente === nombre &&
+           d.getMonth()    === ahora.getMonth() &&
+           d.getFullYear() === ahora.getFullYear();
+  });
+
+  const totalMes     = estesMes.length;
+  const repetidasMes = estesMes.filter(c => c.repetida === 'si').length;
+  const pctRep       = totalMes > 0 ? Math.round((repetidasMes / totalMes) * 100) : null;
+
+  // Categoría más frecuente (histórico)
+  const catCounts = {};
+  todas.filter(c => c.cliente === nombre).forEach(c => {
+    if (c.categoria) catCounts[c.categoria] = (catCounts[c.categoria] || 0) + 1;
+  });
+  const topCatKey = Object.entries(catCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+  const topCatLabel = topCatKey
+    ? ((typeof CATS !== 'undefined' && CATS[topCatKey]?.label) || topCatKey)
+    : null;
+
+  return { totalMes, pctRep, topCatLabel };
+}
+
 // ────────── Render ──────────
 
 function renderClientes() {
@@ -112,42 +145,109 @@ function renderClientes() {
     return;
   }
   cont.innerHTML = visible.map(renderClienteCard).join('');
+  // Re-render también cuando llegan nuevas consultas (para actualizar stats)
+  if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
 }
 
 function renderClienteCard(c) {
-  const tipoLabel = TIPO_LABELS[c.tipo] || c.tipo;
-  const areaTexto = c.area === 'impl' ? 'Implementacion' : 'Soporte';
-  const areaBadge = c.area === 'impl' ? '<span class="badge b-blue">Implementacion</span>' : '';
-  const autonomiaBadge = ({
-    baja:  '<span class="badge b-red">Baja autonomia</span>',
-    media: '<span class="badge b-amber">Media autonomia</span>',
-    alta:  '<span class="badge b-green">Alta autonomia</span>'
-  })[c.autonomia] || '';
-  const scoreClass = c.score >= 7 ? 'b-red' : (c.score >= 4 ? 'b-amber' : 'b-green');
-  const scoreBadge = `<span class="badge ${scoreClass}">Riesgo ${c.score}/10</span>`;
-
+  const tipoLabel    = TIPO_LABELS[c.tipo] || c.tipo;
+  const areaTexto    = c.area === 'impl' ? 'Implementacion' : 'Soporte';
+  const scoreClass   = c.score >= 7 ? 'b-green' : (c.score >= 4 ? 'b-amber' : 'b-red');
   const adopcionColor = c.adopcion >= 70 ? 'var(--green)' : c.adopcion >= 50 ? 'var(--amber)' : 'var(--red)';
 
+  const autBadgeClass = { alta: 'b-green', media: 'b-amber', baja: 'b-red' }[c.autonomia] || 'b-gray';
+  const autLabel      = { alta: 'Alta autonomia', media: 'Media autonomia', baja: 'Baja autonomia' }[c.autonomia] || '—';
+
+  // Stats desde consultas
+  const { totalMes, pctRep, topCatLabel } = getStatsCliente(c.nombre);
+  const ahora      = new Date();
+  const mesLabel   = ahora.toLocaleString('es-AR', { month: 'long' });
+
+  // Color % repetidas: verde=bajo, rojo=alto
+  let repColor = 'var(--text3)';
+  let repTexto = '—';
+  if (pctRep !== null) {
+    repTexto = pctRep + '%';
+    repColor = pctRep >= 40 ? 'var(--red)' : pctRep >= 20 ? 'var(--amber)' : 'var(--green)';
+  }
+
+  const topCatHTML = topCatLabel
+    ? `<div class="cli-card__stat-val cli-card__stat-val--sm">${escapeHtml(topCatLabel)}</div>`
+    : `<div class="cli-card__stat-val cli-card__stat-val--sm" style="color:var(--text3)">Sin datos</div>`;
+
   return `
-    <div class="card" data-id="${c.id}" data-area="${c.area}" data-aut="${c.autonomia}" data-score="${c.score}" data-nombre="${escapeHtml(c.nombre)}" data-tipo="${c.tipo}">
-      <div class="card-header-row">
-        <div class="identity-row">
-          <div class="av av-${c.tipo}">${escapeHtml(c.iniciales)}</div>
+    <div class="cli-card"
+         data-id="${c.id}"
+         data-area="${c.area}"
+         data-aut="${c.autonomia}"
+         data-score="${c.score}"
+         data-nombre="${escapeHtml(c.nombre)}"
+         data-tipo="${c.tipo}">
+
+      <!-- Header -->
+      <div class="cli-card__header">
+        <div class="cli-card__identity">
+          <div class="av av-lg av-${c.tipo}">${escapeHtml(c.iniciales)}</div>
           <div>
-            <div class="tag-row"><span style="font-weight:600">${escapeHtml(c.nombre)}</span><span class="tipo-tag tipo-${c.tipo}">${tipoLabel}</span></div>
-            <div class="text-meta">${areaTexto} &middot; Resp: ${escapeHtml(c.asesor)}</div>
+            <div class="cli-card__name">${escapeHtml(c.nombre)}
+              <span class="tipo-tag tipo-${c.tipo}" style="font-size:9px;vertical-align:middle">${tipoLabel}</span>
+            </div>
+            <div class="cli-card__meta">${areaTexto} &middot; ${escapeHtml(c.asesor)}</div>
           </div>
         </div>
-        <div class="badge-stack">${scoreBadge}${autonomiaBadge}${areaBadge}</div>
+        <div class="cli-card__badges">
+          <span class="badge ${scoreClass}">${c.score}/10</span>
+          <span class="badge ${autBadgeClass}">${autLabel}</span>
+          ${c.area === 'impl' ? '<span class="badge b-blue">Implementacion</span>' : ''}
+        </div>
       </div>
-      <div class="bar-wrap" style="margin-top:4px"><div class="bar-label"><span>Adopcion de herramientas</span><span>${c.adopcion}%</span></div><div class="bar-track"><div class="bar-fill" style="width:${c.adopcion}%;background:${adopcionColor}"></div></div></div>
-      ${c.nota ? `<div class="text-meta" style="margin:8px 0">${escapeHtml(c.nota)}</div>` : ''}
-      <div class="btn-row btn-row--spaced">
-        <button class="btn-sm" onclick="goTo(document.querySelector('.nav-item[onclick*=registrar]'),'registrar')">+ Consulta</button>
+
+      <!-- Stats: consultas / repetidas / top categoría -->
+      <div class="cli-card__stats">
+        <div class="cli-card__stat">
+          <div class="cli-card__stat-val">${totalMes}</div>
+          <div class="cli-card__stat-lbl">consultas en ${mesLabel}</div>
+        </div>
+        <div class="cli-card__stat">
+          <div class="cli-card__stat-val" style="color:${repColor}">${repTexto}</div>
+          <div class="cli-card__stat-lbl">repetidas</div>
+        </div>
+        <div class="cli-card__stat">
+          ${topCatHTML}
+          <div class="cli-card__stat-lbl">más consultado</div>
+        </div>
+      </div>
+
+      <!-- Adopción -->
+      <div class="cli-card__body">
+        <div class="bar-wrap">
+          <div class="bar-label">
+            <span>Adopcion de herramientas</span><span>${c.adopcion}%</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:${c.adopcion}%;background:${adopcionColor}"></div>
+          </div>
+        </div>
+        ${c.nota ? `<div class="cli-card__nota">"${escapeHtml(c.nota)}"</div>` : ''}
+      </div>
+
+      <!-- Footer: botones claramente dentro de la card -->
+      <div class="cli-card__footer">
+        <button class="btn-sm btn-primary" style="font-size:12px"
+          onclick="goTo(document.querySelector('.nav-item[onclick*=registrar]'),'registrar')">
+          + Consulta
+        </button>
+        <button class="btn-sm" style="font-size:12px"
+          onclick="goClienteDetail('${c.id}')">
+          📋 Historial
+        </button>
         ${c.whaticket_url
-          ? `<a class="btn-sm wt-btn" href="${escapeHtml(c.whaticket_url)}" target="_blank" rel="noopener" title="Abrir chat en Whaticket">🎫 Whaticket</a>`
-          : `<button class="btn-sm" onclick="vincularWhaticket('${c.id}')" title="Vincular el chat de Whaticket de este cliente">🎫 Vincular Whaticket</button>`}
-        <button class="btn-sm" style="margin-left:auto" onclick="eliminarCliente('${c.id}')" title="Eliminar cliente">Eliminar cliente</button>
+          ? `<a class="btn-sm wt-btn" href="${escapeHtml(c.whaticket_url)}" target="_blank" rel="noopener">🎫 Whaticket</a>`
+          : `<button class="btn-sm" onclick="vincularWhaticket('${c.id}')">🎫 Vincular</button>`}
+        <button class="btn-sm" style="margin-left:auto;color:var(--text3);font-size:11px"
+          onclick="eliminarCliente('${c.id}')">
+          Eliminar
+        </button>
       </div>
     </div>`;
 }
@@ -331,6 +431,7 @@ function handleClienteChange(payload) {
       CLIENTES_LOOKUP[newRow.nombre] = { tipo: newRow.tipo, iniciales: newRow.iniciales, whaticket_url: newRow.whaticket_url };
       refrescarSelectsCliente(clientes.map(c => c.nombre));
       renderClientes();
+      if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
       // Re-render pendientes para que aparezca el boton de Whaticket si lo tiene
       if (typeof renderPendientes === 'function') renderPendientes();
     }
@@ -343,6 +444,7 @@ function handleClienteChange(payload) {
       CLIENTES_LOOKUP[newRow.nombre] = { tipo: newRow.tipo, iniciales: newRow.iniciales, whaticket_url: newRow.whaticket_url };
       refrescarSelectsCliente(clientes.map(c => c.nombre));
       renderClientes();
+      if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
       // Re-render pendientes en caso de que el cliente haya cambiado de Whaticket URL
       if (typeof renderPendientes === 'function') renderPendientes();
     }
@@ -352,6 +454,7 @@ function handleClienteChange(payload) {
     clientes = clientes.filter(c => c.id !== oldRow.id);
     refrescarSelectsCliente(clientes.map(c => c.nombre));
     renderClientes();
+    if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
   }
 }
 

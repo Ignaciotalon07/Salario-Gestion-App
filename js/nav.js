@@ -11,10 +11,8 @@ function goTo(btn, id) {
   window.scrollTo(0, 0);
 }
 
+// goClienteDetail es re-definida por cliente-detalle.js para navegar a la vista de historial.
+// Esta es solo la versión de fallback por si el módulo no cargó.
 function goClienteDetail(id) {
   goTo(document.querySelector('.nav-item[onclick*=clientes]'), 'clientes');
-  setTimeout(() => {
-    const card = document.querySelector(`[data-id="${id}"]`);
-    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 100);
 }

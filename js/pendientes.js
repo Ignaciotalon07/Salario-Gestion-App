@@ -11,6 +11,7 @@ let viewMode   = 'mis';     // 'mis' | 'equipo'
 let catFilter  = '';        // '' | 'liquidacion' | 'errores' | 'configuracion' | 'actualizaciones' | 'fuera'
 let searchText = '';
 let groupByCliente = false;
+let pendientesCerradosMes = 0; // contador de pendientes cerrados este mes
 
 const TEAM_ASESORES = ['Ignacio', 'Matias', 'Daniel', 'Daniel Ferro', 'Renzo', 'Alfred'];
 
@@ -34,7 +35,8 @@ function dbRowToPendiente(row) {
     resuelto:       row.resuelto,
     tipoPendiente:  row.tipo_pendiente || 'soporte',
     fechaVencimiento: row.fecha_vencimiento,
-    createdAt:      row.created_at
+    createdAt:      row.created_at,
+    interno:        row.interno || false
   };
 }
 
@@ -98,6 +100,16 @@ async function initPendientes() {
   try {
     const rows = await dbList('pendientes', { orderBy: 'created_at', ascending: false });
     pendientes = rows.filter(r => !r.resuelto).map(dbRowToPendiente);
+
+    // Contar pendientes cerrados este mes (resolved_at dentro del mes actual)
+    const ahora     = new Date();
+    const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString();
+    const { count: cerradosCount } = await sb()
+      .from('pendientes')
+      .select('*', { count: 'exact', head: true })
+      .eq('resuelto', true)
+      .gte('resolved_at', inicioMes);
+    pendientesCerradosMes = cerradosCount ?? 0;
 
     // Cargar notas de los pendientes activos en una sola query
     const ids = pendientes.map(p => p.id);
@@ -262,6 +274,7 @@ function renderPendienteCard(p) {
               ${tipoPend ? `<span class="badge ${tipoPend.badge}" title="Tipo: ${tipoPend.label}">${tipoPend.emoji} ${tipoPend.label}</span>` : ''}
               <span class="badge ${prioBadge}">${prioLabel}</span>
               ${venc ? `<span class="badge ${venc.badge}" title="Plazo de 5 dias">⏰ ${venc.label}</span>` : ''}
+              ${p.interno ? `<span class="badge b-gray" title="No alimenta métricas de clientes">🔒 Interno</span>` : ''}
               <span class="text-meta-sm">${p.cuando} &middot; ${p.asesor}</span>
             </div>
             <div class="pendiente-desc">${p.descripcion}</div>
@@ -398,6 +411,9 @@ async function guardarPendiente() {
   const cat     = document.getElementById('pf-cat').value;
   const tipoP   = (document.getElementById('pf-tipo') || {}).value || 'soporte';
 
+  const internoCheck = document.getElementById('pf-interno');
+  const esInterno    = internoCheck ? internoCheck.checked : false;
+
   const row = {
     cliente_nombre: cliente,
     asesor:         asesor,
@@ -407,7 +423,8 @@ async function guardarPendiente() {
     intento:        intento || null,
     prox_paso:      prox || null,
     tipo_pendiente: tipoP,
-    resuelto:       false
+    resuelto:       false,
+    interno:        esInterno
   };
 
   try {
@@ -419,6 +436,8 @@ async function guardarPendiente() {
     document.getElementById('pf-desc').value = '';
     document.getElementById('pf-intento').value = '';
     document.getElementById('pf-prox').value = '';
+    const chk = document.getElementById('pf-interno');
+    if (chk) chk.checked = false;
     renderPendientes();
     updatePendCount();
     const me = getCurrentUserName();
@@ -430,34 +449,240 @@ async function guardarPendiente() {
   }
 }
 
-// cerrarPendiente abre un modal opcional para registrar que solucion se uso.
-// El usuario puede elegir una solucion (suma uso), saltar, o documentar una
-// nueva. En cualquier caso, el pendiente se marca como resuelto.
+// cerrarPendiente: abre el modal de cierre con tiempo (obligatorio) y solución (opcional).
+// Al confirmar, marca el pendiente como resuelto Y crea una consulta en Supabase
+// para que las métricas del panel se alimenten automáticamente.
 //
-// Excepcion: si el pendiente es de tipo 'implementacion' (auto-creado desde
-// una tarea de implementacion), no tiene sentido mostrar el selector de
-// soluciones — esos pendientes son tareas de onboarding, no consultas
-// de soporte. Se cierran directamente.
+// Excepcion: tipo 'implementacion' se cierra directo (son tareas de onboarding,
+// no consultas de soporte, no generan métricas).
 function cerrarPendiente(id, btn) {
   const p = pendientes.find(x => x.id === id);
   if (!p) {
     cerrarPendienteEjecutar(id, btn);
     return;
   }
-  // Permiso: solo el asesor asignado puede cerrar
   if (!puedeEditarPendiente(p)) {
     alert(`Solo ${p.asesor} puede marcar este pendiente como resuelto.`);
     return;
   }
+  // Interno: cierre directo sin modal ni métricas (tarea del equipo, no del cliente)
+  if (p.interno) {
+    cerrarPendienteEjecutar(id, btn);
+    return;
+  }
+  // Implementacion: cierre directo sin métricas
   if (p.tipoPendiente === 'implementacion') {
     cerrarPendienteEjecutar(id, btn);
     return;
   }
-  abrirModalSolucionUsada(p, (solucionId) => {
-    cerrarPendienteEjecutar(id, btn).then(() => {
-      if (solucionId) incrementarUsoSolucion(solucionId);
-    });
+  // Daniel Ferro (comercial): cierre directo sin modal ni métricas
+  // Sus pendientes son agendas y reuniones, no consultas de soporte.
+  if (getCurrentUserName() === 'Daniel Ferro') {
+    cerrarPendienteEjecutar(id, btn);
+    return;
+  }
+
+  // Todos los demás: modal con tiempo + solución opcional
+  abrirModalCierrePendiente(p, btn);
+}
+
+// ── Estado del modal de cierre ──
+let _cierreState = null; // { p, btn, solucionId }
+
+// Abre el modal de cierre: tiempo obligatorio + solución opcional.
+// Alfred y Daniel Ferro ven solo el campo de tiempo (sin selector de solución).
+function abrirModalCierrePendiente(p, btn) {
+  // Alfred ve el modal de tiempo pero sin selector de soluciones (es programador)
+  const sinSolucion = ['Alfred'];
+  const mostrarSolucion = !sinSolucion.includes(getCurrentUserName());
+
+  _cierreState = { p, btn, solucionId: null };
+
+  // Eliminar modal anterior si quedó abierto
+  const anterior = document.getElementById('modal-cierre-pendiente');
+  if (anterior) anterior.remove();
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'modal-cierre-pendiente';
+  overlay.innerHTML = `
+    <div class="modal-dialog" style="max-width:460px">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">Marcar como resuelto</div>
+          <div class="modal-sub">Cliente: <strong>${escapeHtmlPend(p.cliente)}</strong> &middot; ${escapeHtmlPend(p.descripcion ? p.descripcion.substring(0, 60) + (p.descripcion.length > 60 ? '…' : '') : '')}</div>
+        </div>
+        <button class="btn-sm" onclick="cancelarCierrePendiente()" title="Cancelar">✕</button>
+      </div>
+
+      <!-- Tiempo: obligatorio -->
+      <div class="form-group" style="margin-bottom:18px">
+        <label class="fl">
+          ⏱ Tiempo de resolución (hs)
+          <span style="color:var(--red);margin-left:2px">*</span>
+        </label>
+        <input
+          type="number"
+          id="cierre-tiempo"
+          placeholder="Ej: 1.5"
+          step="0.5"
+          min="0.1"
+          style="font-size:15px;font-weight:600"
+        />
+        <div style="font-size:11px;color:var(--text3);margin-top:5px">
+          Obligatorio. Nos permite medir cuánto consume cada cliente.
+        </div>
+      </div>
+
+      <!-- Solución: opcional, solo para el equipo de soporte -->
+      ${mostrarSolucion ? `
+      <div class="form-group" id="cierre-sol-section" style="margin-bottom:18px">
+        <label class="fl">¿Qué solución aplicaste? <span style="color:var(--text3)">(opcional)</span></label>
+        <div id="cierre-sol-elegida" style="display:none;margin-bottom:8px"></div>
+        <button type="button" class="btn-sm" onclick="elegirSolucionCierre()">
+          🔗 Elegir de la base de soluciones
+        </button>
+      </div>
+      ` : ''}
+
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--border)">
+        <button class="btn-secondary" onclick="cancelarCierrePendiente()">Cancelar</button>
+        <button class="btn-primary" onclick="confirmarCierrePendiente()">✓ Marcar como resuelto</button>
+      </div>
+    </div>
+  `;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) cancelarCierrePendiente(); });
+  document.body.appendChild(overlay);
+  setTimeout(() => { const el = document.getElementById('cierre-tiempo'); if (el) el.focus(); }, 80);
+}
+
+function cancelarCierrePendiente() {
+  const m = document.getElementById('modal-cierre-pendiente');
+  if (m) m.remove();
+  _cierreState = null;
+}
+
+// Abre el selector de soluciones dentro del modal de cierre
+function elegirSolucionCierre() {
+  if (!_cierreState) return;
+  const p = _cierreState.p;
+  abrirModalSolucionUsada({
+    cliente: p.cliente,
+    contextoDescripcion: p.descripcion || '',
+    mostrarDocumentar: false,
+    tituloModal: '¿Qué solución aplicaste?',
+    subtituloModal: `Elegí la solución que usaste para cerrar este pendiente de <strong>${escapeHtmlPend(p.cliente)}</strong>.`,
+    onSeleccionar: (solucionId, accion) => {
+      if (accion === 'elegida' && solucionId) {
+        _cierreState.solucionId = solucionId;
+        renderSolucionElegidaCierre(solucionId);
+      }
+    }
   });
+}
+
+// Muestra la solución elegida en el modal de cierre
+function renderSolucionElegidaCierre(solucionId) {
+  const cont = document.getElementById('cierre-sol-elegida');
+  if (!cont) return;
+  const s = (soluciones || []).find(x => x.id === solucionId);
+  if (!s) { cont.style.display = 'none'; return; }
+  const cat = (typeof CATS !== 'undefined' && CATS[s.cat]) || { label: s.cat, bg: '#eee', text: '#444' };
+  cont.style.display = 'flex';
+  cont.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--green-bg);border-radius:8px;margin-bottom:8px';
+  cont.innerHTML = `
+    <div>
+      <div style="font-weight:600;font-size:13px">${escapeHtmlPend(s.titulo)}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">
+        <span class="badge" style="background:${cat.bg};color:${cat.text}">${cat.label}</span>
+        &middot; ${s.usos} uso${s.usos !== 1 ? 's' : ''}
+      </div>
+    </div>
+    <button class="btn-sm" onclick="_cierreState.solucionId=null;document.getElementById('cierre-sol-elegida').style.display='none'" title="Quitar">✕</button>
+  `;
+}
+
+// Confirma el cierre: valida tiempo, cierra el pendiente y crea la consulta
+async function confirmarCierrePendiente() {
+  if (!_cierreState) return;
+
+  const tiempoVal = document.getElementById('cierre-tiempo')?.value;
+  const tiempo = parseFloat(tiempoVal);
+  if (!tiempoVal || isNaN(tiempo) || tiempo <= 0) {
+    alert('El tiempo de resolución es obligatorio. Ingresá cuántas horas te llevó (ej: 0.5, 1, 2.5).');
+    document.getElementById('cierre-tiempo')?.focus();
+    return;
+  }
+
+  const { p, btn, solucionId } = _cierreState;
+  cancelarCierrePendiente();
+
+  // 1. Marcar pendiente como resuelto
+  await cerrarPendienteEjecutar(p.id, btn);
+
+  // 2. Sumar uso a la solución si eligió una
+  if (solucionId && typeof incrementarUsoSolucion === 'function') {
+    incrementarUsoSolucion(solucionId).catch(e => console.warn('No se pudo sumar uso', e));
+  }
+
+  // 3. Crear consulta para alimentar las métricas
+  await crearConsultaDesdePendiente(p, tiempo, solucionId);
+}
+
+// Crea un registro en la tabla consultas a partir de un pendiente cerrado.
+// Esto alimenta las métricas del panel (gráficos, score de cliente, etc.).
+async function crearConsultaDesdePendiente(p, tiempo, solucionId) {
+  const asesor     = (typeof currentMember !== 'undefined' && currentMember) ? currentMember.nombre : 'Equipo';
+  const clienteObj = (typeof clientes !== 'undefined') ? clientes.find(c => c.nombre === p.cliente) : null;
+
+  // Mapear categoria del pendiente a categoria de consulta
+  const categoria = (typeof CATS !== 'undefined' && p.categoriaLabel && CATS[p.categoriaLabel])
+    ? p.categoriaLabel
+    : ({ bug: 'errores', comercial: 'fuera', soporte: 'fuera' }[p.tipoPendiente] || 'fuera');
+
+  try {
+    const inserted = await dbInsert('consultas', {
+      cliente_id:        clienteObj?.id || null,
+      cliente_nombre:    p.cliente,
+      asesor,
+      categoria,
+      subtema:           'Seguimiento',
+      repetida:          false,
+      descripcion:       p.descripcion || null,
+      tiempo_resolucion: tiempo,
+      solucion_id:       solucionId || null
+    });
+
+    // Agregar al array global para que los gráficos se actualicen sin esperar el realtime
+    if (typeof consultas !== 'undefined') {
+      consultas.unshift({
+        id:          inserted.id,
+        cliente:     p.cliente,
+        asesor,
+        categoria,
+        subtema:     'Seguimiento',
+        repetida:    'no',
+        descripcion: p.descripcion || null,
+        solucionId:  solucionId || null,
+        timestamp:   inserted.created_at || new Date().toISOString()
+      });
+    }
+
+    if (typeof refreshPanelMetrics  === 'function') refreshPanelMetrics();
+    if (typeof renderClientes       === 'function') renderClientes();
+    if (typeof recalcularScoreCliente === 'function') recalcularScoreCliente(p.cliente);
+
+  } catch (e) {
+    console.error('Error creando consulta desde pendiente', e);
+    // No alertar: el pendiente ya se cerró correctamente, esto es secundario
+  }
+}
+
+// Helper de escape para este módulo
+function escapeHtmlPend(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // La logica real de cierre. Devuelve una Promise para encadenar el incremento.
@@ -500,6 +725,7 @@ async function cerrarPendienteEjecutar(id, btn) {
 
     pendientes = pendientes.filter(p => p.id !== id);
     delete notasByPendiente[id];
+    pendientesCerradosMes++;
     setTimeout(() => { renderPendientes(); }, 800);
     updatePendCount();
     toast('Pendiente cerrado correctamente');
@@ -767,6 +993,7 @@ function updatePendCount() {
   const myCount = me ? pendientes.filter(p => p.asesor === me).length : 0;
   const total   = pendientes.length;
 
+  // Badge del sidebar y filtros
   const navBadge = document.getElementById('pend-nav-badge');
   if (navBadge) navBadge.textContent = myCount;
 
@@ -777,6 +1004,37 @@ function updatePendCount() {
   const equipoCount = document.getElementById('pend-equipo-count');
   if (misCount)    misCount.textContent    = myCount;
   if (equipoCount) equipoCount.textContent = total;
+
+  // ── Más antiguo (sobre TODOS los pendientes activos, no solo los del filtro) ──
+  const valEl = document.getElementById('pend-mas-antiguo-val');
+  const subEl = document.getElementById('pend-mas-antiguo-sub');
+  if (valEl && subEl) {
+    if (pendientes.length === 0) {
+      valEl.textContent = '—';
+      valEl.style.color = 'var(--text3)';
+      subEl.textContent = 'Sin pendientes activos';
+    } else {
+      // Ordenar por createdAt ascendente para encontrar el más viejo
+      const masAntiguo = pendientes.slice().sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))[0];
+      const dias = diasDesde(masAntiguo.createdAt);
+      if (dias === 0) {
+        valEl.textContent = 'Hoy';
+        valEl.style.color = 'var(--amber)';
+      } else {
+        valEl.textContent = dias === 1 ? '1 día' : dias + ' días';
+        valEl.style.color = dias >= 3 ? 'var(--red)' : 'var(--amber)';
+      }
+      // Subtítulo: cliente + inicio de descripción
+      const desc = masAntiguo.descripcion
+        ? masAntiguo.descripcion.substring(0, 40) + (masAntiguo.descripcion.length > 40 ? '…' : '')
+        : '';
+      subEl.textContent = masAntiguo.cliente + (desc ? ' — ' + desc : '');
+    }
+  }
+
+  // ── Cerrados este mes ──
+  const cerradosEl = document.getElementById('pend-cerrados-mes');
+  if (cerradosEl) cerradosEl.textContent = pendientesCerradosMes;
 }
 
 

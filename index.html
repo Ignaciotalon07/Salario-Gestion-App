@@ -426,7 +426,7 @@
             <div class="page-header">
               <div>
                 <div class="page-title">Panel general</div>
-                <div class="page-sub">Mayo 2026 — datos en tiempo real</div>
+                <div class="page-sub" id="panel-page-sub">Mayo 2026 — datos en tiempo real</div>
               </div>
               <button
                 class="btn-primary"
@@ -444,25 +444,23 @@
             <div class="metrics-grid">
               <div class="metric-card">
                 <div class="metric-label">Clientes activos</div>
-                <div class="metric-value" style="color: var(--accent)">214</div>
-                <div class="metric-sub">8 en implementación</div>
+                <div class="metric-value" style="color: var(--accent)" id="metric-clientes-activos">0</div>
+                <div class="metric-sub" id="metric-clientes-impl">0 en implementación</div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">Consultas este mes</div>
-                <div class="metric-value">47</div>
-                <div class="metric-sub trend-dn">+12 vs mes anterior</div>
+                <div class="metric-value" id="metric-consultas-mes">0</div>
+                <div class="metric-sub" id="metric-consultas-sub">Sin consultas este mes</div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">% consultas repetidas</div>
-                <div class="metric-value" style="color: var(--red)">34%</div>
+                <div class="metric-value" style="color: var(--red)" id="metric-rep-pct">0%</div>
                 <div class="metric-sub">Meta: &lt; 20%</div>
               </div>
               <div class="metric-card">
-                <div class="metric-label">Tiempo prom. resolución</div>
-                <div class="metric-value" style="color: var(--blue)">
-                  2.4 hs
-                </div>
-                <div class="metric-sub trend-up">Mejor que abril</div>
+                <div class="metric-label">Consultas este año</div>
+                <div class="metric-value" style="color: var(--blue)" id="metric-consultas-anio">0</div>
+                <div class="metric-sub" id="metric-consultas-anio-sub">Acumulado 2026</div>
               </div>
             </div>
 
@@ -480,26 +478,28 @@
                   <div style="text-align: center">
                     <div
                       class="score-ring"
+                      id="ring-aut-baja"
                       style="
                         background: var(--red-bg);
                         color: var(--red-text);
                         margin: 0 auto 4px;
                       "
                     >
-                      38%
+                      0%
                     </div>
                     <div style="font-size: 11px; color: var(--text3)">Baja</div>
                   </div>
                   <div style="text-align: center">
                     <div
                       class="score-ring"
+                      id="ring-aut-media"
                       style="
                         background: var(--amber-bg);
                         color: var(--amber-text);
                         margin: 0 auto 4px;
                       "
                     >
-                      44%
+                      0%
                     </div>
                     <div style="font-size: 11px; color: var(--text3)">
                       Media
@@ -508,47 +508,51 @@
                   <div style="text-align: center">
                     <div
                       class="score-ring"
+                      id="ring-aut-alta"
                       style="
                         background: var(--green-bg);
                         color: var(--green-text);
                         margin: 0 auto 4px;
                       "
                     >
-                      18%
+                      0%
                     </div>
                     <div style="font-size: 11px; color: var(--text3)">Alta</div>
                   </div>
                 </div>
                 <div class="bar-wrap">
                   <div class="bar-label">
-                    <span>Baja autonomía</span><span>81 clientes</span>
+                    <span>Baja autonomía</span><span id="bar-aut-baja-count">0 clientes</span>
                   </div>
                   <div class="bar-track">
                     <div
+                      id="bar-aut-baja-fill"
                       class="bar-fill"
-                      style="width: 38%; background: var(--red)"
+                      style="width: 0%; background: var(--red)"
                     ></div>
                   </div>
                 </div>
                 <div class="bar-wrap">
                   <div class="bar-label">
-                    <span>Media autonomía</span><span>94 clientes</span>
+                    <span>Media autonomía</span><span id="bar-aut-media-count">0 clientes</span>
                   </div>
                   <div class="bar-track">
                     <div
+                      id="bar-aut-media-fill"
                       class="bar-fill"
-                      style="width: 44%; background: var(--amber)"
+                      style="width: 0%; background: var(--amber)"
                     ></div>
                   </div>
                 </div>
                 <div class="bar-wrap">
                   <div class="bar-label">
-                    <span>Alta autonomía</span><span>39 clientes</span>
+                    <span>Alta autonomía</span><span id="bar-aut-alta-count">0 clientes</span>
                   </div>
                   <div class="bar-track">
                     <div
+                      id="bar-aut-alta-fill"
                       class="bar-fill"
-                      style="width: 18%; background: var(--green)"
+                      style="width: 0%; background: var(--green)"
                     ></div>
                   </div>
                 </div>
@@ -558,56 +562,61 @@
                 <div class="card-title">Consultas por categoría</div>
                 <div class="bar-wrap">
                   <div class="bar-label">
-                    <span>Liquidación de sueldos</span><span>22</span>
+                    <span>Liquidación de sueldos</span><span id="cat-count-liquidacion">0</span>
                   </div>
                   <div class="bar-track">
                     <div
+                      id="cat-fill-liquidacion"
                       class="bar-fill"
-                      style="width: 72%; background: var(--accent)"
+                      style="width: 0%; background: var(--accent)"
                     ></div>
                   </div>
                 </div>
                 <div class="bar-wrap">
                   <div class="bar-label">
-                    <span>Errores del sistema</span><span>11</span>
+                    <span>Errores del sistema</span><span id="cat-count-errores">0</span>
                   </div>
                   <div class="bar-track">
                     <div
+                      id="cat-fill-errores"
                       class="bar-fill"
-                      style="width: 36%; background: var(--blue)"
+                      style="width: 0%; background: var(--blue)"
                     ></div>
                   </div>
                 </div>
                 <div class="bar-wrap">
                   <div class="bar-label">
-                    <span>Configuración</span><span>8</span>
+                    <span>Configuración</span><span id="cat-count-configuracion">0</span>
                   </div>
                   <div class="bar-track">
                     <div
+                      id="cat-fill-configuracion"
                       class="bar-fill"
-                      style="width: 26%; background: var(--green)"
+                      style="width: 0%; background: var(--green)"
                     ></div>
                   </div>
                 </div>
                 <div class="bar-wrap">
                   <div class="bar-label">
-                    <span>Actualizaciones</span><span>4</span>
+                    <span>Actualizaciones</span><span id="cat-count-actualizaciones">0</span>
                   </div>
                   <div class="bar-track">
                     <div
+                      id="cat-fill-actualizaciones"
                       class="bar-fill"
-                      style="width: 13%; background: var(--amber)"
+                      style="width: 0%; background: var(--amber)"
                     ></div>
                   </div>
                 </div>
                 <div class="bar-wrap">
                   <div class="bar-label">
-                    <span>Fuera del sistema</span><span>2</span>
+                    <span>Fuera del sistema</span><span id="cat-count-fuera">0</span>
                   </div>
                   <div class="bar-track">
                     <div
+                      id="cat-fill-fuera"
                       class="bar-fill"
-                      style="width: 7%; background: var(--red)"
+                      style="width: 0%; background: var(--red)"
                     ></div>
                   </div>
                 </div>
@@ -725,109 +734,10 @@
                       <th style="width: 9%"></th>
                     </tr>
                   </thead>
-                  <tbody>
-                    <tr onclick="goClienteDetail('nina')">
-                      <td style="font-weight: 500">
-                        Nina
-                        <span
-                          class="tipo-tag tipo-empresa"
-                          style="font-size: 9px"
-                          >Empresa</span
-                        >
-                      </td>
-                      <td><span class="badge b-red">8/10</span></td>
-                      <td style="color: var(--red)">44%</td>
-                      <td><span class="badge b-red">Baja</span></td>
-                      <td style="color: var(--red)">50%</td>
-                      <td><span class="badge b-gray">Soporte</span></td>
-                      <td>
-                        <button
-                          class="btn-sm"
-                          onclick="
-                            event.stopPropagation();
-                            goClienteDetail('nina');
-                          "
-                        >
-                          Ver
-                        </button>
-                      </td>
-                    </tr>
-                    <tr onclick="goClienteDetail('noetinger')">
-                      <td style="font-weight: 500">
-                        Noetinger
-                        <span
-                          class="tipo-tag tipo-municipalidad"
-                          style="font-size: 9px"
-                          >Mun.</span
-                        >
-                      </td>
-                      <td><span class="badge b-red">7/10</span></td>
-                      <td style="color: var(--amber)">—</td>
-                      <td><span class="badge b-red">Baja</span></td>
-                      <td style="color: var(--amber)">27%</td>
-                      <td><span class="badge b-blue">Impl.</span></td>
-                      <td>
-                        <button
-                          class="btn-sm"
-                          onclick="
-                            event.stopPropagation();
-                            goClienteDetail('noetinger');
-                          "
-                        >
-                          Ver
-                        </button>
-                      </td>
-                    </tr>
-                    <tr onclick="goClienteDetail('marktwain')">
-                      <td style="font-weight: 500">
-                        Mark Twain
-                        <span
-                          class="tipo-tag tipo-colegio"
-                          style="font-size: 9px"
-                          >Colegio</span
-                        >
-                      </td>
-                      <td><span class="badge b-amber">6/10</span></td>
-                      <td style="color: var(--amber)">—</td>
-                      <td><span class="badge b-amber">Baja</span></td>
-                      <td style="color: var(--amber)">20%</td>
-                      <td><span class="badge b-blue">Impl.</span></td>
-                      <td>
-                        <button
-                          class="btn-sm"
-                          onclick="
-                            event.stopPropagation();
-                            goClienteDetail('marktwain');
-                          "
-                        >
-                          Ver
-                        </button>
-                      </td>
-                    </tr>
-                    <tr onclick="goClienteDetail('m3')">
-                      <td style="font-weight: 500">
-                        m3
-                        <span
-                          class="tipo-tag tipo-empresa"
-                          style="font-size: 9px"
-                          >Empresa</span
-                        >
-                      </td>
-                      <td><span class="badge b-green">2/10</span></td>
-                      <td style="color: var(--green)">0%</td>
-                      <td><span class="badge b-green">Alta</span></td>
-                      <td style="color: var(--green)">95%</td>
-                      <td><span class="badge b-gray">Soporte</span></td>
-                      <td>
-                        <button
-                          class="btn-sm"
-                          onclick="
-                            event.stopPropagation();
-                            goClienteDetail('m3');
-                          "
-                        >
-                          Ver
-                        </button>
+                  <tbody id="score-riesgo-tbody">
+                    <tr>
+                      <td colspan="7" style="text-align:center;color:var(--text3);padding:20px">
+                        Cargando clientes...
                       </td>
                     </tr>
                   </tbody>
@@ -843,7 +753,7 @@
             <div class="page-header">
               <div>
                 <div class="page-title">Clientes</div>
-                <div class="page-sub">214 clientes activos</div>
+                <div class="page-sub" id="clientes-page-sub">0 clientes activos</div>
               </div>
               <div class="btn-row">
                 <button
@@ -1047,7 +957,7 @@
                   style="color: var(--amber)"
                   id="pend-count"
                 >
-                  3
+                  0
                 </div>
               </div>
               <div class="metric-card">
@@ -1055,14 +965,15 @@
                 <div
                   class="metric-value"
                   style="font-size: 16px; color: var(--red)"
+                  id="pend-mas-antiguo-val"
                 >
                   2 días
                 </div>
-                <div class="metric-sub">Nina — error liquidación</div>
+                <div class="metric-sub" id="pend-mas-antiguo-sub">—</div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">Cerrados este mes</div>
-                <div class="metric-value" style="color: var(--green)">12</div>
+                <div class="metric-value" style="color: var(--green)" id="pend-cerrados-mes">0</div>
               </div>
             </div>
 
@@ -1179,7 +1090,16 @@
                   ></textarea>
                 </div>
               </div>
-              <div style="display: flex; gap: 10px">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 0 2px;border-top:1px solid var(--border);margin-top:4px">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:13px;color:var(--text2)">
+                  <input type="checkbox" id="pf-interno" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)" />
+                  <span>
+                    <strong style="color:var(--text)">Pendiente interno</strong>
+                    — no contabiliza métricas de clientes
+                  </span>
+                </label>
+              </div>
+              <div style="display: flex; gap: 10px; margin-top:12px">
                 <button class="btn-primary" onclick="guardarPendiente()">
                   Guardar pendiente
                 </button>
@@ -1346,7 +1266,7 @@
                 </div>
                 <div class="form-group">
                   <label class="fl">¿Quedó resuelto?</label>
-                  <select>
+                  <select id="r-resuelto">
                     <option>Sí, confirmado por el cliente</option>
                     <option>Parcialmente</option>
                     <option>No resuelto / derivado</option>
@@ -1356,11 +1276,11 @@
               <div class="form-row">
                 <div class="form-group">
                   <label class="fl">Tiempo de resolución (hs)</label>
-                  <input type="number" placeholder="Ej: 1.5" step="0.5" />
+                  <input id="r-tiempo" type="number" placeholder="Ej: 1.5" step="0.5" />
                 </div>
                 <div class="form-group">
                   <label class="fl">Material enviado</label>
-                  <select>
+                  <select id="r-material">
                     <option>Ninguno</option>
                     <option>Video</option>
                     <option>PDF / imagen</option>
@@ -1371,7 +1291,7 @@
               <div class="form-row">
                 <div class="form-group">
                   <label class="fl">Autonomía percibida</label>
-                  <select>
+                  <select id="r-autonomia">
                     <option>Baja — necesitó mucha guía</option>
                     <option>Media — siguió con ayuda</option>
                     <option>Alta — casi lo resolvió solo</option>
@@ -1379,7 +1299,7 @@
                 </div>
                 <div class="form-group">
                   <label class="fl">¿Se conectó remotamente?</label>
-                  <select>
+                  <select id="r-remota">
                     <option>Sí, conexión remota</option>
                     <option>No, solo por chat</option>
                     <option>Llamada de voz</option>
@@ -1443,6 +1363,13 @@ Paso 3: Se reprocesó la liquidación..."
                 <button class="btn-secondary">Guardar y registrar otra</button>
               </div>
             </div>
+          </div>
+
+          <!-- ════════════════════════════════════
+         DETALLE DE CLIENTE — render dinámico desde js/cliente-detalle.js
+    ════════════════════════════════════ -->
+          <div id="cliente-detalle" class="page">
+            <!-- Contenido generado dinámicamente por renderDetalleCliente() -->
           </div>
 
           <!-- ════════════════════════════════════
@@ -2386,6 +2313,7 @@ Paso 2: ..."
     <script src="js/consultas.js"></script>
     <script src="js/kb.js"></script>
     <script src="js/implementacion.js"></script>
+    <script src="js/cliente-detalle.js"></script>
     <script src="js/charts.js"></script>
   </body>
 </html>

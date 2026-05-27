@@ -1,37 +1,91 @@
-// REGISTRAR CONSULTA
-// Formulario que se completa despues de cada atencion por WhatsApp/Whaticket.
-// Por ahora persiste en localStorage; mas adelante se migrara a Supabase.
+// REGISTRAR CONSULTA (Supabase)
+// Formulario que se completa después de cada atención por WhatsApp/Whaticket.
+// Las consultas se guardan en la tabla 'consultas' de Supabase y se sincronizan
+// en tiempo real entre todo el equipo.
 //
-// Cuando el asesor selecciona una solucion de la base, al guardar se le suma
-// 1 al contador de usos de esa solucion. Este es el camino "real" para que
-// las metricas de la base de conocimiento reflejen el uso efectivo.
+// Cuando el asesor selecciona una solución de la base, al guardar se le suma
+// 1 al contador de usos de esa solución.
 
-let consultaSolucionId = null; // id de la solucion de la base elegida (si la hay)
+// ── Array global de consultas (cargado al init, sincronizado via realtime) ──
+let consultas = [];
 
-// El asesor que registra una consulta SIEMPRE es el usuario logueado.
-// El campo no se muestra en el form (se quito de index.html). El guardado
-// toma el nombre directamente de currentMember (ver guardarConsulta).
+let consultaSolucionId = null; // id de la solución de la base elegida (si la hay)
+
+// ────────── Mapeo DB <-> UI ──────────
+
+function dbRowToConsulta(row) {
+  return {
+    id:          row.id,
+    cliente:     row.cliente_nombre,          // la DB guarda cliente_nombre
+    asesor:      row.asesor,
+    categoria:   row.categoria,
+    subtema:     row.subtema,
+    repetida:    row.repetida ? 'si' : 'no',  // la DB usa boolean, la UI usa 'si'/'no'
+    descripcion: row.descripcion,
+    solucionId:  row.solucion_id,
+    timestamp:   row.created_at
+  };
+}
+
+// ────────── Init ──────────
+
+async function initConsultas() {
+  try {
+    // Cargar todas las consultas (para métricas históricas)
+    const rows = await dbList('consultas', { orderBy: 'created_at', ascending: false });
+    consultas = rows.map(dbRowToConsulta);
+    // Refrescar métricas del panel con los datos reales
+    if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
+    suscribirConsultas();
+  } catch (e) {
+    console.error('Error cargando consultas', e);
+  }
+}
+
+// ────────── Realtime ──────────
+
+let _consultasChannel = null;
+function suscribirConsultas() {
+  if (_consultasChannel) return;
+  _consultasChannel = sb()
+    .channel('consultas-realtime')
+    .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'consultas' },
+        (payload) => {
+          // Sacar entradas temporales del mismo cliente y reemplazar con el dato real
+          consultas = consultas.filter(c => !c.id.toString().startsWith('_temp_'));
+          if (!consultas.find(c => c.id === payload.new.id)) {
+            consultas.unshift(dbRowToConsulta(payload.new));
+            if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
+            // Re-render cards de clientes para actualizar stats (consultas/mes, % repetidas)
+            if (typeof renderClientes === 'function') renderClientes();
+          }
+        })
+    .subscribe();
+}
+
+// ────────── Form: subtemas ──────────
 
 function updateRegSubtemas() {
   const cat = document.getElementById('r-cat').value;
   const sel = document.getElementById('r-sub');
   sel.innerHTML = cat
     ? CATS[cat].sub.map(s => `<option>${s}</option>`).join('')
-    : '<option>Primero elegi categoria</option>';
+    : '<option>Primero elegí categoría</option>';
 }
 
-// Abre el modal de "que solucion usaste" para vincular a la consulta.
-// Reutiliza el mismo modal que pendientes.
+// ────────── Modal de solución ──────────
+
+// Abre el modal de "qué solución usaste" para vincular a la consulta.
 function elegirSolucionConsulta() {
   const cliente = (document.getElementById('r-cliente') || {}).value || '';
-  // Si la app todavia no cargo el array de soluciones, avisar
   if (!Array.isArray(soluciones) || soluciones.length === 0) {
     alert('La base de soluciones todavía está cargando. Esperá unos segundos y volvé a intentarlo.');
     return;
   }
   abrirModalSolucionUsada({
     cliente,
-    contextoDescripcion: '', // sin contexto especifico para "documentar nueva"
+    contextoDescripcion: '',
     mostrarDocumentar: true,
     tituloModal: '¿Qué solución aplicaste?',
     subtituloModal: `Si la solución viene de la base, elegila para sumar 1 al contador. ${cliente ? 'Cliente: <strong>' + escapeHtmlConsulta(cliente) + '</strong>' : ''}`,
@@ -40,11 +94,9 @@ function elegirSolucionConsulta() {
         consultaSolucionId = solucionId;
         renderSolucionElegida();
       } else if (accion === 'documentar-nueva') {
-        // El modal ya se encargo de navegar a la KB; limpiamos la seleccion
         consultaSolucionId = null;
         renderSolucionElegida();
       }
-      // Si fue "salto" no hacemos nada, queda como estaba
     }
   });
 }
@@ -55,14 +107,13 @@ function quitarSolucionConsulta() {
 }
 
 function renderSolucionElegida() {
-  const cont = document.getElementById('r-sol-elegida');
+  const cont     = document.getElementById('r-sol-elegida');
   const solGroup = document.getElementById('r-sol-group');
   if (!cont) return;
 
   if (!consultaSolucionId) {
     cont.innerHTML = '';
     cont.style.display = 'none';
-    // Mostrar el campo "Solucion aplicada" porque es obligatorio en este caso
     if (solGroup) solGroup.style.display = '';
     return;
   }
@@ -89,46 +140,44 @@ function renderSolucionElegida() {
     <button type="button" class="btn-sm" onclick="quitarSolucionConsulta()" title="Quitar la solución vinculada">✕ Quitar</button>
   `;
 
-  // Ocultar el campo "Solucion aplicada" — ya tenemos solucion de la base
+  // Ocultar el textarea de solución — ya tenemos una de la base
   if (solGroup) {
     solGroup.style.display = 'none';
-    // Limpiamos el textarea para no mandar datos que no se van a usar
     const ta = document.getElementById('r-sol');
     if (ta) ta.value = '';
   }
 }
 
+// ────────── Guardar consulta ──────────
+
 async function guardarConsulta() {
-  const cliente   = (document.getElementById('r-cliente') || {}).value || '';
-  const cat       = (document.getElementById('r-cat')     || {}).value || '';
-  const subtema   = (document.getElementById('r-sub')     || {}).value || '';
-  const repetida  = (document.getElementById('r-rep')     || {}).value || '';
-  const desc      = ((document.getElementById('r-desc')   || {}).value || '').trim();
-  const solucion  = ((document.getElementById('r-sol')    || {}).value || '').trim();
+  const cliente  = (document.getElementById('r-cliente') || {}).value || '';
+  const cat      = (document.getElementById('r-cat')     || {}).value || '';
+  const subtema  = (document.getElementById('r-sub')     || {}).value || '';
+  const repetida = (document.getElementById('r-rep')     || {}).value || 'no';
+  const desc     = ((document.getElementById('r-desc')   || {}).value || '').trim();
+  const solucion = ((document.getElementById('r-sol')    || {}).value || '').trim();
 
-  // ────────── Validaciones basicas (siempre obligatorias) ──────────
-  if (!cliente)               { alert('Elegí un cliente.'); return; }
-  if (!cat)                   { alert('Elegí una categoría.');  document.getElementById('r-cat').focus(); return; }
-  if (!subtema || subtema.toLowerCase().includes('primero'))
-                              { alert('Elegí un subtema.');     document.getElementById('r-sub').focus(); return; }
+  // ── Validaciones ──
+  if (!cliente) { alert('Elegí un cliente.'); return; }
+  if (!cat)     { alert('Elegí una categoría.'); document.getElementById('r-cat').focus(); return; }
+  if (!subtema || subtema.toLowerCase().includes('primero')) {
+    alert('Elegí un subtema.'); document.getElementById('r-sub').focus(); return;
+  }
 
-  // ────────── Logica de solucion ──────────
-  // Caso A: vinculada a la base. Sumamos uso, ignoramos textarea.
-  // Caso B: no vinculada. Necesitamos descripcion + solucion para crear nueva entry en la base.
-
-  let nuevaSolucionId = null; // si creamos una nueva, su id
+  // ── Lógica de solución ──
+  // Caso A: ya hay solución de la base → incrementar uso, no necesitamos texto.
+  // Caso B: no hay solución → crear una nueva en la base con desc + pasos.
+  let nuevaSolucionId = null;
 
   if (consultaSolucionId) {
-    // Caso A: ya hay solucion de la base elegida
+    // Caso A
     if (typeof incrementarUsoSolucion === 'function') {
-      try {
-        await incrementarUsoSolucion(consultaSolucionId);
-      } catch (e) {
-        console.warn('No se pudo sumar uso a la solucion', e);
-      }
+      try { await incrementarUsoSolucion(consultaSolucionId); }
+      catch (e) { console.warn('No se pudo sumar uso a la solución', e); }
     }
   } else {
-    // Caso B: hay que crear nueva solucion en la base
+    // Caso B: obligatorio descripción + solución para crear nueva entry
     if (!desc) {
       alert('Como no elegiste solución de la base, escribí la descripción del problema (será el título de la nueva solución).');
       const el = document.getElementById('r-desc'); if (el) el.focus();
@@ -149,65 +198,174 @@ async function guardarConsulta() {
       return;
     }
 
-    const autor = (typeof currentMember !== 'undefined' && currentMember) ? currentMember.nombre : 'Equipo';
+    const autor         = (typeof currentMember !== 'undefined' && currentMember) ? currentMember.nombre : 'Equipo';
     const tituloSolucion = desc.length > 200 ? desc.substring(0, 197) + '...' : desc;
 
     try {
       const inserted = await dbInsert('soluciones', {
         titulo:   tituloSolucion,
-        cat:      cat,
+        cat,
         sub:      subtema,
-        pasos:    pasos,
+        pasos,
         material: 'Sin material',
         aplica:   'Todos',
-        autor:    autor,
-        usos:     1   // ya cuenta esta primera aplicacion
+        autor,
+        usos:     1
       });
       nuevaSolucionId = inserted.id;
-      // El realtime de kb.js va a refrescar el array global automaticamente
     } catch (e) {
-      console.error('Error creando solucion', e);
+      console.error('Error creando solución', e);
       alert('No se pudo guardar la solución en la base: ' + e.message + '\n\nLa consulta tampoco se guardó. Probá de nuevo.');
       return;
     }
   }
 
-  // ────────── Persistencia de la consulta (localStorage por ahora) ──────────
-  // El asesor SIEMPRE es el usuario logueado, no se lee del DOM
+  // ── Persistencia en Supabase ──
   const asesor = (typeof currentMember !== 'undefined' && currentMember) ? currentMember.nombre : 'Equipo';
-  const consultas = storageLoad(STORAGE_KEYS.CONSULTAS, []);
-  consultas.push({
-    id:          Date.now(),
-    cliente,
-    asesor,
-    categoria:   cat,
-    subtema,
-    repetida,
-    descripcion: desc,
-    solucion:    solucion,
-    solucion_id: consultaSolucionId || nuevaSolucionId || null,
-    timestamp:   new Date().toISOString()
-  });
-  storageSave(STORAGE_KEYS.CONSULTAS, consultas);
 
-  // ────────── Reset del form ──────────
-  consultaSolucionId = null;
-  renderSolucionElegida();
-  if (document.getElementById('r-desc')) document.getElementById('r-desc').value = '';
-  if (document.getElementById('r-sol'))  document.getElementById('r-sol').value  = '';
+  // Buscar el cliente_id desde el array global (para respetar la FK)
+  const clienteObj = (typeof clientes !== 'undefined')
+    ? clientes.find(c => c.nombre === cliente)
+    : null;
+
+  try {
+    await dbInsert('consultas', {
+      cliente_id:   clienteObj ? clienteObj.id : null,
+      cliente_nombre: cliente,
+      asesor,
+      categoria:    cat,
+      subtema,
+      repetida:     repetida === 'si',   // la DB espera boolean
+      descripcion:  desc || null,
+      solucion_id:  consultaSolucionId || nuevaSolucionId || null
+    });
+    // Agregar al array local inmediatamente para que refreshPanelMetrics
+    // y recalcularScoreCliente lean el dato recién guardado sin esperar el realtime
+    consultas.unshift({
+      id:          '_temp_' + Date.now(),
+      cliente,
+      asesor,
+      categoria:   cat,
+      subtema,
+      repetida:    repetida === 'si' ? 'si' : 'no',
+      descripcion: desc || null,
+      solucionId:  consultaSolucionId || nuevaSolucionId || null,
+      timestamp:   new Date().toISOString()
+    });
+
+    if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
+    // Recalcular el score del cliente con la nueva consulta incluida
+    await recalcularScoreCliente(cliente);
+  } catch (e) {
+    console.error('Error guardando consulta', e);
+    alert('No se pudo guardar la consulta: ' + e.message);
+    return;
+  }
+
+  // ── Reset completo del form ──
+  resetFormConsulta();
 
   const ok = document.getElementById('reg-ok');
   if (ok) {
     ok.style.display = 'flex';
-    if (nuevaSolucionId) {
-      ok.innerHTML = '<strong>Consulta guardada.</strong>Se agregó una nueva solución a la base de conocimiento.';
-    } else {
-      ok.innerHTML = '<strong>Consulta guardada.</strong>Se sumó 1 al contador de la solución vinculada.';
-    }
+    ok.innerHTML = nuevaSolucionId
+      ? '<strong>Consulta guardada.</strong>&nbsp;Se agregó una nueva solución a la base de conocimiento.'
+      : '<strong>Consulta guardada.</strong>&nbsp;Se sumó 1 al contador de la solución vinculada.';
     setTimeout(() => ok.style.display = 'none', 4000);
   }
   toast(nuevaSolucionId ? 'Consulta guardada y nueva solución agregada a la base' : 'Consulta guardada correctamente');
 }
+
+// ────────── Cálculo de score de riesgo ──────────
+//
+// Score 0-10: cuanto más alto, mejor cliente.
+//   - Adopción (0-4 pts):      adopcion% / 100 * 4
+//   - Autonomía (0-3 pts):     alta=3, media=1.5, baja=0
+//   - No repetición (0-3 pts): (1 - pct_repetidas) * 3
+//                               si no hay consultas aún → 1.5 (neutral)
+//
+// Se recalcula y guarda en Supabase cada vez que se registra una consulta.
+
+async function recalcularScoreCliente(nombreCliente) {
+  // Buscar el cliente en el array global
+  const cliente = (typeof clientes !== 'undefined')
+    ? clientes.find(c => c.nombre === nombreCliente)
+    : null;
+  if (!cliente) return;
+
+  // ── Componente adopción (0-4 pts) ──
+  const adopcionPts = ((cliente.adopcion || 0) / 100) * 4;
+
+  // ── Componente autonomía (0-3 pts) ──
+  const autonomiaPts = { alta: 3, media: 1.5, baja: 0 }[cliente.autonomia] ?? 1.5;
+
+  // ── Componente no-repetición (0-3 pts) ──
+  // Usa todas las consultas históricas del cliente
+  const todasDelCliente = (typeof consultas !== 'undefined')
+    ? consultas.filter(c => c.cliente === nombreCliente)
+    : [];
+  let repPts;
+  if (todasDelCliente.length === 0) {
+    repPts = 1.5; // neutral si no hay datos todavía
+  } else {
+    const repetidas  = todasDelCliente.filter(c => c.repetida === 'si').length;
+    const pctRepetidas = repetidas / todasDelCliente.length;
+    repPts = (1 - pctRepetidas) * 3;
+  }
+
+  // ── Score final (redondeado, clampeado a 0-10) ──
+  const scoreNuevo = Math.min(10, Math.max(0, Math.round(adopcionPts + autonomiaPts + repPts)));
+
+  // Solo actualizar si cambió para no generar escrituras innecesarias
+  if (scoreNuevo === cliente.score) return;
+
+  try {
+    await dbUpdate('clientes', cliente.id, { score: scoreNuevo });
+    // Actualizar en memoria para que la tabla de score se refresque al instante
+    cliente.score = scoreNuevo;
+    if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
+  } catch (e) {
+    console.warn('No se pudo actualizar el score de', nombreCliente, e);
+  }
+}
+
+// ────────── Reset del form ──────────
+
+function resetFormConsulta() {
+  // Selects y inputs con ID
+  const ids = ['r-cliente', 'r-rep', 'r-resuelto', 'r-material', 'r-autonomia', 'r-remota'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.selectedIndex = 0;
+  });
+
+  // Categoría: resetear a "Seleccioná..." y actualizar subtemas
+  const selCat = document.getElementById('r-cat');
+  if (selCat) {
+    selCat.value = '';
+    updateRegSubtemas(); // resetea el dropdown de subtemas
+  }
+
+  // Tiempo de resolución
+  const tiempo = document.getElementById('r-tiempo');
+  if (tiempo) tiempo.value = '';
+
+  // Textareas
+  const desc = document.getElementById('r-desc');
+  if (desc) desc.value = '';
+
+  // Solución elegida de la base y su textarea
+  consultaSolucionId = null;
+  renderSolucionElegida();
+  const sol = document.getElementById('r-sol');
+  if (sol) sol.value = '';
+
+  // Asegurarse de que el grupo de solución quede visible
+  const solGroup = document.getElementById('r-sol-group');
+  if (solGroup) solGroup.style.display = '';
+}
+
+// ────────── Helpers ──────────
 
 function escapeHtmlConsulta(str) {
   if (!str) return '';
@@ -218,3 +376,5 @@ function escapeHtmlConsulta(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+
+window.addEventListener('app-ready', initConsultas);
