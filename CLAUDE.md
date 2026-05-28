@@ -187,8 +187,7 @@ Cuando el usuario te pida cambios:
 - **Form adaptativo de cliente**: el form de "Nuevo cliente" sigue
   pidiendo autonomía y nota inicial aunque el área sea Implementación.
   Está en discusión si vale la pena hacerlo adaptativo.
-- **Consultas no migradas a Supabase**: el form de "Registrar consulta"
-  todavía persiste a localStorage (no se sincroniza entre equipo).
+- ~~**Consultas no migradas a Supabase**~~: ya migradas. `consultas.js` guarda en la tabla `consultas` de Supabase y sincroniza via realtime.
 
 ## Configuración local para correr
 

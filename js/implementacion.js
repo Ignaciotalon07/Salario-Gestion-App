@@ -479,6 +479,8 @@ async function initImplementacion() {
 
     renderImplementacion();
     suscribirImplementacion();
+    // Recalcular alertas con las tareas recién cargadas
+    if (typeof refreshAlertas === 'function') refreshAlertas();
   } catch (e) {
     console.error('Error cargando implementacion', e);
     const cont = document.getElementById('impl-clientes-list');
@@ -1552,6 +1554,8 @@ function handleImplChange(payload) {
     delete implTareaNotas[oldRow.id];
     renderImplementacion();
   }
+  // Recalcular alertas cuando cambia alguna tarea de implementación
+  if (typeof refreshAlertas === 'function') refreshAlertas();
 }
 
 function handleImplNotaChange(payload) {

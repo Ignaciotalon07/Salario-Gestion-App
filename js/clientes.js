@@ -110,6 +110,9 @@ function getStatsCliente(nombre) {
   const repetidasMes = estesMes.filter(c => c.repetida === 'si').length;
   const pctRep       = totalMes > 0 ? Math.round((repetidasMes / totalMes) * 100) : null;
 
+  // Horas consumidas este mes
+  const hsMes = estesMes.reduce((sum, c) => sum + (parseFloat(c.tiempo) || 0), 0);
+
   // Categoría más frecuente (histórico)
   const catCounts = {};
   todas.filter(c => c.cliente === nombre).forEach(c => {
@@ -120,7 +123,7 @@ function getStatsCliente(nombre) {
     ? ((typeof CATS !== 'undefined' && CATS[topCatKey]?.label) || topCatKey)
     : null;
 
-  return { totalMes, pctRep, topCatLabel };
+  return { totalMes, pctRep, topCatLabel, hsMes };
 }
 
 // ────────── Render ──────────
@@ -159,9 +162,14 @@ function renderClienteCard(c) {
   const autLabel      = { alta: 'Alta autonomia', media: 'Media autonomia', baja: 'Baja autonomia' }[c.autonomia] || '—';
 
   // Stats desde consultas
-  const { totalMes, pctRep, topCatLabel } = getStatsCliente(c.nombre);
+  const { totalMes, pctRep, topCatLabel, hsMes } = getStatsCliente(c.nombre);
   const ahora      = new Date();
   const mesLabel   = ahora.toLocaleString('es-AR', { month: 'long' });
+
+  // Texto de tiempo: "X hs este mes"
+  const fmtHs = h => h % 1 === 0 ? h + ' hs' : h.toFixed(1) + ' hs';
+  const tiempoMesTexto = hsMes > 0 ? fmtHs(hsMes) : '—';
+  const tiempoColor = hsMes >= 5 ? 'var(--red)' : hsMes >= 2 ? 'var(--amber)' : 'var(--text)';
 
   // Color % repetidas: verde=bajo, rojo=alto
   let repColor = 'var(--text3)';
@@ -202,7 +210,7 @@ function renderClienteCard(c) {
         </div>
       </div>
 
-      <!-- Stats: consultas / repetidas / top categoría -->
+      <!-- Stats: consultas / repetidas / tiempo este mes / consulta más repetida -->
       <div class="cli-card__stats">
         <div class="cli-card__stat">
           <div class="cli-card__stat-val">${totalMes}</div>
@@ -210,11 +218,15 @@ function renderClienteCard(c) {
         </div>
         <div class="cli-card__stat">
           <div class="cli-card__stat-val" style="color:${repColor}">${repTexto}</div>
-          <div class="cli-card__stat-lbl">repetidas</div>
+          <div class="cli-card__stat-lbl">% repetidas</div>
+        </div>
+        <div class="cli-card__stat">
+          <div class="cli-card__stat-val" style="color:${tiempoColor}">${tiempoMesTexto}</div>
+          <div class="cli-card__stat-lbl">hs este mes</div>
         </div>
         <div class="cli-card__stat">
           ${topCatHTML}
-          <div class="cli-card__stat-lbl">más consultado</div>
+          <div class="cli-card__stat-lbl">consulta más repetida</div>
         </div>
       </div>
 
@@ -266,7 +278,6 @@ async function guardarCliente() {
   const tipo      = document.getElementById('cf-tipo').value;
   const area      = document.getElementById('cf-area').value;
   const asesor    = document.getElementById('cf-asesor').value;
-  const autonomia = document.getElementById('cf-autonomia').value;
   const nota      = document.getElementById('cf-nota').value.trim();
   const wtRaw     = ((document.getElementById('cf-whaticket') || {}).value || '').trim();
 
@@ -289,7 +300,8 @@ async function guardarCliente() {
   const iniciales = (nombre.replace(/[^A-Za-z0-9]/g, '').substring(0, 2) || 'XX').toUpperCase();
 
   const row = {
-    nombre, tipo, area, asesor, autonomia, iniciales,
+    nombre, tipo, area, asesor, iniciales,
+    autonomia: null,   // se calcula automáticamente a partir de las consultas
     adopcion: 0, score: 0,
     nota: nota || null,
     whaticket_url

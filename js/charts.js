@@ -1,7 +1,7 @@
 // ════════════════════════════════════
 // PANEL GENERAL — Gráficos y métricas dinámicas
 //
-// refreshPanelMetrics()  → lee consultas de localStorage y actualiza
+// refreshPanelMetrics()  → lee el array global `consultas` (Supabase) y actualiza
 //                          los cards + gráficos de tendencia/cliente/asesor/categoría.
 //                          Se llama al cargar y cada vez que se guarda una consulta.
 //
@@ -169,7 +169,7 @@ function initCharts() {
   }
 }
 
-// ────────── Métricas del panel (alimentadas por consultas de localStorage) ──────────
+// ────────── Métricas del panel (alimentadas por el array global `consultas`) ──────────
 
 function refreshPanelMetrics() {
   const ahora       = new Date();
@@ -236,35 +236,63 @@ function refreshPanelMetrics() {
     chartClientesInstance.update();
   }
 
-  // ── Gráfico consultas por asesor (este mes) ──
-  if (chartEquipoInstance) {
-    const colores = ['#c0392b', '#2d6a2d', '#b45309', '#1a5fa5', '#2d2d8e', '#5f5e5a'];
-    const porAsesor = {};
-    mesActual.forEach(c => {
-      if (c.asesor) porAsesor[c.asesor] = (porAsesor[c.asesor] || 0) + 1;
+  // ── Sección equipo ──
+  refreshEquipoMetrics(mesActual);
+
+  // ── Alertas dinámicas ──
+  if (typeof refreshAlertas === 'function') refreshAlertas();
+
+  // ── Barras de consultas por categoría (top 5 dinámico) ──
+  // Las consultas de "Registrar consulta" guardan la clave corta (ej: 'liquidacion').
+  // Las de Pendientes guardan el texto visible (ej: 'Liquidación de sueldos').
+  // Normalizamos todo al label legible usando CATS, y si no hay match mostramos tal cual.
+
+  // Mapa inverso: label → label (para normalizar variantes)
+  const catLabelMap = {};
+  if (typeof CATS !== 'undefined') {
+    Object.entries(CATS).forEach(([key, cfg]) => {
+      catLabelMap[key]       = cfg.label; // 'liquidacion' → 'Liquidación de sueldos'
+      catLabelMap[cfg.label] = cfg.label; // ya está en formato legible, se pasa igual
     });
-    const sorted = Object.entries(porAsesor).sort((a, b) => b[1] - a[1]);
-    chartEquipoInstance.data.labels                          = sorted.map(e => e[0]);
-    chartEquipoInstance.data.datasets[0].data                = sorted.map(e => e[1]);
-    chartEquipoInstance.data.datasets[0].backgroundColor     = sorted.map((_, i) => colores[i % colores.length]);
-    chartEquipoInstance.update();
   }
 
-  // ── Barras de consultas por categoría ──
+  // Contar agrupando por label normalizado
   const catCounts = {};
-  Object.keys(CATS).forEach(k => { catCounts[k] = 0; });
   mesActual.forEach(c => {
-    if (c.categoria && catCounts.hasOwnProperty(c.categoria)) {
-      catCounts[c.categoria]++;
+    if (!c.categoria) return;
+    const label = catLabelMap[c.categoria] || c.categoria; // custom queda como está
+    catCounts[label] = (catCounts[label] || 0) + 1;
+  });
+
+  // Top 5 por cantidad, orden descendente
+  const top5Cats = Object.entries(catCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  // Colores en orden: accent, blue, green, amber, red
+  const CAT_COLORES = ['var(--accent)', 'var(--blue)', 'var(--green)', 'var(--amber)', 'var(--red)'];
+
+  const catContainer = document.getElementById('cat-bars-container');
+  if (catContainer) {
+    if (top5Cats.length === 0) {
+      catContainer.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px 0">Sin consultas registradas este mes.</div>';
+    } else {
+      const maxCat = top5Cats[0][1]; // el primero ya es el máximo
+      catContainer.innerHTML = top5Cats.map(([label, count], i) => {
+        const color = CAT_COLORES[i % CAT_COLORES.length];
+        const pct   = Math.round((count / maxCat) * 100);
+        return `
+          <div class="bar-wrap">
+            <div class="bar-label">
+              <span>${escapeHtmlPanel(label)}</span><span>${count}</span>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width:${pct}%;background:${color}"></div>
+            </div>
+          </div>`;
+      }).join('');
     }
-  });
-  const maxCat = Math.max(...Object.values(catCounts), 1);
-  Object.keys(CATS).forEach(k => {
-    const countEl = document.getElementById('cat-count-' + k);
-    const fillEl  = document.getElementById('cat-fill-' + k);
-    if (countEl) countEl.textContent = catCounts[k];
-    if (fillEl)  fillEl.style.width  = Math.round((catCounts[k] / maxCat) * 100) + '%';
-  });
+  }
 }
 
 // ────────── Métricas de clientes (alimentadas por el array global `clientes`) ──────────
@@ -315,6 +343,9 @@ function refreshClientMetrics() {
   if (elBajaFill)   elBajaFill.style.width   = pBaja  + '%';
   if (elMediaFill)  elMediaFill.style.width  = pMedia + '%';
   if (elAltaFill)   elAltaFill.style.width   = pAlta  + '%';
+
+  // ── Alertas dinámicas (se re-evalúan cuando cambia la lista de clientes) ──
+  if (typeof refreshAlertas === 'function') refreshAlertas();
 
   // ── Tabla de score de riesgo (top 8 clientes por score) ──
   const tbody = document.getElementById('score-riesgo-tbody');
@@ -380,6 +411,134 @@ function renderScoreRow(c) {
       <button class="btn-sm" onclick="event.stopPropagation();goClienteDetail('${c.id}')">Ver</button>
     </td>
   </tr>`;
+}
+
+// ────────── Métricas de equipo (alimentadas por consultas del mes actual) ──────────
+// Recibe el array ya filtrado por mes para no recalcular.
+
+// Los 4 asesores del equipo de soporte/implementación.
+// Se muestran siempre, incluso si no tienen consultas en el mes actual.
+const ASESORES_EQUIPO = ['Ignacio', 'Matias', 'Daniel', 'Renzo'];
+
+function refreshEquipoMetrics(mesActual) {
+  if (!mesActual) return;
+
+  const COLORES_ASESORES = ['#c0392b', '#2d6a2d', '#b45309', '#1a5fa5', '#2d2d8e', '#5f5e5a'];
+  const fmtHs = h => h % 1 === 0 ? h + ' hs' : h.toFixed(1) + ' hs';
+
+  // ── Clientes atendidos (distintos) este mes ──
+  const clientesSet = new Set(mesActual.map(c => c.cliente).filter(Boolean));
+  const elCli = document.getElementById('eq-clientes-atendidos');
+  if (elCli) elCli.textContent = clientesSet.size || '0';
+
+  // ── Hs totales equipo este mes ──
+  const hsTotales = mesActual.reduce((sum, c) => sum + (parseFloat(c.tiempo) || 0), 0);
+  const elHs = document.getElementById('eq-hs-totales');
+  if (elHs) elHs.textContent = hsTotales > 0 ? fmtHs(hsTotales) : '—';
+
+  // ── Stats por asesor: arranca con los 4 conocidos en 0 ──
+  const porAsesor = {};
+  ASESORES_EQUIPO.forEach(nombre => {
+    porAsesor[nombre] = { consultas: 0, hs: 0, cats: {}, clientes: new Set() };
+  });
+
+  // Sumar datos reales del mes
+  mesActual.forEach(c => {
+    if (!c.asesor) return;
+    // Si es un asesor conocido, usa esa entrada; si no, creala (por si hay otro)
+    if (!porAsesor[c.asesor]) {
+      porAsesor[c.asesor] = { consultas: 0, hs: 0, cats: {}, clientes: new Set() };
+    }
+    porAsesor[c.asesor].consultas++;
+    porAsesor[c.asesor].hs += parseFloat(c.tiempo) || 0;
+    if (c.categoria) {
+      porAsesor[c.asesor].cats[c.categoria] = (porAsesor[c.asesor].cats[c.categoria] || 0) + 1;
+    }
+    if (c.cliente) porAsesor[c.asesor].clientes.add(c.cliente);
+  });
+
+  // Ordenar: mayor carga primero, los que tienen 0 al final
+  const sorted = Object.entries(porAsesor).sort((a, b) => b[1].consultas - a[1].consultas);
+
+  // ── Card "Más cargado" ──
+  const elMasCarg    = document.getElementById('eq-mas-cargado');
+  const elMasCargSub = document.getElementById('eq-mas-cargado-sub');
+  if (elMasCarg) {
+    if (sorted.length > 0) {
+      const [nombre, stats] = sorted[0];
+      elMasCarg.textContent   = nombre;
+      elMasCarg.style.color   = 'var(--red)';
+      if (elMasCargSub) elMasCargSub.textContent = stats.consultas + ' consultas · ' + fmtHs(stats.hs);
+    } else {
+      elMasCarg.textContent = '—';
+      elMasCarg.style.color = 'var(--text)';
+      if (elMasCargSub) elMasCargSub.textContent = 'Sin datos este mes';
+    }
+  }
+
+  // ── Lista de asesores ──
+  const cont = document.getElementById('eq-asesores-list');
+  if (cont) {
+    if (sorted.length === 0) {
+      cont.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px 0;font-size:13px">Sin datos disponibles.</div>';
+    } else {
+      const maxConsultas = sorted[0][1].consultas || 1;
+      cont.innerHTML = sorted.map(([nombre, stats], i) => {
+        // Top categoría histórica del asesor
+        const topCatKey   = Object.entries(stats.cats).sort((a, b) => b[1] - a[1])[0]?.[0];
+        const topCatLabel = topCatKey
+          ? ((typeof CATS !== 'undefined' && CATS[topCatKey]?.label) || topCatKey)
+          : null;
+
+        const prom      = stats.consultas > 0 ? stats.hs / stats.consultas : 0;
+        const promTexto = prom > 0 ? fmtHs(prom) : null;
+        const hsTexto   = stats.hs > 0 ? fmtHs(stats.hs) : '—';
+
+        // Color de carga: rojo si es el más cargado, ámbar si está en el 60%, normal si no
+        const cargaColor = stats.consultas >= maxConsultas
+          ? 'var(--red)'
+          : stats.consultas >= maxConsultas * 0.6
+          ? 'var(--amber)'
+          : 'var(--text)';
+
+        // Avatar con color consistente por posición en el ranking
+        const color   = COLORES_ASESORES[i % COLORES_ASESORES.length];
+        const iniciales = nombre.substring(0, 2).toUpperCase();
+
+        // Sublínea: clientes atendidos + top categoría
+        const subParts = [];
+        if (stats.clientes.size > 0) subParts.push(stats.clientes.size + ' cliente' + (stats.clientes.size !== 1 ? 's' : ''));
+        if (topCatLabel) subParts.push('Top: ' + topCatLabel);
+        const subLinea = subParts.join(' · ') || '—';
+
+        // Sublínea derecha: hs + prom
+        const subDerecha = [hsTexto, promTexto ? 'prom ' + promTexto : null].filter(Boolean).join(' · ');
+
+        return `
+          <div class="asesor-row">
+            <div class="av" style="background:${color}22;color:${color};font-size:11px;font-weight:700;flex-shrink:0">
+              ${escapeHtmlPanel(iniciales)}
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:500;font-size:13px">${escapeHtmlPanel(nombre)}</div>
+              <div style="font-size:11px;color:var(--text3)">${escapeHtmlPanel(subLinea)}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:13px;font-weight:600;color:${cargaColor}">${stats.consultas} consultas</div>
+              <div style="font-size:11px;color:var(--text3)">${escapeHtmlPanel(subDerecha)}</div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+  }
+
+  // ── Gráfico por asesor ──
+  if (chartEquipoInstance) {
+    chartEquipoInstance.data.labels                      = sorted.map(([n]) => n);
+    chartEquipoInstance.data.datasets[0].data            = sorted.map(([, s]) => s.consultas);
+    chartEquipoInstance.data.datasets[0].backgroundColor = sorted.map((_, i) => COLORES_ASESORES[i % COLORES_ASESORES.length]);
+    chartEquipoInstance.update();
+  }
 }
 
 // Escape HTML básico para usar en el panel

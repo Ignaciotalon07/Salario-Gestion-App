@@ -131,6 +131,14 @@ function _renderDetalleStats(cliente, consultasDelCliente) {
   };
   const topCatLabel = topCat ? (CATS_LABELS[topCat[0]] || topCat[0]) : '—';
 
+  // Horas consumidas
+  const fmtHs = h => h % 1 === 0 ? h + ' hs' : h.toFixed(1) + ' hs';
+  const hsMes   = esMes.reduce((s, c) => s + (parseFloat(c.tiempo) || 0), 0);
+  const hsTotal = consultasDelCliente.reduce((s, c) => s + (parseFloat(c.tiempo) || 0), 0);
+  const hsMesTexto   = hsMes   > 0 ? fmtHs(hsMes)   : '—';
+  const hsTotalTexto = hsTotal > 0 ? fmtHs(hsTotal)  : '—';
+  const hsMesColor   = hsMes >= 5 ? 'var(--red)' : hsMes >= 2 ? 'var(--amber)' : 'var(--accent)';
+
   // Nombre del mes actual
   const nombreMes = ahora.toLocaleString('es-AR', { month: 'long' });
 
@@ -146,11 +154,15 @@ function _renderDetalleStats(cliente, consultasDelCliente) {
       </div>
       <div class="detalle-stat" style="${pctRep > 30 ? 'color:var(--red)' : ''}">
         <div class="detalle-stat__val">${pctRep}%</div>
-        <div class="detalle-stat__label">Consultas repetidas</div>
+        <div class="detalle-stat__label">% repetidas</div>
       </div>
       <div class="detalle-stat">
-        <div class="detalle-stat__val" style="font-size:16px">${_escHtml(topCatLabel)}</div>
-        <div class="detalle-stat__label">Categoría más frecuente</div>
+        <div class="detalle-stat__val" style="color:${hsMesColor};font-size:22px">${hsMesTexto}</div>
+        <div class="detalle-stat__label">hs este mes</div>
+      </div>
+      <div class="detalle-stat">
+        <div class="detalle-stat__val" style="font-size:22px">${hsTotalTexto}</div>
+        <div class="detalle-stat__label">hs total histórico</div>
       </div>
     </div>
   `;

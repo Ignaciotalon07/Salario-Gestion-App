@@ -23,6 +23,7 @@ function dbRowToConsulta(row) {
     repetida:    row.repetida ? 'si' : 'no',  // la DB usa boolean, la UI usa 'si'/'no'
     descripcion: row.descripcion,
     solucionId:  row.solucion_id,
+    tiempo:      row.tiempo_resolucion || null,
     timestamp:   row.created_at
   };
 }
@@ -67,11 +68,43 @@ function suscribirConsultas() {
 // ────────── Form: subtemas ──────────
 
 function updateRegSubtemas() {
-  const cat = document.getElementById('r-cat').value;
-  const sel = document.getElementById('r-sub');
-  sel.innerHTML = cat
-    ? CATS[cat].sub.map(s => `<option>${s}</option>`).join('')
-    : '<option>Primero elegí categoría</option>';
+  const cat           = document.getElementById('r-cat').value;
+  const sel           = document.getElementById('r-sub');
+  const catCustom     = document.getElementById('r-cat-custom');
+  const subCustom     = document.getElementById('r-sub-custom');
+
+  // Mostrar/ocultar input de categoría custom
+  if (catCustom) {
+    catCustom.style.display = cat === 'otro' ? 'block' : 'none';
+    if (cat !== 'otro') catCustom.value = '';
+  }
+
+  // Siempre limpiar el input de subtema custom al cambiar categoría
+  if (subCustom) { subCustom.style.display = 'none'; subCustom.value = ''; }
+
+  if (!cat) {
+    sel.innerHTML = '<option value="">Primero elegí categoría</option>';
+    return;
+  }
+
+  if (cat === 'otro') {
+    // Categoría libre → subtema también libre
+    sel.innerHTML = '<option value="otro">Otro — escribí el subtema</option>';
+    if (subCustom) subCustom.style.display = 'block';
+    return;
+  }
+
+  // Categoría conocida: llenar lista + "Otro" al final
+  sel.innerHTML = CATS[cat].sub.map(s => `<option>${s}</option>`).join('')
+    + '<option value="otro">Otro — nuevo subtema</option>';
+}
+
+function toggleRSubCustom() {
+  const subVal    = (document.getElementById('r-sub') || {}).value;
+  const subCustom = document.getElementById('r-sub-custom');
+  if (!subCustom) return;
+  subCustom.style.display = subVal === 'otro' ? 'block' : 'none';
+  if (subVal !== 'otro') subCustom.value = '';
 }
 
 // ────────── Modal de solución ──────────
@@ -151,18 +184,35 @@ function renderSolucionElegida() {
 // ────────── Guardar consulta ──────────
 
 async function guardarConsulta() {
-  const cliente  = (document.getElementById('r-cliente') || {}).value || '';
-  const cat      = (document.getElementById('r-cat')     || {}).value || '';
-  const subtema  = (document.getElementById('r-sub')     || {}).value || '';
+  const cliente    = (document.getElementById('r-cliente') || {}).value || '';
+
+  // Categoría: puede ser un valor conocido o "otro" con texto custom
+  const catSelect  = (document.getElementById('r-cat') || {}).value || '';
+  const catCustom  = ((document.getElementById('r-cat-custom') || {}).value || '').trim();
+  const cat        = catSelect === 'otro' ? catCustom : catSelect;
+
+  // Subtema: puede ser un valor conocido o "otro" con texto custom
+  const subSelect  = (document.getElementById('r-sub') || {}).value || '';
+  const subCustom  = ((document.getElementById('r-sub-custom') || {}).value || '').trim();
+  const subtema    = subSelect === 'otro' ? subCustom : subSelect;
+
   const repetida = (document.getElementById('r-rep')     || {}).value || 'no';
   const desc     = ((document.getElementById('r-desc')   || {}).value || '').trim();
   const solucion = ((document.getElementById('r-sol')    || {}).value || '').trim();
+  const tiempoRaw = (document.getElementById('r-tiempo') || {}).value || '';
+  const tiempo   = tiempoRaw ? parseFloat(tiempoRaw) : null;
 
   // ── Validaciones ──
   if (!cliente) { alert('Elegí un cliente.'); return; }
-  if (!cat)     { alert('Elegí una categoría.'); document.getElementById('r-cat').focus(); return; }
-  if (!subtema || subtema.toLowerCase().includes('primero')) {
+  if (!catSelect) { alert('Elegí una categoría.'); document.getElementById('r-cat').focus(); return; }
+  if (catSelect === 'otro' && !catCustom) {
+    alert('Escribí el nombre de la nueva categoría.'); document.getElementById('r-cat-custom').focus(); return;
+  }
+  if (!subSelect || subSelect.toLowerCase().includes('primero')) {
     alert('Elegí un subtema.'); document.getElementById('r-sub').focus(); return;
+  }
+  if (subSelect === 'otro' && !subCustom) {
+    alert('Escribí el nombre del nuevo subtema.'); document.getElementById('r-sub-custom').focus(); return;
   }
 
   // ── Lógica de solución ──
@@ -235,9 +285,10 @@ async function guardarConsulta() {
       asesor,
       categoria:    cat,
       subtema,
-      repetida:     repetida === 'si',   // la DB espera boolean
-      descripcion:  desc || null,
-      solucion_id:  consultaSolucionId || nuevaSolucionId || null
+      repetida:          repetida === 'si',   // la DB espera boolean
+      descripcion:       desc || null,
+      solucion_id:       consultaSolucionId || nuevaSolucionId || null,
+      tiempo_resolucion: (tiempo && !isNaN(tiempo) && tiempo > 0) ? tiempo : null
     });
     // Agregar al array local inmediatamente para que refreshPanelMetrics
     // y recalcularScoreCliente lean el dato recién guardado sin esperar el realtime
@@ -250,11 +301,13 @@ async function guardarConsulta() {
       repetida:    repetida === 'si' ? 'si' : 'no',
       descripcion: desc || null,
       solucionId:  consultaSolucionId || nuevaSolucionId || null,
+      tiempo:      (tiempo && !isNaN(tiempo) && tiempo > 0) ? tiempo : null,
       timestamp:   new Date().toISOString()
     });
 
     if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
-    // Recalcular el score del cliente con la nueva consulta incluida
+    // Recalcular autonomía y score del cliente con la nueva consulta incluida
+    await recalcularAutonomiaCliente(cliente);
     await recalcularScoreCliente(cliente);
   } catch (e) {
     console.error('Error guardando consulta', e);
@@ -329,22 +382,99 @@ async function recalcularScoreCliente(nombreCliente) {
   }
 }
 
+// ────────── Cálculo de autonomía automática ──────────
+//
+// Se alimenta de las consultas reales del cliente (últimos 3 meses).
+// Dos señales:
+//   - Frecuencia mensual promedio (cuánto nos llama)
+//   - % consultas repetidas (si repite preguntas, no aprende)
+//
+// Puntaje 0-6:
+//   Frecuencia (0-3 pts): ≤2/mes → 3 | 3-5/mes → 2 | 6-8/mes → 1 | >8/mes → 0
+//   Repetición (0-3 pts): ≤15%   → 3 | 16-35%  → 2 | 36-55%  → 1 | >55%   → 0
+//
+//   Alta:  5-6 pts
+//   Media: 3-4 pts
+//   Baja:  0-2 pts
+//
+// Requiere mínimo 3 consultas históricas para disparar.
+// Si no hay datos suficientes, no modifica el valor existente.
+
+async function recalcularAutonomiaCliente(nombreCliente) {
+  const cliente = (typeof clientes !== 'undefined')
+    ? clientes.find(c => c.nombre === nombreCliente)
+    : null;
+  if (!cliente) return;
+
+  const todasDelCliente = (typeof consultas !== 'undefined')
+    ? consultas.filter(c => c.cliente === nombreCliente)
+    : [];
+
+  // Sin datos suficientes → no tocar
+  if (todasDelCliente.length < 3) return;
+
+  // Últimos 3 meses
+  const ahora     = new Date();
+  const hace3Meses = new Date(ahora.getFullYear(), ahora.getMonth() - 3, 1);
+  const recientes  = todasDelCliente.filter(c => new Date(c.timestamp) >= hace3Meses);
+
+  // Si no hay actividad reciente tampoco tocamos (cliente inactivo, sin señal)
+  if (recientes.length === 0) return;
+
+  // ── Frecuencia mensual promedio (últimos 3 meses) ──
+  const avgMensual = recientes.length / 3;
+  const frecPts = avgMensual <= 2 ? 3
+                : avgMensual <= 5 ? 2
+                : avgMensual <= 8 ? 1
+                : 0;
+
+  // ── % consultas repetidas (histórico completo) ──
+  const pctRep = todasDelCliente.filter(c => c.repetida === 'si').length / todasDelCliente.length;
+  const repPts = pctRep <= 0.15 ? 3
+               : pctRep <= 0.35 ? 2
+               : pctRep <= 0.55 ? 1
+               : 0;
+
+  // ── Resultado ──
+  const total = frecPts + repPts;
+  const nuevaAutonomia = total >= 5 ? 'alta'
+                       : total >= 3 ? 'media'
+                       : 'baja';
+
+  // Solo guardar si cambió
+  if (nuevaAutonomia === cliente.autonomia) return;
+
+  try {
+    await dbUpdate('clientes', cliente.id, { autonomia: nuevaAutonomia });
+    cliente.autonomia = nuevaAutonomia;
+    if (typeof renderClientes    === 'function') renderClientes();
+    if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
+    if (typeof refreshAlertas    === 'function') refreshAlertas();
+  } catch (e) {
+    console.warn('No se pudo actualizar la autonomía de', nombreCliente, e);
+  }
+}
+
 // ────────── Reset del form ──────────
 
 function resetFormConsulta() {
   // Selects y inputs con ID
-  const ids = ['r-cliente', 'r-rep', 'r-resuelto', 'r-material', 'r-autonomia', 'r-remota'];
+  const ids = ['r-cliente', 'r-rep', 'r-resuelto', 'r-material', 'r-remota'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.selectedIndex = 0;
   });
 
-  // Categoría: resetear a "Seleccioná..." y actualizar subtemas
+  // Categoría: resetear a "Seleccioná..." y actualizar subtemas (también oculta los inputs custom)
   const selCat = document.getElementById('r-cat');
   if (selCat) {
     selCat.value = '';
-    updateRegSubtemas(); // resetea el dropdown de subtemas
+    updateRegSubtemas();
   }
+  const catCustom = document.getElementById('r-cat-custom');
+  if (catCustom) { catCustom.value = ''; catCustom.style.display = 'none'; }
+  const subCustom = document.getElementById('r-sub-custom');
+  if (subCustom) { subCustom.value = ''; subCustom.style.display = 'none'; }
 
   // Tiempo de resolución
   const tiempo = document.getElementById('r-tiempo');

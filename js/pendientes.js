@@ -131,6 +131,8 @@ async function initPendientes() {
     updatePendCount();
     suscribirPendientes();
     pedirPermisoNotificaciones();
+    // Recalcular alertas con los pendientes recién cargados
+    if (typeof refreshAlertas === 'function') refreshAlertas();
   } catch (e) {
     console.error('Error cargando pendientes', e);
     const list = document.getElementById('pend-list');
@@ -156,8 +158,10 @@ function getVisiblePendientes() {
     arr = me ? arr.filter(p => p.asesor === me) : [];
   }
 
-  // Filtro por categoria (matchea sustring en categoriaLabel)
-  if (catFilter) {
+  // Filtro por categoria (matchea substring en categoriaLabel, o flag interno)
+  if (catFilter === '__interno__') {
+    arr = arr.filter(p => p.interno);
+  } else if (catFilter) {
     arr = arr.filter(p => {
       const c = (p.categoriaLabel || '').toLowerCase();
       return c.includes(catFilter);
@@ -247,15 +251,18 @@ function toggleGroupByCliente() {
 }
 
 function renderPendienteCard(p) {
-  const baseColor = { alta: 'var(--red)', media: 'var(--amber)', baja: 'var(--border2)' }[p.prioridad] || 'var(--border2)';
+  // Internos: borde naranja siempre. Clientes: accent (indigo) alta, azul media, gris baja
+  const baseColor = p.interno
+    ? 'var(--amber)'
+    : { alta: 'var(--accent)', media: 'var(--blue)', baja: 'var(--border2)' }[p.prioridad] || 'var(--border2)';
   const borderColor = baseColor;
   const prioBadge   = { alta: 'b-red', media: 'b-amber', baja: 'b-gray' }[p.prioridad] || 'b-gray';
   const prioLabel   = { alta: 'Alta prioridad', media: 'Media prioridad', baja: 'Baja prioridad' }[p.prioridad] || p.prioridad;
   const tipoLabel   = TIPO_LABELS[p.tipo] || '';
   const tipoPend    = TIPO_PENDIENTE[p.tipoPendiente] || null;
   const venc        = vencimientoInfo(p.createdAt);
-  // Si esta vencido o vence hoy, forzar borde rojo
-  const finalBorder = (venc && venc.urgente) ? 'var(--red)' : borderColor;
+  // Si está vencido o vence hoy, forzar borde rojo (solo en pendientes de clientes)
+  const finalBorder = (!p.interno && venc && venc.urgente) ? 'var(--red)' : borderColor;
   const notas = notasByPendiente[p.id] || [];
   // Whaticket URL viene del cliente vinculado (CLIENTES_LOOKUP se llena en clientes.js)
   const whaticketUrl = (CLIENTES_LOOKUP[p.cliente] || {}).whaticket_url;
@@ -263,18 +270,21 @@ function renderPendienteCard(p) {
   const puedoEditar = puedeEditarPendiente(p);
 
   return `
-    <div class="card" data-pend-id="${p.id}" style="border-left:3px solid ${finalBorder}">
+    <div class="card" data-pend-id="${p.id}" style="border-left:3px solid ${finalBorder};${p.interno ? 'background:var(--amber-bg,#fef8ee)' : ''}">
       <div class="card-header-row" style="margin-bottom:12px">
         <div class="identity-row identity-row--top">
-          <div class="av av-${p.tipo}" style="margin-top:2px">${p.iniciales}</div>
+          ${p.interno
+            ? `<div class="av" style="margin-top:2px;background:var(--amber-bg,#fef8ee);color:var(--amber,#b45309);font-size:11px;font-weight:700">CF</div>`
+            : `<div class="av av-${p.tipo}" style="margin-top:2px">${p.iniciales}</div>`
+          }
           <div>
             <div class="tag-row">
-              <span class="pendiente-name">${p.cliente}</span>
-              ${tipoLabel ? `<span class="tipo-tag tipo-${p.tipo}">${tipoLabel}</span>` : ''}
+              <span class="pendiente-name">${p.interno ? 'Consultora Ferro' : p.cliente}</span>
+              ${!p.interno && tipoLabel ? `<span class="tipo-tag tipo-${p.tipo}">${tipoLabel}</span>` : ''}
               ${tipoPend ? `<span class="badge ${tipoPend.badge}" title="Tipo: ${tipoPend.label}">${tipoPend.emoji} ${tipoPend.label}</span>` : ''}
               <span class="badge ${prioBadge}">${prioLabel}</span>
               ${venc ? `<span class="badge ${venc.badge}" title="Plazo de 5 dias">⏰ ${venc.label}</span>` : ''}
-              ${p.interno ? `<span class="badge b-gray" title="No alimenta métricas de clientes">🔒 Interno</span>` : ''}
+              ${p.interno ? `<span class="badge b-amber">🔒 Interno</span>` : ''}
               <span class="text-meta-sm">${p.cuando} &middot; ${p.asesor}</span>
             </div>
             <div class="pendiente-desc">${p.descripcion}</div>
@@ -399,6 +409,22 @@ function showPendForm() {
   f.style.display = f.style.display === 'none' ? 'block' : 'none';
 }
 
+// Muestra/oculta el selector de cliente según si el pendiente es interno
+function toggleInternoForm() {
+  const esInterno   = document.getElementById('pf-interno')?.checked;
+  const clienteGrp  = document.getElementById('pf-cliente-group');
+  if (!clienteGrp) return;
+  clienteGrp.style.display = esInterno ? 'none' : '';
+}
+
+function togglePfCatCustom() {
+  const val    = (document.getElementById('pf-cat') || {}).value;
+  const custom = document.getElementById('pf-cat-custom');
+  if (!custom) return;
+  custom.style.display = val === 'otro' ? 'block' : 'none';
+  if (val !== 'otro') custom.value = '';
+}
+
 async function guardarPendiente() {
   const desc = document.getElementById('pf-desc').value.trim();
   if (!desc) { alert('Describi que quedo pendiente.'); return; }
@@ -408,14 +434,20 @@ async function guardarPendiente() {
   const prio    = document.getElementById('pf-prio').value;
   const intento = document.getElementById('pf-intento').value.trim();
   const prox    = document.getElementById('pf-prox').value.trim();
-  const cat     = document.getElementById('pf-cat').value;
+  const catSelect  = document.getElementById('pf-cat').value;
+  const catCustom  = ((document.getElementById('pf-cat-custom') || {}).value || '').trim();
+  const cat        = catSelect === 'otro' ? catCustom : catSelect;
+  if (catSelect === 'otro' && !catCustom) {
+    alert('Escribí el nombre de la nueva categoría.'); document.getElementById('pf-cat-custom').focus(); return;
+  }
   const tipoP   = (document.getElementById('pf-tipo') || {}).value || 'soporte';
 
   const internoCheck = document.getElementById('pf-interno');
   const esInterno    = internoCheck ? internoCheck.checked : false;
 
   const row = {
-    cliente_nombre: cliente,
+    // Los internos se asignan a la consultora, no a un cliente
+    cliente_nombre: esInterno ? 'Consultora Ferro' : cliente,
     asesor:         asesor,
     prioridad:      prio,
     categoria:      cat,
@@ -1213,6 +1245,8 @@ function handlePendienteChange(payload) {
     renderPendientes();
     updatePendCount();
   }
+  // Recalcular alertas cada vez que cambia un pendiente
+  if (typeof refreshAlertas === 'function') refreshAlertas();
 }
 
 function handleNotaChange(payload) {
