@@ -7,7 +7,9 @@
 // Plantilla: implementacion_plantilla (las 23 etapas seed)
 
 let implTareas = [];          // todas las tareas de todos los clientes impl
-let implTareaNotas = {};      // { tarea_id: [nota, nota, ...] }
+let implTareaNotas   = {};    // { tarea_id: [nota, nota, ...] }
+let implActividadLog = {};    // { cliente_id: [evento, ...] } — cargado lazy
+let _actividadAbierta = {};   // { cliente_id: bool }
 let implFiltroNombre = '';    // buscador de cliente
 let implFiltroAsesor = '';    // '' | 'mis'
 let implFiltroEstado = '';    // '' | 'pendiente' | 'en_progreso' | 'completada' | 'vencida'
@@ -24,8 +26,181 @@ function getEscalaCliente(cid) { return window._implClienteEscala[cid] || 'seman
 // las cards arrancan colapsadas (solo se ve el header del cliente).
 // El usuario hace click para expandir y ver las tareas.
 window._implClienteExpanded = window._implClienteExpanded || {};
+window._implEditMode        = window._implEditMode        || {}; // cid -> true cuando está en modo edición de plantilla
 
 const IMPL_TEAM = ['Ignacio', 'Matias', 'Daniel', 'Daniel Ferro', 'Renzo', 'Alfred'];
+
+// ────────── Panel "¿Qué hago hoy?" ──────────
+
+let _panelHoyExpandido = false;
+
+function renderPanelHoy() {
+  const cont = document.getElementById('impl-panel-hoy');
+  if (!cont) return;
+
+  const me  = getCurrentUserName();
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const enSieteDias = new Date(hoy); enSieteDias.setDate(hoy.getDate() + 7);
+
+  // ── 1. Mis tareas urgentes: vencidas o que vencen esta semana, asignadas a mí ──
+  const urgentes = implTareas.filter(t => {
+    if (t.asesor !== me) return false;
+    if (t.estado === 'completada') return false;
+    if (!t.fecha_estimada) return false;
+    const fecha = new Date(t.fecha_estimada); fecha.setHours(0,0,0,0);
+    return fecha <= enSieteDias;
+  }).sort((a, b) => new Date(a.fecha_estimada) - new Date(b.fecha_estimada));
+
+  // ── 2. Esperando al cliente: tareas responsable_tipo='cliente' no completadas ──
+  const esperandoCliente = implTareas.filter(t => {
+    if (t.estado === 'completada') return false;
+    if (t.responsable_tipo !== 'cliente') return false;
+    // Solo de mis clientes (asesor del cliente = yo)
+    const cli = (typeof clientes !== 'undefined') ? clientes.find(c => c.id === t.cliente_id) : null;
+    return cli && cli.asesor === me;
+  });
+
+  // ── 3. En progreso: mis tareas activas ahora ──
+  const enProgreso = implTareas.filter(t =>
+    t.asesor === me && t.estado === 'en_progreso'
+  );
+
+  if (!me || (urgentes.length === 0 && esperandoCliente.length === 0 && enProgreso.length === 0)) {
+    cont.innerHTML = '';
+    return;
+  }
+
+  const seccion = (titulo, icono, tareas, colorAcento) => {
+    if (tareas.length === 0) return '';
+    const items = tareas.slice(0, 4).map(t => {
+      const cli = (typeof clientes !== 'undefined') ? clientes.find(c => c.id === t.cliente_id) : null;
+      const nombreCli = cli ? cli.nombre : '—';
+      const fecha = t.fecha_estimada
+        ? `<span style="font-size:10px;color:${isTareaVencida(t) ? 'var(--red)' : 'var(--text3)'}">
+            ${isTareaVencida(t) ? '⏰' : '📅'} ${formatFechaImpl(new Date(t.fecha_estimada))}
+           </span>`
+        : '';
+      return `<div class="hoy-item">
+        <span class="hoy-item__cliente">${escapeHtmlImpl(nombreCli)}</span>
+        <span class="hoy-item__tarea">${escapeHtmlImpl(t.tarea)}</span>
+        ${fecha}
+      </div>`;
+    }).join('');
+    const mas = tareas.length > 4 ? `<div style="font-size:11px;color:var(--text3);padding:4px 0">+${tareas.length - 4} más</div>` : '';
+    return `<div class="hoy-seccion">
+      <div class="hoy-seccion__titulo" style="color:${colorAcento}">${icono} ${titulo} <span class="hoy-count">${tareas.length}</span></div>
+      ${_panelHoyExpandido ? items + mas : ''}
+    </div>`;
+  };
+
+  cont.innerHTML = `
+    <div class="card hoy-panel" style="margin-bottom:16px">
+      <div class="hoy-header" onclick="_panelHoyExpandido=!_panelHoyExpandido;renderPanelHoy()">
+        <div class="hoy-header__left">
+          <span class="hoy-titulo">🎯 ¿Qué hacés hoy?</span>
+          <span style="font-size:11px;color:var(--text3)">${me}</span>
+        </div>
+        <div class="hoy-header__chips">
+          ${urgentes.length > 0        ? `<span class="hoy-chip hoy-chip--red">⏰ ${urgentes.length} urgente${urgentes.length !== 1 ? 's' : ''}</span>` : ''}
+          ${esperandoCliente.length > 0 ? `<span class="hoy-chip hoy-chip--amber">👤 ${esperandoCliente.length} esperando cliente</span>` : ''}
+          ${enProgreso.length > 0       ? `<span class="hoy-chip hoy-chip--blue">▶ ${enProgreso.length} en progreso</span>` : ''}
+          <span class="hoy-chevron">${_panelHoyExpandido ? '▴' : '▾'}</span>
+        </div>
+      </div>
+      ${_panelHoyExpandido ? `
+        <div class="hoy-body">
+          ${seccion('Urgentes esta semana', '⏰', urgentes, 'var(--red)')}
+          ${seccion('Esperando al cliente', '👤', esperandoCliente, 'var(--amber)')}
+          ${seccion('En progreso', '▶', enProgreso, 'var(--accent)')}
+        </div>` : ''}
+    </div>`;
+}
+
+// ────────── Semáforo de salud del proyecto ──────────
+// Compara el ritmo actual de avance con el deadline.
+// Si no hay deadline, compara % completado vs % de tiempo transcurrido.
+//
+// Devuelve: { color, emoji, label, detalle }
+function calcularSemaforo(c, tareasCliente, progreso) {
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+
+  // Si el proyecto ya terminó → siempre verde
+  if (progreso === 100) {
+    return { color: 'var(--green)', emoji: '🟢', label: 'Completado', detalle: 'Todas las tareas finalizadas' };
+  }
+
+  // Con deadline: comparar ETA vs objetivo
+  if (c.fecha_fin_objetivo) {
+    const objetivo  = new Date(c.fecha_fin_objetivo); objetivo.setHours(0,0,0,0);
+    const eta       = calcularETACliente(tareasCliente);
+    const etaFecha  = eta?.fechaFin;
+
+    if (!etaFecha) {
+      return { color: 'var(--text3)', emoji: '⚪', label: 'Sin datos', detalle: 'Configurá las fechas para ver el estado' };
+    }
+
+    const diasDiff = diasEntre(objetivo, etaFecha); // positivo = tarde
+    if (diasDiff <= 0) {
+      return { color: 'var(--green)', emoji: '🟢', label: 'En tiempo', detalle: `ETA: ${formatFechaImpl(etaFecha)}` };
+    } else if (diasDiff <= 7) {
+      return { color: 'var(--amber)', emoji: '🟡', label: 'Justo', detalle: `${diasDiff}d sobre el objetivo` };
+    } else {
+      return { color: 'var(--red)', emoji: '🔴', label: 'En riesgo', detalle: `${diasDiff}d de demora estimada` };
+    }
+  }
+
+  // Sin deadline: comparar % completado vs % de tiempo transcurrido desde inicio
+  if (c.fecha_inicio_implementacion) {
+    const inicio    = new Date(c.fecha_inicio_implementacion); inicio.setHours(0,0,0,0);
+    const diasTotal = 60; // estimado estándar de 60 días para una implementación
+    const diasPasados = Math.max(0, diasEntre(inicio, hoy));  // días transcurridos... wait, diasEntre devuelve diasEntre(a,b) = b - a
+    const pctTiempo = Math.min(100, Math.round((diasPasados / diasTotal) * 100));
+    const diff = progreso - pctTiempo; // positivo = adelantado, negativo = atrasado
+
+    if (diff >= -10) {
+      return { color: 'var(--green)', emoji: '🟢', label: 'Buen ritmo', detalle: `${progreso}% completado` };
+    } else if (diff >= -25) {
+      return { color: 'var(--amber)', emoji: '🟡', label: 'Ritmo lento', detalle: `${progreso}% completado` };
+    } else {
+      return { color: 'var(--red)', emoji: '🔴', label: 'Atrasado', detalle: `${progreso}% completado` };
+    }
+  }
+
+  return { color: 'var(--text3)', emoji: '⚪', label: 'Sin fechas', detalle: 'Configurá fecha de inicio' };
+}
+
+// ────────── Fases de implementación ──────────
+// Cada fase agrupa etapas por número de orden.
+// Se usa para el progreso visual y el semáforo de salud.
+const IMPL_FASES = [
+  { key: 'relevamiento',  nombre: 'Relevamiento', icono: '🔍' },
+  { key: 'configuracion', nombre: 'Configuración', icono: '⚙️' },
+  { key: 'analisis',      nombre: 'Análisis',      icono: '📊' },
+  { key: 'pruebas',       nombre: 'Pruebas',       icono: '✅' },
+  { key: 'golive',        nombre: 'Go-live',       icono: '🚀' },
+];
+
+// Devuelve el estado de cada fase para un cliente:
+// { completas, total, pct, estado: 'completa'|'activa'|'pendiente' }
+function calcularFases(tareasCliente) {
+  const faseActiva = IMPL_FASES.findIndex(f => {
+    const tareasFase = tareasCliente.filter(t => (t.fase || 'relevamiento') === f.key);
+    if (tareasFase.length === 0) return false;
+    return tareasFase.some(t => t.estado !== 'completada');
+  });
+
+  return IMPL_FASES.map((f, i) => {
+    const tareasFase = tareasCliente.filter(t => (t.fase || 'relevamiento') === f.key);
+    const total    = tareasFase.length;
+    const completas = tareasFase.filter(t => t.estado === 'completada').length;
+    const pct      = total > 0 ? Math.round((completas / total) * 100) : 0;
+    const estado   = completas === total && total > 0 ? 'completa'
+                   : i === faseActiva ? 'activa'
+                   : completas > 0 ? 'activa'
+                   : 'pendiente';
+    return { ...f, total, completas, pct, estado };
+  });
+}
 
 // ────────── Helpers de filtros ──────────
 
@@ -55,6 +230,19 @@ function _activarChip(btn, grupo) {
 }
 
 // Vista/escala por cliente: cada card mantiene su propio estado
+function toggleEditModeCliente(clienteId, event) {
+  if (event) event.stopPropagation();
+  window._implEditMode[clienteId] = !window._implEditMode[clienteId];
+  renderImplementacion();
+}
+
+function confirmarEdicionCliente(clienteId, event) {
+  if (event) event.stopPropagation();
+  window._implEditMode[clienteId] = false;
+  renderImplementacion();
+  toast('Plantilla del cliente actualizada ✓');
+}
+
 function setVistaCliente(clienteId, vista) {
   window._implClienteVista[clienteId] = vista;
   renderImplementacion();
@@ -370,6 +558,8 @@ function renderGanttCliente(tareasCli, cliente, escala) {
         <span class="gantt-legend-item"><span class="gantt-legend-color" style="background:var(--red)"></span>Vencida</span>
         <span class="gantt-legend-item"><span class="gantt-legend-line gantt-legend-line--today"></span>Hoy</span>
         ${cliente.fecha_fin_objetivo ? `<span class="gantt-legend-item"><span class="gantt-legend-line gantt-legend-line--objetivo"></span>Objetivo</span>` : ''}
+        <span class="gantt-legend-item" style="margin-left:8px;border-left:1px solid var(--border);padding-left:8px"><span class="gantt-legend-color gantt-legend-color--equipo"></span>Equipo</span>
+        <span class="gantt-legend-item"><span class="gantt-legend-color gantt-legend-color--cliente"></span>Cliente</span>
       </div>
     </div>`;
 }
@@ -391,9 +581,16 @@ function renderGanttRow(t, idx, minDate, pxDay, totalWidth) {
 
     const tooltip = `${t.tarea}\nAsesor: ${t.asesor || 'sin asignar'}\nInicio: ${formatFechaImpl(inicio)}\nFin: ${formatFechaImpl(fin)}\nDuración: ${t.duracion_dias}d\nEstado: ${labelEstadoImpl(t.estado)}${t.fecha_completada ? '\nCompletada: ' + formatFechaImpl(t.fecha_completada) : ''}`;
 
+    // Barras del cliente: rayas diagonales. Barras del equipo/ambos: lisas.
+    const esCliente = t.responsable_tipo === 'cliente';
+    const barStyle  = esCliente
+      ? `left:${x}px;width:${w}px;background:repeating-linear-gradient(135deg,${color} 0px,${color} 4px,${color}55 4px,${color}55 8px)`
+      : `left:${x}px;width:${w}px;background:${color}`;
+    const barClass  = esCliente ? 'gantt-bar gantt-bar--cliente' : 'gantt-bar gantt-bar--equipo';
+
     barHtml = `
-      <div class="gantt-bar"
-           style="left:${x}px;width:${w}px;background:${color}"
+      <div class="${barClass}"
+           style="${barStyle}"
            title="${escapeHtmlImpl(tooltip)}"
            onclick="toggleImplTareaExpanded('${t.id}', null)">
         <span class="gantt-bar-label">${String(t.orden).padStart(2, '0')}</span>
@@ -446,6 +643,8 @@ function dbRowToImplTarea(row) {
     predecesoras_ids:  Array.isArray(row.predecesoras_ids) ? row.predecesoras_ids : [],
     pendiente_id:      row.pendiente_id,
     notas:             row.notas,
+    fase:              row.fase || 'relevamiento',
+    asesor_plantilla:  row.asesor_plantilla || null,
     createdAt:         row.created_at,
     updatedAt:         row.updated_at
   };
@@ -493,6 +692,7 @@ async function initImplementacion() {
 function renderImplementacion() {
   const cont = document.getElementById('impl-clientes-list');
   if (!cont) return;
+  renderPanelHoy();
 
   // Tomar todos los clientes con area=impl (vienen del array global 'clientes')
   const todosImpl = (typeof clientes !== 'undefined' ? clientes : []).filter(c => c.area === 'impl');
@@ -725,7 +925,7 @@ function renderClienteImplCard(c) {
               <div class="impl-cliente-meta">Sin tareas de implementación creadas</div>
             </div>
           </div>
-          <button class="btn-primary btn-primary--sm" onclick="iniciarImplementacion('${c.id}')">+ Crear las 23 etapas</button>
+          <button class="btn-primary btn-primary--sm" onclick="iniciarImplementacionConModal('${c.id}')">+ Crear etapas</button>
         </div>
       </div>`;
   }
@@ -780,6 +980,7 @@ function renderClienteImplCard(c) {
   const isCollapsed = hayFiltroTarea ? false : !window._implClienteExpanded[c.id];
 
   const subtituloProgreso = `${completas} de ${totalTareas}${vencidas > 0 ? ` · <span style="color:var(--red);font-weight:600">⏰ ${vencidas} vencida${vencidas !== 1 ? 's' : ''}</span>` : ''}${hayFiltroTarea ? ` · <span style="color:var(--accent-text)">${tareasVisibles.length} con filtro</span>` : ''}`;
+  const semaforo = calcularSemaforo(c, tareasCliente, progreso);
 
   return `
     <div class="card impl-cliente-card ${isCollapsed ? 'impl-cliente-card--collapsed' : ''}" data-cliente-id="${c.id}" data-tipo="${c.tipo}">
@@ -793,7 +994,12 @@ function renderClienteImplCard(c) {
           <div class="impl-cliente-identity">
             <div class="av av-${c.tipo} impl-cliente-avatar">${escapeHtmlImpl(c.iniciales)}</div>
             <div class="impl-cliente-info">
-              <div class="impl-cliente-name">${escapeHtmlImpl(c.nombre)}</div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <div class="impl-cliente-name">${escapeHtmlImpl(c.nombre)}</div>
+                <span class="impl-semaforo-badge" style="background:${semaforo.color}18;color:${semaforo.color};border:1px solid ${semaforo.color}35" title="${semaforo.detalle}">
+                  ${semaforo.emoji} ${semaforo.label}
+                </span>
+              </div>
               <div class="impl-cliente-meta">
                 <span class="impl-cliente-meta-resp">Resp: <strong>${escapeHtmlImpl(c.asesor || '—')}</strong></span>
                 ${c.whaticket_url ? `<span class="impl-cliente-meta-sep">·</span><a href="${escapeHtmlImpl(c.whaticket_url)}" target="_blank" rel="noopener" class="impl-cliente-meta-link" onclick="event.stopPropagation();">🎫 Whaticket</a>` : ''}
@@ -837,15 +1043,111 @@ function renderClienteImplCard(c) {
 
       <div class="impl-cliente-body">
         ${renderClienteViewToggle(c)}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          ${window._implEditMode[c.id]
+            ? `<button class="btn-primary btn-primary--sm" onclick="confirmarEdicionCliente('${c.id}', event)">✓ Confirmar</button>
+               <span style="font-size:12px;color:var(--accent)">✏️ Modo edición — configurá asesores, duraciones y predecesoras</span>`
+            : `<button class="btn-sm" style="font-size:11px" onclick="toggleEditModeCliente('${c.id}', event)">✏️ Editar plantilla</button>`
+          }
+        </div>
         ${getVistaCliente(c.id) === 'gantt'
           ? renderGanttCliente(tareasVisibles, c, getEscalaCliente(c.id))
-          : `<div class="impl-tareas-list">
-              ${tareasVisibles.length > 0
-                ? tareasVisibles.map(renderImplTarea).join('')
-                : '<div style="text-align:center;color:var(--text3);font-size:12px;padding:20px">Ninguna tarea matchea los filtros actuales para este cliente.</div>'}
-            </div>`}
+          : renderListaFases(c, tareasCliente, tareasVisibles)}
+        ${renderGoLive(c.id, tareasCliente, progreso)}
+        ${renderActividadCliente(c.id)}
       </div>
     </div>`;
+}
+
+// Renderiza las 5 fases como una barra segmentada
+function renderFasesCliente(tareasCliente) {
+  const fases = calcularFases(tareasCliente);
+  return `
+    <div class="impl-fases">
+      ${fases.map(f => {
+        const colorBg   = f.estado === 'completa' ? 'var(--green)'
+                        : f.estado === 'activa'   ? 'var(--accent)'
+                        : 'var(--border2)';
+        const colorText = f.estado === 'pendiente' ? 'var(--text3)' : 'white';
+        const label     = f.estado === 'completa' ? '✓'
+                        : f.estado === 'activa'   ? `${f.completas}/${f.total}`
+                        : '—';
+        const title = `${f.nombre}: ${f.completas}/${f.total} tareas completadas`;
+        return `
+          <div class="impl-fase" title="${title}">
+            <div class="impl-fase__bar">
+              <div class="impl-fase__fill" style="width:${f.pct}%;background:${colorBg}"></div>
+            </div>
+            <div class="impl-fase__label" style="color:${f.estado === 'pendiente' ? 'var(--text3)' : 'var(--text)'}">
+              ${f.icono} ${f.nombre}
+            </div>
+            <div class="impl-fase__pct" style="color:${colorBg};font-weight:600">${label}</div>
+          </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// ────────── Lista por fases (acordeón) ──────────
+
+// Estado expandido por fase y cliente: { 'clienteId_faseIdx': bool }
+window._implFaseExpanded = window._implFaseExpanded || {};
+
+function toggleFaseExpanded(clienteId, faseIdx) {
+  const key = `${clienteId}_${faseIdx}`;
+  window._implFaseExpanded[key] = !window._implFaseExpanded[key];
+  renderImplementacion();
+}
+
+function renderListaFases(c, tareasCliente, tareasVisibles) {
+  const fases = calcularFases(tareasCliente);
+  const hayFiltro = implFiltroAsesor || implFiltroEstado || implFiltroResp;
+
+  return `<div class="impl-fases-acordeon">
+    ${fases.map((f, i) => {
+      const key       = `${c.id}_${i}`;
+      // Si hay filtro activo, auto-expandir fases que tengan tareas visibles
+      const tareasDeFase    = tareasCliente.filter(t => (t.fase || 'relevamiento') === f.key);
+      const tareasVisFase   = tareasVisibles.filter(t => (t.fase || 'relevamiento') === f.key);
+      const isExpanded = hayFiltro
+        ? tareasVisFase.length > 0
+        : (window._implFaseExpanded[key] ?? f.estado === 'activa');
+
+      const colorBar  = f.estado === 'completa' ? 'var(--green)'
+                      : f.estado === 'activa'   ? 'var(--accent)'
+                      : 'var(--border2)';
+      const badge     = f.estado === 'completa'
+        ? `<span class="badge b-green" style="font-size:10px">✓ Completa</span>`
+        : f.estado === 'activa'
+        ? `<span class="badge b-blue" style="font-size:10px">${f.completas}/${f.total}</span>`
+        : `<span style="font-size:11px;color:var(--text3)">${f.completas}/${f.total}</span>`;
+
+      const tareasRender = hayFiltro ? tareasVisFase : tareasDeFase;
+
+      return `
+        <div class="impl-fase-grupo ${f.estado === 'completa' ? 'impl-fase-grupo--completa' : f.estado === 'activa' ? 'impl-fase-grupo--activa' : ''}">
+          <div class="impl-fase-header" onclick="toggleFaseExpanded('${c.id}', ${i})">
+            <div class="impl-fase-header__left">
+              <span class="impl-fase-num">Fase ${i + 1}</span>
+              <span class="impl-fase-icon">${f.icono}</span>
+              <span class="impl-fase-nombre">${f.nombre}</span>
+            </div>
+            <div class="impl-fase-header__right">
+              ${badge}
+              <div class="impl-fase-minibar">
+                <div class="impl-fase-minibar__fill" style="width:${f.pct}%;background:${colorBar}"></div>
+              </div>
+              <span class="impl-fase-chevron">${isExpanded ? '▴' : '▾'}</span>
+            </div>
+          </div>
+          ${isExpanded ? `
+            <div class="impl-fase-tareas">
+              ${tareasRender.length > 0
+                ? tareasRender.map(renderImplTarea).join('')
+                : '<div style="text-align:center;color:var(--text3);font-size:12px;padding:16px">Sin tareas visibles con los filtros actuales.</div>'}
+            </div>` : ''}
+        </div>`;
+    }).join('')}
+  </div>`;
 }
 
 // Toggle "Lista / Gantt" + escala (cuando Gantt) que va dentro de cada card
@@ -889,16 +1191,34 @@ function renderImplTarea(t) {
   // - Si no → muestra rango calculado (inicio → fin) + input de duración editable
   const inicioStr = t.fecha_inicio_calc ? formatFechaImpl(t.fecha_inicio_calc) : '—';
   const finStr    = t.fecha_estimada    ? formatFechaImpl(t.fecha_estimada)    : '—';
+  const enEdicion = !!(window._implEditMode && window._implEditMode[t.cliente_id]);
+  const numPred   = (t.predecesoras_ids || []).length;
+
+  // Badge de responsable con asesor (pre-calculado para no anidar template literals)
+  const asesorMostrar = t.asesor || t.asesor_plantilla;
+  const mostrarAsesor = (t.responsable_tipo === 'equipo' || t.responsable_tipo === 'ambos') && asesorMostrar;
+  const respBadgeConAsesor = '<span class="badge ' + respBadge + '" title="Responsable">' + respLabel + (mostrarAsesor ? ' · ' + asesorMostrar.split(' ')[0] : '') + '</span>';
+
   const fechaCell = isCompleted
     ? `<div class="impl-tarea__fecha-done" title="Completada el ${formatFechaImpl(t.fecha_completada)}">✓ ${formatFechaImpl(t.fecha_completada)}</div>`
-    : `<div class="impl-tarea__gantt-cell" title="Inicio: ${inicioStr} · Fin: ${finStr}">
-         <span class="impl-tarea__rango">${inicioStr} → ${finStr}</span>
-         <input type="number" min="1" max="365" class="impl-tarea__duracion-input" value="${t.duracion_dias || 1}" onclick="event.stopPropagation();" onchange="cambiarDuracionTarea('${t.id}', this.value)" title="Duración en días" ${disabledAttr}> d
-       </div>`;
+    : enEdicion
+      ? `<div class="impl-tarea__gantt-cell">
+           <input type="number" min="1" max="365" class="impl-tarea__duracion-input"
+             value="${t.duracion_dias || 1}" onclick="event.stopPropagation();"
+             onchange="cambiarDuracionTarea('${t.id}', this.value)" title="Duración en días"> d
+         </div>`
+      : `<div class="impl-tarea__gantt-cell" title="Inicio: ${inicioStr} · Fin: ${finStr}">
+           <span class="impl-tarea__rango">${inicioStr} → ${finStr}</span>
+           <span class="impl-tarea__dur-label">${t.duracion_dias || 1} d</span>
+         </div>`;
 
-  // Botón de predecesoras
-  const numPred = (t.predecesoras_ids || []).length;
-  const predBtn = `<button class="impl-tarea__pred-btn ${numPred > 0 ? 'impl-tarea__pred-btn--has' : ''}" onclick="event.stopPropagation(); abrirModalPredecesoras('${t.id}')" title="Editar predecesoras (qué tareas tienen que terminar antes)" ${disabledAttr}>🔗${numPred > 0 ? ' ' + numPred : ''}</button>`;
+  const predBtn = enEdicion
+    ? `<button class="impl-tarea__pred-btn ${numPred > 0 ? 'impl-tarea__pred-btn--has' : ''}"
+         onclick="event.stopPropagation(); abrirModalPredecesoras('${t.id}')"
+         title="Configurar predecesoras">🔗${numPred > 0 ? ' ' + numPred : ''}</button>`
+    : numPred > 0
+      ? `<span class="impl-tarea__pred-info" title="${numPred} predecesora${numPred !== 1 ? 's' : ''}">🔗 ${numPred}</span>`
+      : '';
 
   // Indicador del boton de notas: muestra contador
   const notasTarea = implTareaNotas[t.id] || [];
@@ -931,17 +1251,31 @@ function renderImplTarea(t) {
       <button class="impl-tarea__check impl-tarea__check--${t.estado}" onclick="event.stopPropagation(); toggleTareaCompleta('${t.id}')" title="${lockTooltip}" ${disabledAttr}>${cfg.icon}</button>
       <div class="impl-tarea__num">${String(t.orden).padStart(2, '0')}</div>
       <div class="impl-tarea__title">${escapeHtmlImpl(t.tarea)}${isVencida ? ` <span class="impl-tarea__vencida-badge" title="La fecha estimada ya pasó">⏰ Vencida hace ${diasVencido} día${diasVencido !== 1 ? 's' : ''}</span>` : ''}${notasCount > 0 ? `<span class="impl-tarea__chevron">▸</span>` : ''}${!puedoEditar ? ` <span class="impl-tarea__lock" title="Solo ${escapeHtmlImpl(t.asesor)} puede modificar">🔒</span>` : ''}</div>
-      <span class="badge ${respBadge}" title="Responsable">${respLabel}</span>
+      ${enEdicion
+        ? `<select class="impl-tarea__resp-sel" onclick="event.stopPropagation();"
+               onchange="cambiarResponsableTipoTarea('${t.id}', this.value, event)" title="Responsable">
+             <option value="cliente" ${t.responsable_tipo === 'cliente' ? 'selected' : ''}>Cliente</option>
+             <option value="equipo"  ${t.responsable_tipo === 'equipo'  ? 'selected' : ''}>Equipo</option>
+             <option value="ambos"   ${t.responsable_tipo === 'ambos'   ? 'selected' : ''}>Ambos</option>
+           </select>`
+        : respBadgeConAsesor
+      }
       <select class="impl-tarea__estado-sel" onclick="event.stopPropagation();" onchange="cambiarEstadoTarea('${t.id}', this.value)" title="${puedoEditar ? 'Cambiar estado' : 'Solo ' + t.asesor + ' puede cambiar el estado'}" ${disabledAttr}>
         <option value="pendiente"   ${t.estado === 'pendiente'   ? 'selected' : ''}>Pendiente</option>
         <option value="en_progreso" ${t.estado === 'en_progreso' ? 'selected' : ''}>En progreso</option>
         <option value="completada"  ${t.estado === 'completada'  ? 'selected' : ''}>Completada</option>
         <option value="demorada"    ${t.estado === 'demorada'    ? 'selected' : ''}>Demorada</option>
       </select>
-      <select class="impl-tarea__asesor-sel" onclick="event.stopPropagation();" onchange="cambiarAsesorTarea('${t.id}', this.value)" title="${puedoEditar ? 'Asignar a un asesor (crea pendiente automatico)' : 'Solo ' + t.asesor + ' puede reasignar'}" ${disabledAttr}>
-        <option value="">Sin asignar</option>
-        ${IMPL_TEAM.map(a => `<option value="${a}" ${t.asesor === a ? 'selected' : ''}>${a}</option>`).join('')}
-      </select>
+      ${enEdicion
+        ? `<select class="impl-tarea__asesor-sel" onclick="event.stopPropagation();"
+               onchange="cambiarAsesorTarea('${t.id}', this.value)" title="Asignar asesor">
+             <option value="">Sin asignar</option>
+             ${IMPL_TEAM.map(a => `<option value="${a}" ${(t.asesor || t.asesor_plantilla) === a ? 'selected' : ''}>${a}</option>`).join('')}
+           </select>`
+        : `<span class="impl-tarea__asesor-label" title="Asesor asignado">
+             ${t.asesor || t.asesor_plantilla || '<span style="color:var(--text3)">Sin asignar</span>'}
+           </span>`
+      }
       ${fechaCell}
       ${predBtn}
       ${notasIndicator}
@@ -1228,6 +1562,25 @@ async function cambiarFechaEstimada(tareaId, fecha) {
   try {
     await dbUpdate('implementacion_tareas', tareaId, { fecha_estimada: fecha || null });
   } catch (e) { console.error('Error', e); }
+}
+
+// Cambia el responsable_tipo de una tarea (Cliente / Equipo / Ambos)
+async function cambiarResponsableTipoTarea(tareaId, tipo, event) {
+  if (event) event.stopPropagation();
+  const t = implTareas.find(x => x.id === tareaId);
+  if (!t || t.responsable_tipo === tipo) return;
+  try {
+    await dbUpdate('implementacion_tareas', tareaId, { responsable_tipo: tipo });
+    t.responsable_tipo = tipo;
+    // Si ya no es equipo/ambos, limpiar el asesor
+    if (tipo === 'cliente') {
+      await cambiarAsesorTarea(tareaId, '');
+    }
+    renderImplementacion();
+  } catch (e) {
+    console.error('Error cambiando responsable', e);
+    alert('No se pudo guardar: ' + e.message);
+  }
 }
 
 // Cambia la duracion (en dias) de una tarea y recalcula el Gantt del cliente
@@ -1594,18 +1947,52 @@ function handleImplNotaChange(payload) {
   }
 }
 
-// ────────── Plantilla de etapas (editable desde Configuracion) ──────────
+// ────────── Plantilla de etapas (panel dentro de Implementación) ──────────
+// Soporta 4 tipos: empresa, estudio, colegio, municipalidad.
+// Cada tipo es una plantilla independiente y editable.
 
-let implPlantilla = [];
+let implPlantilla    = [];          // etapas del tipo activo
+let implPlantillaTipo = 'empresa';  // tab activo
+
+const PLANTILLA_TIPOS = {
+  empresa:       { label: 'Empresa',         emoji: '🏢' },
+  estudio:       { label: 'Est. contable',   emoji: '📊' },
+  colegio:       { label: 'Colegio',         emoji: '🏫' },
+  municipalidad: { label: 'Municipalidad',   emoji: '🏛' },
+};
+
+// Mostrar u ocultar el panel de plantillas
+function togglePlantillasPanel() {
+  const panel = document.getElementById('plantillas-panel');
+  if (!panel) return;
+  const visible = panel.style.display !== 'none';
+  panel.style.display = visible ? 'none' : 'block';
+  if (!visible) cargarPlantilla(); // cargar al abrir
+}
+
+// Cambiar entre tabs de tipo
+function cambiarTabPlantilla(tipo, btn) {
+  implPlantillaTipo = tipo;
+  document.querySelectorAll('.plantilla-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  cargarPlantilla();
+}
 
 async function cargarPlantilla() {
+  const cont = document.getElementById('plantilla-list');
+  if (!cont) return;
+  cont.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px">Cargando…</div>`;
   try {
-    const rows = await dbList('implementacion_plantilla', { orderBy: 'orden', ascending: true });
-    implPlantilla = rows;
+    const { data, error } = await sb()
+      .from('implementacion_plantilla')
+      .select('*')
+      .eq('tipo', implPlantillaTipo)
+      .order('orden', { ascending: true });
+    if (error) throw error;
+    implPlantilla = data || [];
     renderPlantilla();
   } catch (e) {
     console.error('Error cargando plantilla', e);
-    const cont = document.getElementById('plantilla-list');
     if (cont) cont.innerHTML = `<div style="color:var(--red);padding:12px">No se pudo cargar la plantilla: ${e.message}</div>`;
   }
 }
@@ -1614,35 +2001,81 @@ function renderPlantilla() {
   const cont = document.getElementById('plantilla-list');
   if (!cont) return;
   if (implPlantilla.length === 0) {
-    cont.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px">No hay etapas en la plantilla. Agregá la primera.</div>`;
+    cont.innerHTML = `<div style="text-align:center;color:var(--text3);padding:20px">No hay etapas en esta plantilla. Agregá la primera.</div>`;
     return;
   }
-  cont.innerHTML = implPlantilla.map((e, i) => {
-    const isFirst = i === 0;
-    const isLast = i === implPlantilla.length - 1;
-    return `
-      <div class="plantilla-row" data-etapa-id="${e.id}">
-        <div class="plantilla-row__num">${String(e.orden).padStart(2, '0')}</div>
-        <input type="text" class="plantilla-row__nombre" value="${escapeHtmlImpl(e.tarea)}" onchange="editarEtapaCampo('${e.id}', 'tarea', this.value)" placeholder="Nombre de la etapa">
-        <select class="plantilla-row__resp" onchange="editarEtapaCampo('${e.id}', 'responsable_tipo', this.value)">
-          <option value="cliente" ${e.responsable_tipo === 'cliente' ? 'selected' : ''}>Cliente</option>
-          <option value="equipo"  ${e.responsable_tipo === 'equipo'  ? 'selected' : ''}>Equipo</option>
-          <option value="ambos"   ${e.responsable_tipo === 'ambos'   ? 'selected' : ''}>Ambos</option>
-        </select>
-        <input type="number" min="1" max="365" class="plantilla-row__dur" value="${e.duracion_dias != null ? e.duracion_dias : 3}" onchange="editarEtapaCampo('${e.id}', 'duracion_dias', parseInt(this.value, 10) || 1)" title="Duración en días por default">
-        <button class="plantilla-row__btn" onclick="moverEtapa('${e.id}', -1)" title="Subir" ${isFirst ? 'disabled' : ''}>↑</button>
-        <button class="plantilla-row__btn" onclick="moverEtapa('${e.id}', 1)" title="Bajar" ${isLast ? 'disabled' : ''}>↓</button>
-        <button class="plantilla-row__btn plantilla-row__btn--delete" onclick="eliminarEtapaPlantilla('${e.id}')" title="Eliminar etapa">×</button>
-      </div>
-    `;
-  }).join('');
+
+  // Agrupar etapas por fase manteniendo el orden de IMPL_FASES
+  let html = '';
+  IMPL_FASES.forEach(f => {
+    const etapasFase = implPlantilla.filter(e => (e.fase || 'relevamiento') === f.key);
+
+    html += `
+      <div class="plantilla-fase-section" data-fase="${f.key}"
+           ondragover="plantillaDragOver(event, this)"
+           ondragleave="plantillaDragLeave(event, this)"
+           ondrop="plantillaDrop(event, '${f.key}')">
+        <div class="plantilla-fase-header">
+          <span>${f.icono} Fase ${IMPL_FASES.indexOf(f) + 1}: ${f.nombre}</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;color:var(--text3)">${etapasFase.length} tarea${etapasFase.length !== 1 ? 's' : ''}</span>
+            <button class="btn-sm" style="font-size:11px;padding:2px 8px" onclick="agregarEtapaEnFase('${f.key}')">+ Agregar tarea</button>
+          </div>
+        </div>`;
+
+    if (etapasFase.length === 0) {
+      html += `<div class="plantilla-fase-empty">Arrastrá una etapa acá</div>`;
+    }
+
+    etapasFase.forEach(e => {
+      const i       = implPlantilla.indexOf(e);
+      const isFirst = i === 0;
+      const isLast  = i === implPlantilla.length - 1;
+
+      // Selector de asesor: visible solo cuando responsable_tipo = 'equipo'
+      const esEquipo = e.responsable_tipo === 'equipo';
+      const asesorSel = `
+        <select class="plantilla-row__asesor" style="display:${esEquipo ? '' : 'none'}"
+          onchange="editarEtapaCampo('${e.id}', 'asesor', this.value || null)" title="Asesor del equipo">
+          <option value="" ${!e.asesor ? 'selected' : ''}>Sin asignar</option>
+          <option value="Matias Ferro"   ${e.asesor === 'Matias Ferro'   ? 'selected' : ''}>Matias Ferro</option>
+          <option value="Ignacio Talon"  ${e.asesor === 'Ignacio Talon'  ? 'selected' : ''}>Ignacio Talon</option>
+        </select>`;
+
+      html += `
+        <div class="plantilla-row" data-etapa-id="${e.id}" draggable="true"
+             ondragstart="plantillaDragStart(event, '${e.id}')"
+             ondragend="plantillaDragEnd(event)">
+          <div class="plantilla-row__drag" title="Arrastrá para cambiar de fase">⠿</div>
+          <div class="plantilla-row__num">${String(e.orden).padStart(2, '0')}</div>
+          <input type="text" class="plantilla-row__nombre" value="${escapeHtmlImpl(e.tarea)}"
+            onchange="editarEtapaCampo('${e.id}', 'tarea', this.value)" placeholder="Nombre de la etapa">
+          <select class="plantilla-row__resp" onchange="onPlantillaRespChange(this, '${e.id}')">
+            <option value="cliente" ${e.responsable_tipo === 'cliente' ? 'selected' : ''}>Cliente</option>
+            <option value="equipo"  ${e.responsable_tipo === 'equipo'  ? 'selected' : ''}>Equipo</option>
+            <option value="ambos"   ${e.responsable_tipo === 'ambos'   ? 'selected' : ''}>Ambos</option>
+          </select>
+          ${asesorSel}
+          <input type="number" min="1" max="365" class="plantilla-row__dur"
+            value="${e.duracion_dias != null ? e.duracion_dias : 3}"
+            onchange="editarEtapaCampo('${e.id}', 'duracion_dias', parseInt(this.value, 10) || 1)"
+            title="Duración en días">
+          <button class="plantilla-row__btn" onclick="moverEtapa('${e.id}', -1)" title="Subir"  ${isFirst ? 'disabled' : ''}>↑</button>
+          <button class="plantilla-row__btn" onclick="moverEtapa('${e.id}', 1)"  title="Bajar"  ${isLast  ? 'disabled' : ''}>↓</button>
+          <button class="plantilla-row__btn plantilla-row__btn--delete" onclick="eliminarEtapaPlantilla('${e.id}')" title="Eliminar">×</button>
+        </div>`;
+    });
+
+    html += `</div>`; // cierre plantilla-fase-section
+  });
+
+  cont.innerHTML = html;
 }
 
 async function editarEtapaCampo(etapaId, campo, valor) {
   const e = implPlantilla.find(x => x.id === etapaId);
   if (!e) return;
-  if ((e[campo] || '') === (valor || '')) return; // sin cambio
-
+  if ((e[campo] || '') === (valor || '')) return;
   const patch = {};
   patch[campo] = valor;
   try {
@@ -1652,7 +2085,7 @@ async function editarEtapaCampo(etapaId, campo, valor) {
   } catch (err) {
     console.error('Error actualizando etapa', err);
     alert('No se pudo guardar el cambio: ' + err.message);
-    renderPlantilla(); // revertir UI
+    renderPlantilla();
   }
 }
 
@@ -1661,18 +2094,13 @@ async function moverEtapa(etapaId, delta) {
   if (idx === -1) return;
   const target = idx + delta;
   if (target < 0 || target >= implPlantilla.length) return;
-
   const a = implPlantilla[idx];
   const b = implPlantilla[target];
-
-  // Swap orden via dos updates (sin transaccion, asume baja contencion)
   try {
-    // Usamos un valor temporal alto para evitar conflicto con el UNIQUE de orden
     const tempOrden = 9999 + Math.floor(Math.random() * 1000);
     await dbUpdate('implementacion_plantilla', a.id, { orden: tempOrden });
     await dbUpdate('implementacion_plantilla', b.id, { orden: a.orden });
     await dbUpdate('implementacion_plantilla', a.id, { orden: b.orden });
-    // Actualizar estado local
     const aOrden = a.orden, bOrden = b.orden;
     a.orden = bOrden;
     b.orden = aOrden;
@@ -1688,44 +2116,386 @@ async function moverEtapa(etapaId, delta) {
 async function eliminarEtapaPlantilla(etapaId) {
   const e = implPlantilla.find(x => x.id === etapaId);
   if (!e) return;
-  if (!confirm(`¿Eliminar la etapa "${e.tarea}" de la plantilla?\n\nEsto NO borra las tareas ya creadas en clientes existentes, solo evita que se cree en futuras implementaciones.`)) return;
+  if (!confirm(`¿Eliminar la etapa "${e.tarea}" de la plantilla ${PLANTILLA_TIPOS[implPlantillaTipo]?.label}?\n\nEsto NO borra las tareas ya creadas en clientes existentes.`)) return;
   try {
     await dbDelete('implementacion_plantilla', etapaId);
     implPlantilla = implPlantilla.filter(x => x.id !== etapaId);
     renderPlantilla();
-    toast('Etapa eliminada de la plantilla');
+    toast('Etapa eliminada');
   } catch (err) {
     console.error('Error eliminando etapa', err);
     alert('No se pudo eliminar: ' + err.message);
   }
 }
 
-async function agregarEtapaPlantilla() {
-  const nombre = prompt('Nombre de la nueva etapa:');
+// Cuando cambia responsable_tipo en la plantilla, muestra/oculta el selector de asesor
+function onPlantillaRespChange(sel, etapaId) {
+  editarEtapaCampo(etapaId, 'responsable_tipo', sel.value);
+  const row = sel.closest('.plantilla-row');
+  const asesorSel = row ? row.querySelector('.plantilla-row__asesor') : null;
+  if (asesorSel) asesorSel.style.display = sel.value === 'equipo' ? '' : 'none';
+  // Si deja de ser equipo, limpiar el asesor
+  if (sel.value !== 'equipo') editarEtapaCampo(etapaId, 'asesor', null);
+}
+
+// ────────── Drag & drop entre fases ──────────
+
+let _plantillaDragId = null; // id de la etapa que se está arrastrando
+
+function plantillaDragStart(event, etapaId) {
+  _plantillaDragId = etapaId;
+  event.dataTransfer.effectAllowed = 'move';
+  // Marcar la fila visualmente
+  setTimeout(() => {
+    const row = document.querySelector(`.plantilla-row[data-etapa-id="${etapaId}"]`);
+    if (row) row.classList.add('plantilla-row--dragging');
+  }, 0);
+}
+
+function plantillaDragEnd(event) {
+  document.querySelectorAll('.plantilla-row--dragging').forEach(el => el.classList.remove('plantilla-row--dragging'));
+  document.querySelectorAll('.plantilla-fase-section--over').forEach(el => el.classList.remove('plantilla-fase-section--over'));
+  _plantillaDragId = null;
+}
+
+function plantillaDragOver(event, section) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  section.classList.add('plantilla-fase-section--over');
+}
+
+function plantillaDragLeave(event, section) {
+  // Solo quitar el highlight si salimos de la sección, no de un hijo
+  if (!section.contains(event.relatedTarget)) {
+    section.classList.remove('plantilla-fase-section--over');
+  }
+}
+
+async function plantillaDrop(event, faseKey) {
+  event.preventDefault();
+  document.querySelectorAll('.plantilla-fase-section--over').forEach(el => el.classList.remove('plantilla-fase-section--over'));
+
+  if (!_plantillaDragId) return;
+  const etapa = implPlantilla.find(e => e.id === _plantillaDragId);
+  if (!etapa || (etapa.fase || 'relevamiento') === faseKey) return;
+
+  // Cambiar fase en Supabase y en memoria
+  try {
+    await dbUpdate('implementacion_plantilla', etapa.id, { fase: faseKey });
+    etapa.fase = faseKey;
+    renderPlantilla();
+    toast(`Etapa movida a ${IMPL_FASES.find(f => f.key === faseKey)?.nombre || faseKey}`);
+  } catch (e) {
+    console.error('Error moviendo etapa', e);
+    alert('No se pudo mover la etapa: ' + e.message);
+  }
+}
+
+// Agrega una etapa directamente en la fase indicada.
+// Se llama desde el botón "+ Agregar" de cada sección de fase en el editor.
+async function agregarEtapaEnFase(faseKey) {
+  const nombre = prompt(`Nombre de la nueva etapa (fase: ${IMPL_FASES.find(f => f.key === faseKey)?.nombre || faseKey}):`);
   if (!nombre || !nombre.trim()) return;
-  const maxOrden = implPlantilla.length > 0
+
+  // El orden debe ser único por tipo — usamos el máximo global de la plantilla
+  const maxOrdenFase = implPlantilla.length > 0
     ? Math.max(...implPlantilla.map(e => e.orden))
     : 0;
+
   try {
     const inserted = await dbInsert('implementacion_plantilla', {
-      orden: maxOrden + 1,
-      tarea: nombre.trim(),
-      responsable_tipo: 'equipo' // default
+      orden:            maxOrdenFase + 1,
+      tarea:            nombre.trim(),
+      responsable_tipo: 'equipo',
+      tipo:             implPlantillaTipo,
+      fase:             faseKey
     });
     implPlantilla.push(inserted);
+    implPlantilla.sort((a, b) => a.orden - b.orden);
     renderPlantilla();
-    toast('Etapa agregada a la plantilla');
+    toast('Etapa agregada');
   } catch (e) {
     console.error('Error agregando etapa', e);
     alert('No se pudo agregar: ' + e.message);
   }
 }
 
-// Cargar la plantilla al inicio para que este lista cuando el usuario vaya
-// a la seccion de configuracion
-window.addEventListener('app-ready', () => {
-  cargarPlantilla();
-});
+// Mantener la función original por compatibilidad (agrega al final, sin fase específica)
+async function agregarEtapaPlantilla() {
+  await agregarEtapaEnFase('relevamiento');
+}
+
+// ────────── Modal selector de plantilla al iniciar implementación ──────────
+
+function iniciarImplementacionConModal(clienteId) {
+  // Cerrar modal previo si quedó abierto
+  const prev = document.getElementById('modal-elegir-plantilla');
+  if (prev) prev.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'modal-elegir-plantilla';
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal-dialog" style="max-width:420px">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">¿Qué plantilla querés usar?</div>
+          <div class="modal-sub">Elegí el tipo de cliente para cargar las etapas correspondientes.</div>
+        </div>
+        <button class="btn-sm" onclick="document.getElementById('modal-elegir-plantilla').remove()">✕</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:8px 0 16px">
+        ${Object.entries(PLANTILLA_TIPOS).map(([tipo, cfg]) => `
+          <button class="plantilla-opcion-btn" onclick="confirmarIniciarImpl('${clienteId}','${tipo}')">
+            <span style="font-size:22px">${cfg.emoji}</span>
+            <div>
+              <div style="font-weight:600;font-size:14px">${cfg.label}</div>
+              <div style="font-size:11px;color:var(--text3)">Plantilla ${cfg.label.toLowerCase()}</div>
+            </div>
+          </button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+async function confirmarIniciarImpl(clienteId, tipo) {
+  const modal = document.getElementById('modal-elegir-plantilla');
+  if (modal) modal.remove();
+  try {
+    const { data, error } = await sb().rpc('crear_implementacion_para_cliente', {
+      p_cliente_id: clienteId,
+      p_tipo:       tipo
+    });
+    if (error) throw error;
+    toast(`Etapas creadas desde plantilla ${PLANTILLA_TIPOS[tipo]?.label} (${data || '?'})`);
+  } catch (e) {
+    console.error('Error iniciando implementacion', e);
+    alert('No se pudo crear la implementación: ' + e.message);
+  }
+}
+
+// ────────── Checklist de go-live ──────────
+// Condiciones automáticas basadas en el estado de las tareas clave.
+// Aparece cuando el proyecto supera el 60% de avance.
+
+const GOLIVE_CHECKS = [
+  {
+    label:    'Relevamiento y configuración completados',
+    subtexto: 'Fases 1 y 2 terminadas',
+    fn: (tareas) => {
+      const etapas = [1,2,3,4,5,6,7,8,9,10];
+      const relevant = tareas.filter(t => etapas.includes(t.orden));
+      return relevant.length > 0 && relevant.every(t => t.estado === 'completada');
+    }
+  },
+  {
+    label:    'Análisis de liquidaciones aprobado',
+    subtexto: 'Tareas 11-15 completadas',
+    fn: (tareas) => {
+      const rel = tareas.filter(t => [11,12,13,14,15].includes(t.orden));
+      return rel.length > 0 && rel.every(t => t.estado === 'completada');
+    }
+  },
+  {
+    label:    'Pruebas bancarias y presentaciones OK',
+    subtexto: 'Tareas 16-18 completadas',
+    fn: (tareas) => {
+      const rel = tareas.filter(t => [16,17,18].includes(t.orden));
+      return rel.length > 0 && rel.every(t => t.estado === 'completada');
+    }
+  },
+  {
+    label:    'Salario instalado en la empresa',
+    subtexto: 'Tarea 19 completada',
+    fn: (tareas) => tareas.find(t => t.orden === 19)?.estado === 'completada'
+  },
+  {
+    label:    'Capacitación a usuarios realizada',
+    subtexto: 'Tarea 20 completada',
+    fn: (tareas) => tareas.find(t => t.orden === 20)?.estado === 'completada'
+  },
+  {
+    label:    'Acompañamiento iniciado',
+    subtexto: 'Tareas 21-22 en curso o completadas',
+    fn: (tareas) => {
+      const rel = tareas.filter(t => [21,22].includes(t.orden));
+      return rel.some(t => t.estado === 'completada' || t.estado === 'en_progreso');
+    }
+  },
+];
+
+let _goliveAbierto = {}; // { cliente_id: bool }
+
+function toggleGoLive(clienteId) {
+  _goliveAbierto[clienteId] = !_goliveAbierto[clienteId];
+  renderImplementacion();
+}
+
+function renderGoLive(clienteId, tareasCliente, progreso) {
+  // Solo mostrar si el proyecto supera el 60%
+  if (progreso < 60 && progreso !== 100) return '';
+
+  const checks = GOLIVE_CHECKS.map(c => ({
+    ...c,
+    ok: !!c.fn(tareasCliente)
+  }));
+
+  const okCount    = checks.filter(c => c.ok).length;
+  const total      = checks.length;
+  const listo      = okCount === total;
+  const abierto    = _goliveAbierto[clienteId];
+
+  const btnColor   = listo ? 'var(--green)' : 'var(--amber)';
+  const btnLabel   = listo ? '🚀 Listo para go-live' : `🚦 Go-live: ${okCount}/${total}`;
+
+  return `
+    <div class="impl-golive" style="border-top:1px solid var(--border);padding:10px 16px">
+      <button class="impl-golive__toggle" style="color:${btnColor}"
+        onclick="toggleGoLive('${clienteId}')">
+        ${btnLabel} <span style="font-size:9px">${abierto ? '▴' : '▾'}</span>
+      </button>
+      ${abierto ? `
+        <div class="impl-golive__lista">
+          ${checks.map(c => `
+            <div class="impl-golive__item ${c.ok ? 'impl-golive__item--ok' : ''}">
+              <span class="impl-golive__check">${c.ok ? '✅' : '⬜'}</span>
+              <div>
+                <div class="impl-golive__label">${c.label}</div>
+                <div class="impl-golive__sub">${c.subtexto}</div>
+              </div>
+            </div>`).join('')}
+          ${listo ? `
+            <div class="impl-golive__ready">
+              🎉 Todas las condiciones están cumplidas. ¡El cliente está listo para operar!
+            </div>` : ''}
+        </div>` : ''}
+    </div>`;
+}
+
+// ────────── Log de actividad por cliente ──────────
+// Combina eventos de tareas + notas en una línea de tiempo cronológica.
+// Se carga de forma lazy al abrir el log de cada cliente.
+
+async function toggleActividadCliente(clienteId) {
+  _actividadAbierta[clienteId] = !_actividadAbierta[clienteId];
+
+  if (_actividadAbierta[clienteId] && !implActividadLog[clienteId]) {
+    await cargarActividadCliente(clienteId);
+  }
+  renderImplementacion();
+}
+
+async function cargarActividadCliente(clienteId) {
+  const tareaIds = implTareas
+    .filter(t => t.cliente_id === clienteId)
+    .map(t => t.id);
+
+  if (tareaIds.length === 0) { implActividadLog[clienteId] = []; return; }
+
+  const eventos = [];
+
+  // Cargar eventos (cambios de estado, asesor, etc.)
+  try {
+    const { data } = await sb()
+      .from('implementacion_tarea_eventos')
+      .select('*')
+      .in('tarea_id', tareaIds)
+      .order('created_at', { ascending: false })
+      .limit(30);
+    (data || []).forEach(e => {
+      const tarea = implTareas.find(t => t.id === e.tarea_id);
+      eventos.push({
+        fecha:  e.created_at,
+        tipo:   e.tipo,
+        autor:  e.autor_nombre || '—',
+        texto:  e.detalle || e.tipo,
+        tarea:  tarea ? tarea.tarea : '—',
+        origen: 'evento'
+      });
+    });
+  } catch(e) { console.warn('No se pudieron cargar eventos', e); }
+
+  // Agregar notas desde el array ya cargado
+  tareaIds.forEach(tid => {
+    (implTareaNotas[tid] || []).forEach(n => {
+      const tarea = implTareas.find(t => t.id === tid);
+      eventos.push({
+        fecha:  n.created_at,
+        tipo:   'nota',
+        autor:  n.autor_nombre || '—',
+        texto:  n.texto,
+        tarea:  tarea ? tarea.tarea : '—',
+        origen: 'nota'
+      });
+    });
+  });
+
+  // Ordenar cronológicamente (más reciente primero)
+  eventos.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  implActividadLog[clienteId] = eventos;
+}
+
+function renderActividadCliente(clienteId) {
+  const abierto = _actividadAbierta[clienteId];
+  const eventos = implActividadLog[clienteId] || [];
+
+  const iconoTipo = {
+    completada:       { i: '✅', color: 'var(--green)',  label: 'Completada' },
+    en_progreso:      { i: '▶',  color: 'var(--accent)', label: 'En progreso' },
+    pendiente:        { i: '○',  color: 'var(--text3)',  label: 'Reiniciada' },
+    reasignado:       { i: '↔',  color: 'var(--amber)',  label: 'Reasignada' },
+    nota:             { i: '💬', color: 'var(--blue)',   label: 'Nota' },
+    creado:           { i: '➕', color: 'var(--text3)',  label: 'Creada' },
+  };
+
+  const fmtFecha = (iso) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' }) +
+           ' ' + d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Calcular días entre eventos para detectar silencios
+  const diasEntre2 = (a, b) => Math.round(Math.abs(new Date(a) - new Date(b)) / 86400000);
+
+  return `
+    <div class="impl-actividad">
+      <button class="impl-actividad__toggle" onclick="toggleActividadCliente('${clienteId}')">
+        📋 ${abierto ? 'Ocultar' : 'Ver'} actividad${eventos.length > 0 ? ` (${eventos.length})` : ''}
+        <span style="font-size:9px">${abierto ? '▴' : '▾'}</span>
+      </button>
+      ${abierto ? `
+        <div class="impl-actividad__timeline">
+          ${eventos.length === 0
+            ? '<div style="color:var(--text3);font-size:12px;padding:12px">Sin actividad registrada todavía.</div>'
+            : eventos.slice(0, 15).map((e, i) => {
+                const cfg = iconoTipo[e.tipo] || { i: '◆', color: 'var(--text3)', label: e.tipo };
+                // Mostrar brecha si pasaron más de 3 días entre eventos
+                const brecha = i < eventos.length - 1
+                  ? diasEntre2(e.fecha, eventos[i + 1].fecha)
+                  : 0;
+                const brechaHtml = brecha >= 3
+                  ? `<div class="impl-actividad__brecha">↕ ${brecha} días sin actividad</div>`
+                  : '';
+                return `
+                  <div class="impl-actividad__item">
+                    <div class="impl-actividad__icon" style="color:${cfg.color}">${cfg.i}</div>
+                    <div class="impl-actividad__content">
+                      <div class="impl-actividad__tarea">${escapeHtmlImpl(e.tarea)}</div>
+                      <div class="impl-actividad__detalle">
+                        <span style="color:${cfg.color};font-weight:600">${cfg.label}</span>
+                        ${e.texto && e.texto !== e.tipo ? `· ${escapeHtmlImpl(e.texto.substring(0, 60))}` : ''}
+                      </div>
+                      <div class="impl-actividad__meta">${escapeHtmlImpl(e.autor)} · ${fmtFecha(e.fecha)}</div>
+                    </div>
+                  </div>
+                  ${brechaHtml}`;
+              }).join('')}
+        </div>` : ''}
+    </div>`;
+}
 
 // ────────── Reasignación masiva de tareas ──────────
 

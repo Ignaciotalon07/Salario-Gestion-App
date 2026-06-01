@@ -46,6 +46,7 @@ async function initKB() {
     renderKBList();
     actualizarMetricasKB();
     suscribirSoluciones();
+    if (typeof refreshSolucionesAlertas === 'function') refreshSolucionesAlertas();
   } catch (e) {
     console.error('Error cargando soluciones', e);
     const body = document.getElementById('kb-body');
@@ -80,14 +81,30 @@ function renderKBList() {
     return;
   }
 
+  const ahora = new Date();
   body.innerHTML = lista.map(s => {
-    const cat = CATS[s.cat] || { label: s.cat, bg: '#eee', text: '#444' };
-    return `<tr onclick="verKBDetalle('${s.id}')" style="cursor:pointer">
-      <td style="padding-left:20px;white-space:normal;line-height:1.4;font-weight:500">${escapeHtmlKB(s.titulo)}</td>
+    const cat  = CATS[s.cat] || { label: s.cat, bg: '#eee', text: '#444' };
+    const dias = s.updatedAt || s.createdAt
+      ? Math.floor((ahora - new Date(s.updatedAt || s.createdAt)) / (1000 * 60 * 60 * 24))
+      : 0;
+    const vencida    = dias > 120;
+    const porRevisar = dias > 60 && !vencida;
+    const rowStyle   = vencida    ? 'background:rgba(192,57,43,0.06)'
+                     : porRevisar ? 'background:rgba(180,83,9,0.05)'
+                     : '';
+    const badge = vencida
+      ? `<span class="badge b-red" style="font-size:10px;margin-left:6px">Desactualizada</span>`
+      : porRevisar
+      ? `<span class="badge b-amber" style="font-size:10px;margin-left:6px">Revisar</span>`
+      : '';
+    return `<tr onclick="verKBDetalle('${s.id}')" style="cursor:pointer;${rowStyle}">
+      <td style="padding-left:20px;white-space:normal;line-height:1.4;font-weight:500">
+        ${escapeHtmlKB(s.titulo)}${badge}
+      </td>
       <td><span class="badge" style="background:${cat.bg};color:${cat.text}">${cat.label}</span></td>
       <td style="color:var(--text2);white-space:normal;font-size:12px">${escapeHtmlKB(s.sub)}</td>
       <td style="font-weight:600">${s.usos}</td>
-      <td style="color:var(--text3)">${s.fecha}</td>
+      <td style="color:${vencida ? 'var(--red)' : porRevisar ? 'var(--amber)' : 'var(--text3)'}">${s.fecha}</td>
       <td style="color:var(--text3)">${escapeHtmlKB(s.autor)}</td>
       <td><button class="btn-sm" onclick="event.stopPropagation();verKBDetalle('${s.id}')">Ver</button></td>
     </tr>`;
@@ -104,6 +121,18 @@ function actualizarMetricasKB() {
   if (cards[1]) {
     const top = soluciones.slice().sort((a, b) => b.usos - a.usos)[0];
     cards[1].textContent = top ? top.titulo : '—';
+  }
+
+  // Para revisar: soluciones con más de 60 días sin actualizar y al menos 1 uso
+  if (cards[2]) {
+    const ahora2 = new Date();
+    const paraRevisar = soluciones.filter(s => {
+      if (!s.updatedAt && !s.createdAt) return false;
+      const dias = Math.floor((ahora2 - new Date(s.updatedAt || s.createdAt)) / (1000 * 60 * 60 * 24));
+      return dias > 60 && (s.usos || 0) >= 1;
+    });
+    cards[2].textContent = paraRevisar.length;
+    cards[2].style.color = paraRevisar.length > 0 ? 'var(--amber)' : 'var(--green)';
   }
 
   // Agregadas este mes

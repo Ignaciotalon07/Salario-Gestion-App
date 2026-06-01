@@ -418,7 +418,7 @@ function renderScoreRow(c) {
 
 // Los 4 asesores del equipo de soporte/implementación.
 // Se muestran siempre, incluso si no tienen consultas en el mes actual.
-const ASESORES_EQUIPO = ['Ignacio', 'Matias', 'Daniel', 'Renzo'];
+const ASESORES_EQUIPO = ['Ignacio Talon', 'Matias Ferro', 'Daniel Colomer', 'Renzo Moretti'];
 
 function refreshEquipoMetrics(mesActual) {
   if (!mesActual) return;

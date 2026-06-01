@@ -22,13 +22,82 @@ function dbRowToConsulta(row) {
     subtema:     row.subtema,
     repetida:    row.repetida ? 'si' : 'no',  // la DB usa boolean, la UI usa 'si'/'no'
     descripcion: row.descripcion,
-    solucionId:  row.solucion_id,
-    tiempo:      row.tiempo_resolucion || null,
-    timestamp:   row.created_at
+    solucionId:    row.solucion_id,
+    tiempo:        row.tiempo_resolucion || null,
+    material:      row.material || null,
+    remota:        row.conexion_remota || false,
+    tipoConsulta:  row.tipo_consulta || 'soporte',
+    timestamp:     row.created_at
   };
 }
 
 // ────────── Init ──────────
+
+// Muestra u oculta campos del form según el tipo de consulta seleccionado.
+// Programación: form simplificado (sin repetida, material, remota, base soluciones)
+// Soporte: form completo con base de soluciones
+// Comercial: form sin base de soluciones
+function onTipoConsultaChange() {
+  const tipo = (document.getElementById('r-tipo-consulta') || {}).value || 'soporte';
+  const esProg = tipo === 'programacion';
+  const esSop  = tipo === 'soporte';
+
+  const show = (id, visible) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = visible ? '' : 'none';
+  };
+
+  // Categoría/subtema estándar ↔ subtema libre de programación
+  show('r-row-cat',        !esProg);
+  show('r-row-prog-sub',   esProg);
+
+  // Repetida ↔ oculta en programación
+  show('r-row-rep',        !esProg);
+  show('r-row-tiempo-solo', esProg);
+
+  // Material + remota: solo soporte/comercial
+  show('r-row-material',   !esProg);
+
+  // Programación realizada: solo programación
+  show('r-group-prog-realizada', esProg);
+
+  // Base de soluciones: solo soporte
+  show('r-group-soluciones', esSop);
+
+  // Label de descripción
+  const lbl = document.getElementById('r-desc-label');
+  if (lbl) lbl.textContent = esProg ? '¿Qué consultó el cliente?' : 'Descripción del problema';
+
+  // Poblar datalist de subtemas previos de programación
+  if (esProg) {
+    const datalist = document.getElementById('r-sub-prog-list');
+    if (datalist && typeof consultas !== 'undefined') {
+      const subtemasPrev = [...new Set(
+        consultas
+          .filter(c => c.tipoConsulta === 'programacion' && c.subtema)
+          .map(c => c.subtema)
+      )].sort();
+      datalist.innerHTML = subtemasPrev.map(s => `<option value="${escapeHtmlConsulta(s)}">`).join('');
+    }
+  }
+}
+
+// Llena el select de tipo-consulta con las opciones habilitadas según el usuario logueado.
+// - Alfredo Cesar     → soporte + programacion
+// - Daniel Ferro      → soporte + comercial
+// - Resto del equipo  → solo soporte
+function initTipoConsulta() {
+  const sel = document.getElementById('r-tipo-consulta');
+  if (!sel) return;
+  const email         = currentMember ? (currentMember.email || '').toLowerCase() : '';
+  const nombre        = currentMember ? (currentMember.nombre || '').toLowerCase() : '';
+  const esAlfredo     = email === 'alfred@salario.local'   || nombre.includes('alfred');
+  const esDanielFerro = email === 'danielferro@salario.local' || nombre.includes('ferro');
+
+  sel.innerHTML = '<option value="soporte">Soporte</option>';
+  if (esAlfredo)     sel.innerHTML += '<option value="programacion">Programación</option>';
+  if (esDanielFerro) sel.innerHTML += '<option value="comercial">Comercial</option>';
+}
 
 async function initConsultas() {
   try {
@@ -38,6 +107,9 @@ async function initConsultas() {
     // Refrescar métricas del panel con los datos reales
     if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
     suscribirConsultas();
+    // Filtrar opciones del select según el rol y ajustar el form
+    initTipoConsulta();
+    onTipoConsultaChange();
   } catch (e) {
     console.error('Error cargando consultas', e);
   }
@@ -200,109 +272,122 @@ async function guardarConsulta() {
   const desc     = ((document.getElementById('r-desc')   || {}).value || '').trim();
   const solucion = ((document.getElementById('r-sol')    || {}).value || '').trim();
   const tiempoRaw = (document.getElementById('r-tiempo') || {}).value || '';
-  const tiempo   = tiempoRaw ? parseFloat(tiempoRaw) : null;
+  const tiempo    = tiempoRaw ? parseFloat(tiempoRaw) : null;
+  const material      = (document.getElementById('r-material')      || {}).value || 'ninguno';
+  const remota        = (document.getElementById('r-remota')        || {}).value || 'no';
+  const tipoConsulta  = (document.getElementById('r-tipo-consulta') || {}).value || 'soporte';
+  const esProg        = tipoConsulta === 'programacion';
 
-  // ── Validaciones ──
-  if (!cliente) { alert('Elegí un cliente.'); return; }
-  if (!catSelect) { alert('Elegí una categoría.'); document.getElementById('r-cat').focus(); return; }
-  if (catSelect === 'otro' && !catCustom) {
-    alert('Escribí el nombre de la nueva categoría.'); document.getElementById('r-cat-custom').focus(); return;
-  }
-  if (!subSelect || subSelect.toLowerCase().includes('primero')) {
-    alert('Elegí un subtema.'); document.getElementById('r-sub').focus(); return;
-  }
-  if (subSelect === 'otro' && !subCustom) {
-    alert('Escribí el nombre del nuevo subtema.'); document.getElementById('r-sub-custom').focus(); return;
+  // ── Para programación: leer campos específicos ──
+  let cat, subtema;
+  if (esProg) {
+    cat = 'programacion';
+    subtema = ((document.getElementById('r-sub-prog') || {}).value || '').trim();
+    if (!cliente) { alert('Elegí un cliente.'); return; }
+    if (!subtema) { alert('Escribí el subtema o módulo.'); document.getElementById('r-sub-prog').focus(); return; }
+  } else {
+    // ── Validaciones soporte/comercial ──
+    if (!cliente) { alert('Elegí un cliente.'); return; }
+    if (!catSelect) { alert('Elegí una categoría.'); document.getElementById('r-cat').focus(); return; }
+    if (catSelect === 'otro' && !catCustom) {
+      alert('Escribí el nombre de la nueva categoría.'); document.getElementById('r-cat-custom').focus(); return;
+    }
+    if (!subSelect || subSelect.toLowerCase().includes('primero')) {
+      alert('Elegí un subtema.'); document.getElementById('r-sub').focus(); return;
+    }
+    if (subSelect === 'otro' && !subCustom) {
+      alert('Escribí el nombre del nuevo subtema.'); document.getElementById('r-sub-custom').focus(); return;
+    }
+    cat = catSelect === 'otro' ? catCustom : catSelect;
+    subtema = subSelect === 'otro' ? subCustom : subSelect;
   }
 
-  // ── Lógica de solución ──
-  // Caso A: ya hay solución de la base → incrementar uso, no necesitamos texto.
-  // Caso B: no hay solución → crear una nueva en la base con desc + pasos.
+  // ── Lógica de solución (solo para SOPORTE) ──
+  // Programación y Comercial NO alimentan la base de soluciones.
   let nuevaSolucionId = null;
 
-  if (consultaSolucionId) {
-    // Caso A
-    if (typeof incrementarUsoSolucion === 'function') {
-      try { await incrementarUsoSolucion(consultaSolucionId); }
-      catch (e) { console.warn('No se pudo sumar uso a la solución', e); }
-    }
-  } else {
-    // Caso B: obligatorio descripción + solución para crear nueva entry
-    if (!desc) {
-      alert('Como no elegiste solución de la base, escribí la descripción del problema (será el título de la nueva solución).');
-      const el = document.getElementById('r-desc'); if (el) el.focus();
-      return;
-    }
-    if (!solucion) {
-      alert('Como no elegiste solución de la base, completá el campo "Solución aplicada" — esos pasos se guardan en la base.');
-      const el = document.getElementById('r-sol'); if (el) el.focus();
-      return;
-    }
-
-    const pasos = solucion.split('\n')
-      .map(p => p.replace(/^\s*paso\s*\d+\s*[:\.\-]?\s*/i, '').trim())
-      .filter(p => p.length > 0);
-    if (pasos.length === 0) {
-      alert('Escribí al menos un paso de la solución (uno por línea).');
-      const el = document.getElementById('r-sol'); if (el) el.focus();
-      return;
-    }
-
-    const autor         = (typeof currentMember !== 'undefined' && currentMember) ? currentMember.nombre : 'Equipo';
-    const tituloSolucion = desc.length > 200 ? desc.substring(0, 197) + '...' : desc;
-
-    try {
-      const inserted = await dbInsert('soluciones', {
-        titulo:   tituloSolucion,
-        cat,
-        sub:      subtema,
-        pasos,
-        material: 'Sin material',
-        aplica:   'Todos',
-        autor,
-        usos:     1
-      });
-      nuevaSolucionId = inserted.id;
-    } catch (e) {
-      console.error('Error creando solución', e);
-      alert('No se pudo guardar la solución en la base: ' + e.message + '\n\nLa consulta tampoco se guardó. Probá de nuevo.');
-      return;
+  if (!esProg && tipoConsulta !== 'comercial') {
+    if (consultaSolucionId) {
+      if (typeof incrementarUsoSolucion === 'function') {
+        try { await incrementarUsoSolucion(consultaSolucionId); }
+        catch (e) { console.warn('No se pudo sumar uso a la solución', e); }
+      }
+    } else {
+      if (!desc) {
+        alert('Como no elegiste solución de la base, escribí la descripción del problema (será el título de la nueva solución).');
+        const el = document.getElementById('r-desc'); if (el) el.focus();
+        return;
+      }
+      if (!solucion) {
+        alert('Como no elegiste solución de la base, completá el campo "Solución aplicada" — esos pasos se guardan en la base.');
+        const el = document.getElementById('r-sol'); if (el) el.focus();
+        return;
+      }
+      const pasos = solucion.split('\n')
+        .map(p => p.replace(/^\s*paso\s*\d+\s*[:\.\-]?\s*/i, '').trim())
+        .filter(p => p.length > 0);
+      if (pasos.length === 0) {
+        alert('Escribí al menos un paso de la solución (uno por línea).');
+        const el = document.getElementById('r-sol'); if (el) el.focus();
+        return;
+      }
+      const autor          = (typeof currentMember !== 'undefined' && currentMember) ? currentMember.nombre : 'Equipo';
+      const tituloSolucion = desc.length > 200 ? desc.substring(0, 197) + '...' : desc;
+      try {
+        const inserted = await dbInsert('soluciones', {
+          titulo: tituloSolucion, cat, sub: subtema,
+          pasos, material: 'Sin material', aplica: 'Todos', autor, usos: 1
+        });
+        nuevaSolucionId = inserted.id;
+      } catch (e) {
+        console.error('Error creando solución', e);
+        alert('No se pudo guardar la solución en la base: ' + e.message + '\n\nLa consulta tampoco se guardó. Probá de nuevo.');
+        return;
+      }
     }
   }
+
+  // Para programación: leer tiempo y descripción de sus campos específicos
+  const tiempoProgRaw = (document.getElementById('r-tiempo-prog') || {}).value || '';
+  const tiempoProg    = tiempoProgRaw ? parseFloat(tiempoProgRaw) : null;
+  const progRealizada = ((document.getElementById('r-prog-realizada') || {}).value || '').trim();
+  const tiempoFinal   = esProg ? tiempoProg : tiempo;
 
   // ── Persistencia en Supabase ──
   const asesor = (typeof currentMember !== 'undefined' && currentMember) ? currentMember.nombre : 'Equipo';
-
-  // Buscar el cliente_id desde el array global (para respetar la FK)
-  const clienteObj = (typeof clientes !== 'undefined')
-    ? clientes.find(c => c.nombre === cliente)
-    : null;
+  const clienteObj = (typeof clientes !== 'undefined') ? clientes.find(c => c.nombre === cliente) : null;
 
   try {
     await dbInsert('consultas', {
-      cliente_id:   clienteObj ? clienteObj.id : null,
-      cliente_nombre: cliente,
+      cliente_id:        clienteObj ? clienteObj.id : null,
+      cliente_nombre:    cliente,
+      asesor,
+      categoria:         cat,
+      subtema,
+      repetida:          esProg ? false : repetida === 'si',
+      descripcion:       desc || null,
+      // Para programación: guardamos qué se programó en el campo solucion (texto libre, sin KB)
+      solucion_id:       esProg ? null : (consultaSolucionId || nuevaSolucionId || null),
+      tiempo_resolucion: (tiempoFinal && !isNaN(tiempoFinal) && tiempoFinal > 0) ? tiempoFinal : null,
+      material:          esProg ? null : (material !== 'ninguno' ? material : null),
+      conexion_remota:   esProg ? false : (remota === 'si' ? true : false),
+      tipo_consulta:     tipoConsulta
+    });
+
+    consultas.unshift({
+      id:           '_temp_' + Date.now(),
+      cliente,
       asesor,
       categoria:    cat,
       subtema,
-      repetida:          repetida === 'si',   // la DB espera boolean
-      descripcion:       desc || null,
-      solucion_id:       consultaSolucionId || nuevaSolucionId || null,
-      tiempo_resolucion: (tiempo && !isNaN(tiempo) && tiempo > 0) ? tiempo : null
-    });
-    // Agregar al array local inmediatamente para que refreshPanelMetrics
-    // y recalcularScoreCliente lean el dato recién guardado sin esperar el realtime
-    consultas.unshift({
-      id:          '_temp_' + Date.now(),
-      cliente,
-      asesor,
-      categoria:   cat,
-      subtema,
-      repetida:    repetida === 'si' ? 'si' : 'no',
-      descripcion: desc || null,
-      solucionId:  consultaSolucionId || nuevaSolucionId || null,
-      tiempo:      (tiempo && !isNaN(tiempo) && tiempo > 0) ? tiempo : null,
-      timestamp:   new Date().toISOString()
+      repetida:     esProg ? 'no' : (repetida === 'si' ? 'si' : 'no'),
+      descripcion:  desc || null,
+      solucionId:   esProg ? null : (consultaSolucionId || nuevaSolucionId || null),
+      tiempo:       (tiempoFinal && !isNaN(tiempoFinal) && tiempoFinal > 0) ? tiempoFinal : null,
+      material:     esProg ? null : (material !== 'ninguno' ? material : null),
+      remota:       esProg ? false : remota === 'si',
+      tipoConsulta: tipoConsulta,
+      timestamp:    new Date().toISOString()
     });
 
     if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
@@ -435,8 +520,20 @@ async function recalcularAutonomiaCliente(nombreCliente) {
                : pctRep <= 0.55 ? 1
                : 0;
 
+  // ── % con material enviado (señal negativa: necesitó material de apoyo) ──
+  const conMaterial = todasDelCliente.filter(c => c.material && c.material !== 'ninguno').length;
+  const pctMaterial = conMaterial / todasDelCliente.length;
+  // Si en más del 50% de las consultas hubo que mandarle material → resta 1 pt
+  const materialPenalty = pctMaterial > 0.50 ? -1 : 0;
+
+  // ── % con conexión remota (señal negativa: no pudo resolverlo solo) ──
+  const conRemota = todasDelCliente.filter(c => c.remota === true || c.remota === 'si').length;
+  const pctRemota = conRemota / todasDelCliente.length;
+  // Si en más del 40% de las consultas hubo que conectarse → resta 1 pt
+  const remotaPenalty = pctRemota > 0.40 ? -1 : 0;
+
   // ── Resultado ──
-  const total = frecPts + repPts;
+  const total = frecPts + repPts + materialPenalty + remotaPenalty;
   const nuevaAutonomia = total >= 5 ? 'alta'
                        : total >= 3 ? 'media'
                        : 'baja';
@@ -459,7 +556,7 @@ async function recalcularAutonomiaCliente(nombreCliente) {
 
 function resetFormConsulta() {
   // Selects y inputs con ID
-  const ids = ['r-cliente', 'r-rep', 'r-resuelto', 'r-material', 'r-remota'];
+  const ids = ['r-cliente', 'r-rep', 'r-material', 'r-remota'];
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.selectedIndex = 0;
@@ -479,6 +576,12 @@ function resetFormConsulta() {
   // Tiempo de resolución
   const tiempo = document.getElementById('r-tiempo');
   if (tiempo) tiempo.value = '';
+  const tiempoProg = document.getElementById('r-tiempo-prog');
+  if (tiempoProg) tiempoProg.value = '';
+  const subProg = document.getElementById('r-sub-prog');
+  if (subProg) subProg.value = '';
+  const progRealizada = document.getElementById('r-prog-realizada');
+  if (progRealizada) progRealizada.value = '';
 
   // Textareas
   const desc = document.getElementById('r-desc');

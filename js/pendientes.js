@@ -13,7 +13,7 @@ let searchText = '';
 let groupByCliente = false;
 let pendientesCerradosMes = 0; // contador de pendientes cerrados este mes
 
-const TEAM_ASESORES = ['Ignacio', 'Matias', 'Daniel', 'Daniel Ferro', 'Renzo', 'Alfred'];
+const TEAM_ASESORES = ['Ignacio Talon', 'Matias Ferro', 'Daniel Colomer', 'Daniel Ferro', 'Renzo Moretti', 'Alfredo Cesar'];
 
 // ────────── Mapeo DB <-> UI ──────────
 
@@ -59,10 +59,10 @@ function vencimientoInfo(createdAt) {
 
 // Configuracion visual y default-asesor por tipo
 const TIPO_PENDIENTE = {
-  soporte:        { label: 'Soporte',        emoji: '🎧', badge: 'b-blue',   defaultAsesor: null },
-  implementacion: { label: 'Implementacion', emoji: '🚀', badge: 'b-amber',  defaultAsesor: null },
-  bug:            { label: 'Bug',            emoji: '🐛', badge: 'b-red',    defaultAsesor: 'Alfred' },
-  comercial:      { label: 'Comercial',      emoji: '💼', badge: 'b-green',  defaultAsesor: 'Daniel Ferro' }
+  soporte:        { label: 'Soporte',              emoji: '🎧', badge: 'b-blue',   defaultAsesor: null },
+  implementacion: { label: 'Implementación',       emoji: '🚀', badge: 'b-amber',  defaultAsesor: null },
+  bug:            { label: 'Programación',         emoji: '🐛', badge: 'b-red',    defaultAsesor: 'Alfredo Cesar' },
+  comercial:      { label: 'Comercial (Adm.)', emoji: '💼', badge: 'b-green',  defaultAsesor: 'Daniel Ferro' }
 };
 
 function categoriaBadge(cat) {
@@ -131,6 +131,8 @@ async function initPendientes() {
     updatePendCount();
     suscribirPendientes();
     pedirPermisoNotificaciones();
+    // Mostrar solo los tipos de trabajo habilitados para el usuario logueado
+    filtrarOpcionesTipoPendiente();
     // Recalcular alertas con los pendientes recién cargados
     if (typeof refreshAlertas === 'function') refreshAlertas();
   } catch (e) {
@@ -509,7 +511,7 @@ function cerrarPendiente(id, btn) {
   }
   // Daniel Ferro (comercial): cierre directo sin modal ni métricas
   // Sus pendientes son agendas y reuniones, no consultas de soporte.
-  if (getCurrentUserName() === 'Daniel Ferro') {
+  if (['Daniel Ferro'].includes(getCurrentUserName())) {
     cerrarPendienteEjecutar(id, btn);
     return;
   }
@@ -525,7 +527,7 @@ let _cierreState = null; // { p, btn, solucionId }
 // Alfred y Daniel Ferro ven solo el campo de tiempo (sin selector de solución).
 function abrirModalCierrePendiente(p, btn) {
   // Alfred ve el modal de tiempo pero sin selector de soluciones (es programador)
-  const sinSolucion = ['Alfred'];
+  const sinSolucion = ['Alfredo Cesar'];
   const mostrarSolucion = !sinSolucion.includes(getCurrentUserName());
 
   _cierreState = { p, btn, solucionId: null };
@@ -547,6 +549,7 @@ function abrirModalCierrePendiente(p, btn) {
         <button class="btn-sm" onclick="cancelarCierrePendiente()" title="Cancelar">✕</button>
       </div>
 
+      <div class="modal-body">
       <!-- Tiempo: obligatorio -->
       <div class="form-group" style="margin-bottom:18px">
         <label class="fl">
@@ -566,18 +569,75 @@ function abrirModalCierrePendiente(p, btn) {
         </div>
       </div>
 
+      <!-- Repetida: obligatorio -->
+      <div class="form-group" style="margin-bottom:18px">
+        <label class="fl">
+          🔁 ¿Es una consulta repetida?
+          <span style="color:var(--red);margin-left:2px">*</span>
+        </label>
+        <select id="cierre-repetida" style="font-size:13px">
+          <option value="no">No — es una consulta nueva</option>
+          <option value="si">Sí — el cliente ya consultó esto antes</option>
+        </select>
+        <div style="font-size:11px;color:var(--text3);margin-top:5px">
+          Alimenta el % de repetición del cliente en el panel.
+        </div>
+      </div>
+
+      <!-- Material + Remota en una fila -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="fl">
+            📎 Material enviado
+            <span style="color:var(--red);margin-left:2px">*</span>
+          </label>
+          <select id="cierre-material" style="font-size:13px">
+            <option value="ninguno">Ninguno</option>
+            <option value="video">Video</option>
+            <option value="pdf">PDF / imagen</option>
+            <option value="varios">Varios materiales</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="fl">
+            🖥 Conexión remota
+            <span style="color:var(--red);margin-left:2px">*</span>
+          </label>
+          <select id="cierre-remota" style="font-size:13px">
+            <option value="no">No — solo por chat</option>
+            <option value="si">Sí — nos conectamos</option>
+            <option value="llamada">Llamada de voz</option>
+          </select>
+        </div>
+      </div>
+
       <!-- Solución: opcional, solo para el equipo de soporte -->
       ${mostrarSolucion ? `
       <div class="form-group" id="cierre-sol-section" style="margin-bottom:18px">
-        <label class="fl">¿Qué solución aplicaste? <span style="color:var(--text3)">(opcional)</span></label>
+        <label class="fl">¿Cómo lo resolviste? <span style="color:var(--text3)">(opcional)</span></label>
+
+        <!-- Opción A: elegir de la base -->
         <div id="cierre-sol-elegida" style="display:none;margin-bottom:8px"></div>
-        <button type="button" class="btn-sm" onclick="elegirSolucionCierre()">
+        <button type="button" class="btn-sm" onclick="elegirSolucionCierre()" id="cierre-btn-elegir">
           🔗 Elegir de la base de soluciones
         </button>
+
+        <!-- Opción B: escribir solución nueva -->
+        <div style="margin-top:10px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:5px">
+            O escribí los pasos directamente — se van a guardar en la base de soluciones:
+          </div>
+          <textarea
+            id="cierre-sol-nueva"
+            placeholder="Paso 1: ...&#10;Paso 2: ...&#10;Paso 3: ..."
+            style="min-height:80px;font-size:12px;resize:vertical"
+          ></textarea>
+        </div>
       </div>
       ` : ''}
+      </div><!-- /.modal-body -->
 
-      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--border)">
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:12px;border-top:1px solid var(--border);flex-shrink:0">
         <button class="btn-secondary" onclick="cancelarCierrePendiente()">Cancelar</button>
         <button class="btn-primary" onclick="confirmarCierrePendiente()">✓ Marcar como resuelto</button>
       </div>
@@ -609,6 +669,11 @@ function elegirSolucionCierre() {
       if (accion === 'elegida' && solucionId) {
         _cierreState.solucionId = solucionId;
         renderSolucionElegidaCierre(solucionId);
+        // Ocultar textarea de solución nueva — ya tienen una de la base
+        const ta = document.getElementById('cierre-sol-nueva');
+        if (ta) { ta.value = ''; ta.style.display = 'none'; }
+        const btn = document.getElementById('cierre-btn-elegir');
+        if (btn) btn.style.display = 'none';
       }
     }
   });
@@ -631,7 +696,14 @@ function renderSolucionElegidaCierre(solucionId) {
         &middot; ${s.usos} uso${s.usos !== 1 ? 's' : ''}
       </div>
     </div>
-    <button class="btn-sm" onclick="_cierreState.solucionId=null;document.getElementById('cierre-sol-elegida').style.display='none'" title="Quitar">✕</button>
+    <button class="btn-sm" onclick="
+      _cierreState.solucionId=null;
+      document.getElementById('cierre-sol-elegida').style.display='none';
+      const ta=document.getElementById('cierre-sol-nueva');
+      if(ta) ta.style.display='';
+      const btn=document.getElementById('cierre-btn-elegir');
+      if(btn) btn.style.display='';
+    " title="Quitar">✕</button>
   `;
 }
 
@@ -647,24 +719,62 @@ async function confirmarCierrePendiente() {
     return;
   }
 
+  // Leer textarea de solución nueva (si escribieron algo)
+  const solNuevaTexto = (document.getElementById('cierre-sol-nueva')?.value || '').trim();
+  const repetida = document.getElementById('cierre-repetida')?.value || 'no';
+  const material = document.getElementById('cierre-material')?.value || 'ninguno';
+  const remota   = document.getElementById('cierre-remota')?.value || 'no';
+
   const { p, btn, solucionId } = _cierreState;
+
+  // Si eligieron solución de la base → sumar uso
+  // Si escribieron pasos → crear nueva solución en la base
+  let solucionIdFinal = solucionId;
+
+  if (!solucionId && solNuevaTexto) {
+    // Crear nueva solución desde los pasos escritos
+    const pasos = solNuevaTexto.split('\n')
+      .map(l => l.replace(/^\s*paso\s*\d+\s*[:\.\-]?\s*/i, '').trim())
+      .filter(l => l.length > 0);
+
+    if (pasos.length > 0) {
+      const autor    = (typeof currentMember !== 'undefined' && currentMember) ? currentMember.nombre : 'Equipo';
+      const titulo   = p.descripcion
+        ? (p.descripcion.length > 200 ? p.descripcion.substring(0, 197) + '...' : p.descripcion)
+        : 'Solución desde pendiente';
+      // Mapear categoria del pendiente a clave de CATS
+      const catKey = Object.keys(CATS || {}).find(k =>
+        (p.categoriaLabel || '').toLowerCase().includes(k.toLowerCase())
+      ) || 'fuera';
+
+      try {
+        const inserted = await dbInsert('soluciones', {
+          titulo, cat: catKey, sub: 'Seguimiento',
+          pasos, material: 'Sin material', aplica: 'Todos',
+          autor, usos: 1
+        });
+        solucionIdFinal = inserted.id;
+        toast('Nueva solución guardada en la base');
+      } catch (e) {
+        console.warn('No se pudo crear la solución', e);
+      }
+    }
+  } else if (solucionId && typeof incrementarUsoSolucion === 'function') {
+    incrementarUsoSolucion(solucionId).catch(e => console.warn('No se pudo sumar uso', e));
+  }
+
   cancelarCierrePendiente();
 
   // 1. Marcar pendiente como resuelto
   await cerrarPendienteEjecutar(p.id, btn);
 
-  // 2. Sumar uso a la solución si eligió una
-  if (solucionId && typeof incrementarUsoSolucion === 'function') {
-    incrementarUsoSolucion(solucionId).catch(e => console.warn('No se pudo sumar uso', e));
-  }
-
-  // 3. Crear consulta para alimentar las métricas
-  await crearConsultaDesdePendiente(p, tiempo, solucionId);
+  // 2. Crear consulta para alimentar las métricas
+  await crearConsultaDesdePendiente(p, tiempo, solucionIdFinal, repetida, material, remota);
 }
 
 // Crea un registro en la tabla consultas a partir de un pendiente cerrado.
 // Esto alimenta las métricas del panel (gráficos, score de cliente, etc.).
-async function crearConsultaDesdePendiente(p, tiempo, solucionId) {
+async function crearConsultaDesdePendiente(p, tiempo, solucionId, repetida = 'no', material = 'ninguno', remota = 'no') {
   const asesor     = (typeof currentMember !== 'undefined' && currentMember) ? currentMember.nombre : 'Equipo';
   const clienteObj = (typeof clientes !== 'undefined') ? clientes.find(c => c.nombre === p.cliente) : null;
 
@@ -680,10 +790,12 @@ async function crearConsultaDesdePendiente(p, tiempo, solucionId) {
       asesor,
       categoria,
       subtema:           'Seguimiento',
-      repetida:          false,
+      repetida:          repetida === 'si',
       descripcion:       p.descripcion || null,
       tiempo_resolucion: tiempo,
-      solucion_id:       solucionId || null
+      solucion_id:       solucionId || null,
+      material:          material !== 'ninguno' ? material : null,
+      conexion_remota:   remota === 'si'
     });
 
     // Agregar al array global para que los gráficos se actualicen sin esperar el realtime
@@ -694,9 +806,11 @@ async function crearConsultaDesdePendiente(p, tiempo, solucionId) {
         asesor,
         categoria,
         subtema:     'Seguimiento',
-        repetida:    'no',
+        repetida:    repetida === 'si' ? 'si' : 'no',
         descripcion: p.descripcion || null,
         solucionId:  solucionId || null,
+        material:    material !== 'ninguno' ? material : null,
+        remota:      remota === 'si',
         timestamp:   inserted.created_at || new Date().toISOString()
       });
     }
@@ -1360,6 +1474,38 @@ function actualizarSugerenciasKB() {
       `).join('')}
     `;
   }, 250);
+}
+
+// Muestra u oculta las opciones Bug y Comercial del form de nuevo pendiente
+// según el usuario logueado:
+//   - Alfredo Cesar     → soporte + implementacion + bug
+//   - Daniel Ferro      → soporte + implementacion + comercial
+//   - Resto del equipo  → solo soporte + implementacion
+// Renderiza las opciones del select "Tipo de trabajo" del form de pendientes
+// según el usuario logueado. Se llama al init y cada vez que se abre el form.
+//   - Alfredo Cesar     → soporte + implementacion + bug
+//   - Daniel Ferro      → soporte + implementacion + comercial
+//   - Resto del equipo  → solo soporte + implementacion
+function filtrarOpcionesTipoPendiente() {
+  const sel = document.getElementById('pf-tipo');
+  if (!sel) return;
+  const email         = currentMember ? (currentMember.email || '').toLowerCase() : '';
+  const nombre        = currentMember ? (currentMember.nombre || '').toLowerCase() : '';
+  const esAlfredo     = email === 'alfred@salario.local'      || nombre.includes('alfred');
+  const esDanielFerro = email === 'danielferro@salario.local' || nombre.includes('ferro');
+
+  // Reconstruir las opciones para evitar problemas de display:none en Safari/Firefox
+  const valorActual = sel.value;
+  sel.innerHTML =
+    '<option value="soporte">Soporte</option>' +
+    '<option value="implementacion">Implementación</option>' +
+    (esAlfredo     ? '<option value="bug">Programación</option>' : '') +
+    (esDanielFerro ? '<option value="comercial">Comercial (Administración)</option>' : '');
+
+  // Restaurar el valor previo si todavía es válido para este usuario
+  if (sel.querySelector(`option[value="${valorActual}"]`)) {
+    sel.value = valorActual;
+  }
 }
 
 window.addEventListener('app-ready', initPendientes);

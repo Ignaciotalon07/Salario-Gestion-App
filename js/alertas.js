@@ -166,7 +166,7 @@ function refreshAlertas() {
   }
 
   // ── 7. ASESOR SOBRECARGADO (>= 2x el promedio del equipo, mínimo 5 consultas) ──
-  const ASESORES_BASE = ['Ignacio', 'Matias', 'Daniel', 'Renzo'];
+  const ASESORES_BASE = ['Ignacio Talon', 'Matias Ferro', 'Daniel Colomer', 'Renzo Moretti'];
   const contAsesor = {};
   ASESORES_BASE.forEach(a => { contAsesor[a] = 0; });
   mesActual.forEach(c => { if (c.asesor && contAsesor.hasOwnProperty(c.asesor)) contAsesor[c.asesor]++; });
@@ -324,6 +324,68 @@ function refreshAlertas() {
     });
   }
 
+  // ── Alertas de facturación (solo para Daniel Ferro) ──
+  const me = (typeof getCurrentUserName === 'function') ? getCurrentUserName() : null;
+  if (me === 'Daniel Ferro') {
+    const allFacturas = (typeof adminFacturas !== 'undefined') ? adminFacturas : [];
+    const hoy         = new Date(); hoy.setHours(0,0,0,0);
+    const mesActual   = hoy.getMonth() + 1;
+    const anioActual  = hoy.getFullYear();
+    const MESES       = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+    // ── F1. Sin pago del mes actual ──
+    const sinPagoMes = allClientes.filter(c => {
+      const factura = allFacturas.find(f =>
+        f.cliente_id === c.id && f.mes === mesActual && f.anio === anioActual
+      );
+      return !factura || factura.estado !== 'pagada';
+    });
+
+    if (sinPagoMes.length > 0) {
+      const cuantos = sinPagoMes.length;
+      const lista   = sinPagoMes.slice(0, 4).map(c => c.nombre).join(', ');
+      const mas     = cuantos > 4 ? ` y ${cuantos - 4} más` : '';
+      alertas.push({
+        tipo:    'red',
+        titulo:  `${cuantos} cliente${cuantos !== 1 ? 's' : ''} sin pago en ${MESES[mesActual]}`,
+        texto:   lista + mas + '. Sin factura cargada para este mes.',
+        accion:  'Ver facturación',
+        onClick: `goTo(document.querySelector('.nav-item[onclick*=administracion]'),'administracion')`
+      });
+    }
+
+    // ── F2. Próxima facturación vencida (fecha_proxima < hoy) ──
+    const facturasPorCliente = {};
+    allFacturas.forEach(f => {
+      if (!facturasPorCliente[f.cliente_id] ||
+          f.anio > facturasPorCliente[f.cliente_id].anio ||
+          (f.anio === facturasPorCliente[f.cliente_id].anio && f.mes > facturasPorCliente[f.cliente_id].mes)) {
+        facturasPorCliente[f.cliente_id] = f;
+      }
+    });
+
+    const vencidas = Object.values(facturasPorCliente).filter(f => {
+      if (!f.fecha_proxima) return false;
+      const prox = new Date(f.fecha_proxima); prox.setHours(0,0,0,0);
+      return prox < hoy && f.estado === 'pagada';
+    });
+
+    if (vencidas.length > 0) {
+      const nombres = vencidas.slice(0, 3).map(f => {
+        const cli = allClientes.find(c => c.id === f.cliente_id);
+        return cli ? cli.nombre : '—';
+      }).join(', ');
+      const mas = vencidas.length > 3 ? ` y ${vencidas.length - 3} más` : '';
+      alertas.push({
+        tipo:    'amber',
+        titulo:  `${vencidas.length} cliente${vencidas.length !== 1 ? 's' : ''} con fecha de facturación vencida`,
+        texto:   `${nombres}${mas}. Ya pasó la fecha de próxima facturación.`,
+        accion:  'Ver facturación',
+        onClick: `goTo(document.querySelector('.nav-item[onclick*=administracion]'),'administracion')`
+      });
+    }
+  }
+
   // ── Render ──
   _renderAlertas(alertas);
 }
@@ -377,9 +439,130 @@ function _renderAlertas(alertas) {
   }).join('');
 }
 
+// ────────── Top 5 soluciones + soluciones para revisar ──────────
+
+function refreshSolucionesAlertas() {
+  const allSoluciones = (typeof soluciones !== 'undefined') ? soluciones : [];
+  _renderTopSoluciones(allSoluciones);
+  _renderRevisarSoluciones(allSoluciones);
+}
+
+function _renderTopSoluciones(allSoluciones) {
+  const cont = document.getElementById('alertas-top-soluciones');
+  if (!cont) return;
+
+  const top5 = allSoluciones
+    .slice()
+    .sort((a, b) => (b.usos || 0) - (a.usos || 0))
+    .slice(0, 5);
+
+  if (top5.length === 0) {
+    cont.innerHTML = `<div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">Sin soluciones cargadas todavía.</div>`;
+    return;
+  }
+
+  const maxUsos = top5[0].usos || 1;
+
+  cont.innerHTML = top5.map((s, i) => {
+    const cat  = (typeof CATS !== 'undefined' && CATS[s.cat]) || { label: s.cat || '—', bg: '#eee', text: '#444' };
+    const pct  = Math.round(((s.usos || 0) / maxUsos) * 100);
+    const medal = ['🥇','🥈','🥉','4️⃣','5️⃣'][i];
+    return `
+      <div style="padding:12px 20px;${i < top5.length - 1 ? 'border-bottom:1px solid var(--border)' : ''}">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <span style="font-size:16px;flex-shrink:0">${medal}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                 title="${_alEscHtml(s.titulo)}">${_alEscHtml(s.titulo)}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;display:flex;gap:6px;align-items:center">
+              <span class="badge" style="background:${cat.bg};color:${cat.text};font-size:10px">${cat.label}</span>
+              <span>${s.usos} uso${s.usos !== 1 ? 's' : ''}</span>
+              <span>· ${_alEscHtml(s.autor || '—')}</span>
+            </div>
+          </div>
+        </div>
+        <div style="background:var(--surface2);border-radius:4px;height:5px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:var(--accent);border-radius:4px;transition:width 0.4s"></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function _renderRevisarSoluciones(allSoluciones) {
+  const cont = document.getElementById('alertas-revisar-soluciones');
+  if (!cont) return;
+
+  const ahora = new Date();
+  // Soluciones con más de 90 días sin actualizar Y con al menos 1 uso
+  const paraRevisar = allSoluciones
+    .filter(s => {
+      if (!s.updatedAt && !s.createdAt) return false;
+      const fecha = new Date(s.updatedAt || s.createdAt);
+      const dias  = Math.floor((ahora - fecha) / (1000 * 60 * 60 * 24));
+      return dias > 60 && (s.usos || 0) >= 1;
+    })
+    .sort((a, b) => {
+      const da = new Date(a.updatedAt || a.createdAt);
+      const db = new Date(b.updatedAt || b.createdAt);
+      return da - db; // más antigua primero
+    })
+    .slice(0, 5);
+
+  if (paraRevisar.length === 0) {
+    cont.innerHTML = `
+      <div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">
+        Todo en orden — ninguna solución tiene más de 60 días sin actualizar.
+      </div>`;
+    return;
+  }
+
+  cont.innerHTML = paraRevisar.map((s, i) => {
+    const cat  = (typeof CATS !== 'undefined' && CATS[s.cat]) || { label: s.cat || '—', bg: '#eee', text: '#444' };
+    const fecha = new Date(s.updatedAt || s.createdAt);
+    const dias  = Math.floor((ahora - fecha) / (1000 * 60 * 60 * 24));
+    const meses = Math.floor(dias / 30);
+    const tiempoTexto = meses >= 2 ? `hace ${meses} meses` : `hace ${dias} días`;
+    const urgente = dias > 120;
+    return `
+      <div style="padding:12px 20px;${i < paraRevisar.length - 1 ? 'border-bottom:1px solid var(--border)' : ''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                 title="${_alEscHtml(s.titulo)}">${_alEscHtml(s.titulo)}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px;display:flex;gap:6px;align-items:center">
+              <span class="badge" style="background:${cat.bg};color:${cat.text};font-size:10px">${cat.label}</span>
+              <span>Actualizada ${tiempoTexto} · ${_alEscHtml(s.autor || '—')}</span>
+            </div>
+          </div>
+          <span class="badge ${urgente ? 'b-red' : 'b-amber'}" style="flex-shrink:0">
+            ${urgente ? 'Desactualizada' : 'Revisar'}
+          </span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn-sm" onclick="marcarSolucionVigente('${s.id}')">✓ Sigue vigente</button>
+          <button class="btn-sm" onclick="goTo(document.querySelector('.nav-item[onclick*=biblioteca]'),'biblioteca');setTimeout(()=>verSolucion('${s.id}'),200)">Ver</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// Marca una solución como revisada hoy (actualiza updated_at)
+async function marcarSolucionVigente(id) {
+  try {
+    await dbUpdate('soluciones', id, { updated_at: new Date().toISOString() });
+    // Actualizar en memoria
+    const s = (typeof soluciones !== 'undefined') ? soluciones.find(x => x.id === id) : null;
+    if (s) s.updatedAt = new Date().toISOString();
+    refreshSolucionesAlertas();
+    toast('Solución marcada como vigente');
+  } catch (e) {
+    console.error('Error marcando solución vigente', e);
+    alert('No se pudo actualizar: ' + e.message);
+  }
+}
+
 window.addEventListener('app-ready', () => {
-  // Primera pasada en cuanto la app está lista.
-  // Los datos pueden no estar cargados aún → refreshAlertas se llama de nuevo
-  // cuando cada módulo termina su init (consultas, clientes, pendientes).
   refreshAlertas();
+  // Las soluciones se cargan en kb.js — esperamos un tick para que estén listas
+  setTimeout(refreshSolucionesAlertas, 1500);
 });

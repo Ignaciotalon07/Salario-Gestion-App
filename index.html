@@ -380,6 +380,20 @@
             </button>
           </div>
 
+          <!-- Sección Administración: solo visible para Daniel Ferro -->
+          <div class="sidebar-section" id="nav-administracion" style="display:none">
+            <div class="sidebar-section-label">Administración</div>
+            <button class="nav-item" onclick="goTo(this, 'administracion')">
+              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="1" y="3" width="14" height="10" rx="1.5"></rect>
+                <path d="M1 6h14"></path>
+                <path d="M5 9h2M9 9h2"></path>
+              </svg>
+              <span>Facturación</span>
+              <span class="nav-badge warn" id="admin-nav-badge" style="display:none"></span>
+            </button>
+          </div>
+
           <div class="sidebar-section" style="margin-top: auto">
             <div class="sidebar-section-label">Sistema</div>
             <button class="nav-item" onclick="goTo(this, 'alertas')">
@@ -730,12 +744,18 @@
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label class="fl">Nombre del cliente</label>
-                  <input
-                    type="text"
-                    id="cf-nombre"
-                    placeholder="Ej: Empresa XYZ"
-                  />
+                  <label class="fl">Nombre comercial</label>
+                  <input type="text" id="cf-nombre" placeholder="Ej: Estudio Maineri" />
+                </div>
+                <div class="form-group">
+                  <label class="fl">Razón social</label>
+                  <input type="text" id="cf-razon" placeholder="Ej: Consultores Asociados SRL" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">CUIT</label>
+                  <input type="text" id="cf-cuit" placeholder="Ej: 30712275827" />
                 </div>
                 <div class="form-group">
                   <label class="fl">Tipo</label>
@@ -749,40 +769,21 @@
               </div>
               <div class="form-row">
                 <div class="form-group">
-                  <label class="fl">Area</label>
+                  <label class="fl">Área</label>
                   <select id="cf-area">
                     <option value="soporte">Soporte</option>
                     <option value="impl">Implementación</option>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="fl">Asesor responsable</label>
-                  <select id="cf-asesor">
-                    <option>Ignacio</option>
-                    <option>Matias</option>
-                    <option>Daniel</option>
-                    <option>Renzo</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="fl">Nota inicial</label>
-                  <input
-                    type="text"
-                    id="cf-nota"
-                    placeholder="Opcional: contexto del cliente"
-                  />
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group" style="flex: 1">
                   <label class="fl">Link de Whaticket (opcional)</label>
-                  <input
-                    type="text"
-                    id="cf-whaticket"
-                    placeholder="Pega la URL del chat: https://app.whaticket.com/tickets/..."
-                  />
+                  <input type="text" id="cf-whaticket" placeholder="https://app.whaticket.com/tickets/..." />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group" style="flex:1">
+                  <label class="fl">Nota inicial (opcional)</label>
+                  <input type="text" id="cf-nota" placeholder="Contexto del cliente" />
                 </div>
               </div>
               <div class="btn-row">
@@ -928,44 +929,28 @@
                 <div class="form-group">
                   <label class="fl">Tipo de trabajo</label>
                   <select id="pf-tipo" onchange="onTipoPendienteChange()">
-                    <option value="soporte">
-                      Soporte (consulta del cliente)
-                    </option>
-                    <option value="implementacion">
-                      Implementacion (cliente nuevo / onboarding)
-                    </option>
-                    <option value="bug">
-                      Bug (problema tecnico para programacion)
-                    </option>
-                    <option value="comercial">
-                      Comercial (renovacion / venta / retencion)
+                    <option value="soporte">Soporte</option>
+                    <option value="implementacion">Implementación</option>
+                    <option value="bug">Programación</option>
+                    <option value="comercial">Comercial (Administración)
                     </option>
                   </select>
                 </div>
                 <div class="form-group" id="pf-cliente-group">
                   <label class="fl">Cliente</label>
                   <select id="pf-cliente">
-                    <option>ESTIN</option>
-                    <option>Ispova</option>
-                    <option>Estudio Bocco</option>
-                    <option>Noetinger</option>
-                    <option>Mark Twain</option>
-                    <option>Taborin</option>
-                    <option>Sartori</option>
-                    <option>Zarazaga</option>
-                    <option>Nina</option>
-                    <option>m3</option>
+                    <option value="">Cargando clientes...</option>
                   </select>
                 </div>
                 <div class="form-group">
                   <label class="fl">Asesor responsable</label>
                   <select id="pf-asesor">
-                    <option>Ignacio</option>
-                    <option>Matias</option>
-                    <option>Daniel</option>
+                    <option>Ignacio Talon</option>
+                    <option>Matias Ferro</option>
+                    <option>Daniel Colomer</option>
                     <option>Daniel Ferro</option>
-                    <option>Renzo</option>
-                    <option>Alfred</option>
+                    <option>Renzo Moretti</option>
+                    <option>Alfredo Cesar</option>
                   </select>
                 </div>
               </div>
@@ -1167,22 +1152,20 @@
                 <div class="form-group" style="max-width: 50%; flex: 1">
                   <label class="fl">Cliente</label>
                   <select id="r-cliente">
-                    <option>ESTIN</option>
-                    <option>Ispova</option>
-                    <option>Estudio Bocco</option>
-                    <option>Noetinger</option>
-                    <option>Mark Twain</option>
-                    <option>Taborin</option>
-                    <option>Sartori</option>
-                    <option>Zarazaga</option>
-                    <option>Nina</option>
-                    <option>m3</option>
-                    <option>Otro cliente</option>
+                    <option value="">Cargando clientes...</option>
+                  </select>
+                </div>
+                <div class="form-group" style="max-width: 50%; flex: 1">
+                  <label class="fl">Tipo de consulta</label>
+                  <select id="r-tipo-consulta" onchange="onTipoConsultaChange()">
+                    <!-- Opciones se renderizan por JS según el usuario logueado -->
+                    <option value="soporte">Soporte</option>
                   </select>
                 </div>
                 <!-- "Asesor que atendió" se asigna automáticamente al usuario logueado -->
               </div>
-              <div class="form-row">
+              <!-- Fila categoría/subtema — solo soporte/comercial -->
+              <div class="form-row" id="r-row-cat">
                 <div class="form-group">
                   <label class="fl">Categoría</label>
                   <select id="r-cat" onchange="updateRegSubtemas()">
@@ -1206,7 +1189,20 @@
                     style="display:none;margin-top:6px" />
                 </div>
               </div>
-              <div class="form-row">
+
+              <!-- Subtema libre — solo programación (con autocomplete de subtemas previos) -->
+              <div class="form-row" id="r-row-prog-sub" style="display:none">
+                <div class="form-group" style="flex:1">
+                  <label class="fl">Subtema / Módulo</label>
+                  <input type="text" id="r-sub-prog" list="r-sub-prog-list"
+                    placeholder="Ej: Liquidación final, AFIP F931, Importación..."
+                    autocomplete="off" />
+                  <datalist id="r-sub-prog-list"></datalist>
+                </div>
+              </div>
+
+              <!-- Repetida + Tiempo -->
+              <div class="form-row" id="r-row-rep">
                 <div class="form-group">
                   <label class="fl">¿Es consulta repetida?</label>
                   <select id="r-rep">
@@ -1215,86 +1211,73 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="fl">¿Quedó resuelto?</label>
-                  <select id="r-resuelto">
-                    <option>Sí, confirmado por el cliente</option>
-                    <option>Parcialmente</option>
-                    <option>No resuelto / derivado</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
                   <label class="fl">Tiempo de resolución (hs)</label>
                   <input id="r-tiempo" type="number" placeholder="Ej: 1.5" step="0.5" />
                 </div>
+              </div>
+
+              <!-- Tiempo solo (para programación) -->
+              <div class="form-row" id="r-row-tiempo-solo" style="display:none">
+                <div class="form-group" style="max-width:200px">
+                  <label class="fl">Tiempo de programación (hs)</label>
+                  <input id="r-tiempo-prog" type="number" placeholder="Ej: 2.5" step="0.5" />
+                </div>
+              </div>
+
+              <!-- Material + Remota — solo soporte/comercial -->
+              <div class="form-row" id="r-row-material">
                 <div class="form-group">
                   <label class="fl">Material enviado</label>
                   <select id="r-material">
-                    <option>Ninguno</option>
-                    <option>Video</option>
-                    <option>PDF / imagen</option>
-                    <option>Varios materiales</option>
+                    <option value="ninguno">Ninguno</option>
+                    <option value="video">Video</option>
+                    <option value="pdf">PDF / imagen</option>
+                    <option value="varios">Varios materiales</option>
                   </select>
                 </div>
-              </div>
-              <div class="form-row">
                 <div class="form-group">
                   <label class="fl">¿Se conectó remotamente?</label>
                   <select id="r-remota">
-                    <option>Sí, conexión remota</option>
-                    <option>No, solo por chat</option>
-                    <option>Llamada de voz</option>
+                    <option value="no">No, solo por chat</option>
+                    <option value="si">Sí, conexión remota</option>
+                    <option value="llamada">Llamada de voz</option>
                   </select>
                 </div>
               </div>
 
+              <!-- Descripción del problema (todos los tipos) -->
               <div class="form-group">
-                <label class="fl">Descripción del problema</label>
-                <textarea
-                  id="r-desc"
-                  placeholder="Ej: El cliente no sabía liquidar las horas extras en feriado. Intentó el proceso pero el sistema le daba diferente..."
-                ></textarea>
+                <label class="fl" id="r-desc-label">Descripción del problema</label>
+                <textarea id="r-desc"
+                  placeholder="Ej: El cliente no sabía liquidar las horas extras en feriado..."></textarea>
               </div>
 
-              <div class="form-group">
-                <label class="fl"
-                  >¿Aplicaste una solución de la base? (opcional)</label
-                >
-                <div
-                  id="r-sol-elegida"
-                  class="sol-elegida"
-                  style="display: none"
-                ></div>
-                <button
-                  type="button"
-                  class="btn-sm"
-                  onclick="elegirSolucionConsulta()"
-                >
-                  🔗 Elegir solución de la base
-                </button>
-                <div
-                  style="font-size: 11px; color: var(--text3); margin-top: 6px"
-                >
-                  Si elegís una de la base, al guardar le suma 1 al contador de
-                  usos.
+              <!-- Qué se programó — solo programación -->
+              <div class="form-group" id="r-group-prog-realizada" style="display:none">
+                <label class="fl">¿Qué se programó?</label>
+                <textarea id="r-prog-realizada"
+                  placeholder="Describí qué fue lo que se desarrolló / modificó para el cliente..."></textarea>
+              </div>
+
+              <!-- Base de soluciones — solo soporte -->
+              <div id="r-group-soluciones">
+                <div class="form-group">
+                  <label class="fl">¿Aplicaste una solución de la base? (opcional)</label>
+                  <div id="r-sol-elegida" class="sol-elegida" style="display:none"></div>
+                  <button type="button" class="btn-sm" onclick="elegirSolucionConsulta()">
+                    🔗 Elegir solución de la base
+                  </button>
+                  <div style="font-size:11px;color:var(--text3);margin-top:6px">
+                    Si elegís una de la base, al guardar le suma 1 al contador de usos.
+                  </div>
                 </div>
-              </div>
-
-              <div class="form-group" id="r-sol-group">
-                <label class="fl">Solución aplicada (paso a paso)</label>
-                <textarea
-                  id="r-sol"
-                  placeholder="Paso 1: Se fue a Configuración &gt; Parámetros &gt; Feriados
-Paso 2: Se verificó que el porcentaje estuviera en 100%
-Paso 3: Se reprocesó la liquidación..."
-                ></textarea>
-                <div
-                  style="font-size: 11px; color: var(--text3); margin-top: 6px"
-                >
-                  <strong>Obligatorio.</strong> Al guardar la consulta, los
-                  pasos se agregan automáticamente como nueva solución a la base
-                  (usando la "Descripción del problema" como título).
+                <div class="form-group" id="r-sol-group">
+                  <label class="fl">Solución aplicada (paso a paso)</label>
+                  <textarea id="r-sol"
+                    placeholder="Paso 1: Se fue a Configuración > Parámetros > Feriados&#10;Paso 2: Se verificó que el porcentaje estuviera en 100%..."></textarea>
+                  <div style="font-size:11px;color:var(--text3);margin-top:6px">
+                    <strong>Obligatorio.</strong> Al guardar, los pasos se agregan como nueva solución a la base.
+                  </div>
                 </div>
               </div>
 
@@ -1323,6 +1306,29 @@ Paso 3: Se reprocesó la liquidación..."
                 <div class="page-title">Implementación</div>
                 <div class="page-sub">
                   Seguimiento de clientes en proceso de onboarding
+                </div>
+              </div>
+              <button class="btn-secondary" onclick="togglePlantillasPanel()">
+                📋 Plantillas
+              </button>
+            </div>
+
+            <!-- Panel de plantillas (oculto por default) -->
+            <div id="plantillas-panel" style="display:none">
+              <div class="card" style="padding:0;overflow:hidden">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 14px;border-bottom:1px solid var(--border)">
+                  <div class="card-title" style="margin:0">Plantillas de implementación</div>
+                  <button class="btn-sm" onclick="togglePlantillasPanel()">✕ Cerrar</button>
+                </div>
+                <!-- Tabs por tipo -->
+                <div style="display:flex;gap:0;border-bottom:1px solid var(--border);padding:0 20px">
+                  <button class="plantilla-tab active" data-tipo="empresa"       onclick="cambiarTabPlantilla('empresa',this)">🏢 Empresa</button>
+                  <button class="plantilla-tab"         data-tipo="estudio"      onclick="cambiarTabPlantilla('estudio',this)">📊 Est. contable</button>
+                  <button class="plantilla-tab"         data-tipo="colegio"      onclick="cambiarTabPlantilla('colegio',this)">🏫 Colegio</button>
+                  <button class="plantilla-tab"         data-tipo="municipalidad" onclick="cambiarTabPlantilla('municipalidad',this)">🏛 Municipalidad</button>
+                </div>
+                <div style="padding:16px 20px">
+                  <div id="plantilla-list" style="display:flex;flex-direction:column;gap:4px"></div>
                 </div>
               </div>
             </div>
@@ -1373,6 +1379,9 @@ Paso 3: Se reprocesó la liquidación..."
                 </div>
               </div>
             </div>
+
+            <!-- Panel "¿Qué hago hoy?" — generado por renderPanelHoy() en implementacion.js -->
+            <div id="impl-panel-hoy"></div>
 
             <div class="filter-row">
               <input
@@ -1756,11 +1765,13 @@ Paso 2: ..."
               <div class="form-row">
                 <div class="form-group">
                   <label class="fl">Quién la carga</label>
-                  <select>
-                    <option>Ignacio</option>
-                    <option>Matías</option>
-                    <option>Daniel</option>
-                    <option>Renzo</option>
+                  <select id="kb-autor">
+                    <option>Ignacio Talon</option>
+                    <option>Matias Ferro</option>
+                    <option>Daniel Colomer</option>
+                    <option>Daniel Ferro</option>
+                    <option>Renzo Moretti</option>
+                    <option>Alfredo Cesar</option>
                   </select>
                 </div>
                 <div class="form-group">
@@ -1813,116 +1824,92 @@ Paso 2: ..."
               </div>
             </div>
 
-            <div class="card" style="margin-top: 20px">
-              <div class="card-title">
-                Soluciones de la base pendientes de revisión
-              </div>
-              <div
-                style="padding: 12px 0; border-bottom: 1px solid var(--border)"
-              >
-                <div
-                  style="
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: flex-start;
-                  "
-                >
-                  <div>
-                    <div style="font-size: 13px; font-weight: 500">
-                      El cliente no sabe liquidar vacaciones proporcionales
-                    </div>
-                    <div
-                      style="
-                        font-size: 11px;
-                        color: var(--text3);
-                        margin-top: 3px;
-                      "
-                    >
-                      Liquidación · Cargada hace 4 meses · Por: Ignacio
-                    </div>
-                  </div>
-                  <span class="badge b-amber">Revisar</span>
+            <div class="grid-2" style="margin-top:20px">
+              <div class="card" style="padding:0;overflow:hidden">
+                <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border)">
+                  <div class="card-title" style="margin:0">🔁 Top 5 soluciones más usadas</div>
                 </div>
-                <div style="display: flex; gap: 8px; margin-top: 10px">
-                  <button
-                    class="btn-sm"
-                    onclick="toast('Marcada como vigente')"
-                  >
-                    Sigue vigente
-                  </button>
-                  <button class="btn-sm">Editar</button>
+                <div id="alertas-top-soluciones">
+                  <div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">Cargando...</div>
                 </div>
               </div>
-              <div
-                style="padding: 12px 0; border-bottom: 1px solid var(--border)"
-              >
-                <div
-                  style="
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: flex-start;
-                  "
-                >
-                  <div>
-                    <div style="font-size: 13px; font-weight: 500">
-                      Error al importar empleados desde Excel
-                    </div>
-                    <div
-                      style="
-                        font-size: 11px;
-                        color: var(--text3);
-                        margin-top: 3px;
-                      "
-                    >
-                      Errores del sistema · Cargada hace 3 meses · Por: Matías
-                    </div>
-                  </div>
-                  <span class="badge b-red">Puede estar desactualizada</span>
+              <div class="card" style="padding:0;overflow:hidden">
+                <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border)">
+                  <div class="card-title" style="margin:0">⚠️ Soluciones para revisar</div>
                 </div>
-                <div style="display: flex; gap: 8px; margin-top: 10px">
-                  <button
-                    class="btn-sm"
-                    onclick="toast('Marcada como vigente')"
-                  >
-                    Sigue vigente
-                  </button>
-                  <button class="btn-sm">Editar</button>
+                <div id="alertas-revisar-soluciones">
+                  <div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">Cargando...</div>
                 </div>
               </div>
-              <div style="padding: 12px 0">
-                <div
-                  style="
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: flex-start;
-                  "
-                >
-                  <div>
-                    <div style="font-size: 13px; font-weight: 500">
-                      No aparece el botón de generar F931
-                    </div>
-                    <div
-                      style="
-                        font-size: 11px;
-                        color: var(--text3);
-                        margin-top: 3px;
-                      "
-                    >
-                      Errores del sistema · Cargada hace 2 meses · Por: Matías
-                    </div>
-                  </div>
-                  <span class="badge b-amber">Revisar</span>
-                </div>
-                <div style="display: flex; gap: 8px; margin-top: 10px">
-                  <button
-                    class="btn-sm"
-                    onclick="toast('Marcada como vigente')"
-                  >
-                    Sigue vigente
-                  </button>
-                  <button class="btn-sm">Editar</button>
-                </div>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════
+         ADMINISTRACIÓN — solo para Daniel Ferro
+    ════════════════════════════════════ -->
+          <div id="administracion" class="page">
+            <div class="page-header">
+              <div>
+                <div class="page-title">Facturación</div>
+                <div class="page-sub" id="admin-page-sub">Estado de cuenta de todos los clientes</div>
               </div>
+              <div class="admin-mes-selector">
+                <select id="admin-sel-mes" onchange="actualizarFiltroAdminMes()" style="margin-bottom:0;width:130px">
+                  <!-- Opciones generadas por JS en initAdministracion() -->
+                </select>
+                <select id="admin-sel-anio" onchange="actualizarFiltroAdminMes()" style="margin-bottom:0;width:90px">
+                  <!-- Opciones generadas por JS en initAdministracion() -->
+                </select>
+              </div>
+            </div>
+
+            <!-- Métricas rápidas -->
+            <div class="metrics-grid" style="grid-template-columns:repeat(4,1fr)">
+              <div class="metric-card">
+                <div class="metric-label">Total clientes</div>
+                <div class="metric-value" id="admin-m-total" style="color:var(--accent)">—</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Al día</div>
+                <div class="metric-value" id="admin-m-aldia" style="color:var(--green)">—</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Adeudan</div>
+                <div class="metric-value" id="admin-m-deben" style="color:var(--red)">—</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Facturado este mes</div>
+                <div class="metric-value" id="admin-m-monto" style="color:var(--blue);font-size:20px">—</div>
+              </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="filter-row">
+              <input type="text" placeholder="Buscar cliente..." style="width:220px;margin-bottom:0"
+                oninput="filtrarAdminTexto(this.value)" />
+              <button class="filter-chip active" onclick="filtrarAdminEstado('',this)">Todos</button>
+              <button class="filter-chip" onclick="filtrarAdminEstado('aldia',this)">✅ Al día</button>
+              <button class="filter-chip" onclick="filtrarAdminEstado('debe',this)">🔴 Adeudan</button>
+            </div>
+
+            <!-- Tabla de clientes -->
+            <div class="card" style="padding:0;overflow:hidden">
+              <table class="tbl" id="admin-tabla">
+                <thead>
+                  <tr>
+                    <th style="width:24%;padding-left:20px">Cliente</th>
+                    <th style="width:10%">Último mes</th>
+                    <th style="width:11%">Fecha factura</th>
+                    <th style="width:12%">Próx. facturación</th>
+                    <th style="width:10%">Monto</th>
+                    <th style="width:11%">Estado</th>
+                    <th style="width:22%;padding-right:16px"></th>
+                  </tr>
+                </thead>
+                <tbody id="admin-tbody">
+                  <tr><td colspan="7" style="text-align:center;color:var(--text3);padding:32px">Cargando...</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -1957,19 +1944,6 @@ Paso 2: ..."
                 <div class="config-menu-item__chevron">›</div>
               </button>
 
-              <button
-                class="config-menu-item"
-                onclick="abrirConfigSeccion('implementacion')"
-              >
-                <div class="config-menu-item__icon">📋</div>
-                <div class="config-menu-item__body">
-                  <div class="config-menu-item__title">Implementación</div>
-                  <div class="config-menu-item__sub">
-                    Editar la plantilla de etapas del proceso de onboarding
-                  </div>
-                </div>
-                <div class="config-menu-item__chevron">›</div>
-              </button>
             </div>
 
             <!-- Sub-sección: Apariencia -->
@@ -2037,14 +2011,6 @@ Paso 2: ..."
                     Cargando plantilla…
                   </div>
                 </div>
-                <div class="btn-row" style="margin-top: 12px">
-                  <button
-                    class="btn-primary btn-primary--sm"
-                    onclick="agregarEtapaPlantilla()"
-                  >
-                    + Agregar etapa
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -2071,6 +2037,7 @@ Paso 2: ..."
     <script src="js/kb.js"></script>
     <script src="js/implementacion.js"></script>
     <script src="js/cliente-detalle.js"></script>
+    <script src="js/administracion.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/alertas.js"></script>
   </body>

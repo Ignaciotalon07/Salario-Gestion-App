@@ -10,14 +10,16 @@ let _detalleClienteId = null;
 // Instancia del mini chart (para destruir antes de recrear)
 let _detalleChartInstance = null;
 
-// Mes seleccionado en el filtro (null = todos)
-let _detalleMesFiltro = null;
+// Filtros activos en la tabla de historial
+let _detalleMesFiltro  = null;
+let _detalleTipoFiltro = null;
 
 // ────────── Entrada principal ──────────
 
 function goClienteDetail(clienteId) {
-  _detalleClienteId = clienteId;
-  _detalleMesFiltro = null;
+  _detalleClienteId  = clienteId;
+  _detalleMesFiltro  = null;
+  _detalleTipoFiltro = null;
 
   // Navegar a la página de detalle (sin marcar ningún nav-item activo)
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -50,6 +52,7 @@ function renderDetalleCliente(clienteId) {
   page.innerHTML = `
     ${_renderDetalleHeader(cliente)}
     ${_renderDetalleStats(cliente, consultasDelCliente)}
+    ${_renderDetalleTipoStats(consultasDelCliente)}
     ${_renderDetalleMiniChart(cliente, consultasDelCliente)}
     ${_renderDetalleFiltroYTabla(cliente, consultasDelCliente)}
   `;
@@ -79,6 +82,14 @@ function _renderDetalleHeader(cliente) {
   const scoreClase = cliente.score >= 7 ? 'b-green' : cliente.score >= 4 ? 'b-amber' : 'b-red';
   const scoreBadge = `<span class="badge ${scoreClase}">Score ${cliente.score ?? 0}/10</span>`;
 
+  // Razón social y CUIT
+  const razonLine = cliente.razon_social
+    ? `<div style="font-size:12px;color:var(--text3);margin-top:2px">📋 ${_escHtml(cliente.razon_social)}</div>`
+    : '';
+  const cuitLine = cliente.cuit
+    ? `<div style="font-size:12px;color:var(--text3);margin-top:1px">CUIT: ${_escHtml(cliente.cuit)}</div>`
+    : '';
+
   return `
     <div class="detalle-header">
       <button class="btn-secondary detalle-back" onclick="volverAClientes()">
@@ -90,7 +101,9 @@ function _renderDetalleHeader(cliente) {
         </div>
         <div class="detalle-header__info">
           <div class="detalle-header__nombre">${_escHtml(cliente.nombre)}</div>
-          <div class="detalle-header__badges">
+          ${razonLine}
+          ${cuitLine}
+          <div class="detalle-header__badges" style="margin-top:8px">
             ${areaBadge}
             ${autBadge}
             ${scoreBadge}
@@ -163,6 +176,38 @@ function _renderDetalleStats(cliente, consultasDelCliente) {
       <div class="detalle-stat">
         <div class="detalle-stat__val" style="font-size:22px">${hsTotalTexto}</div>
         <div class="detalle-stat__label">hs total histórico</div>
+      </div>
+    </div>
+  `;
+}
+
+// ────────── Panel de tipos de consulta ──────────
+
+function _renderDetalleTipoStats(consultasDelCliente) {
+  const soporte      = consultasDelCliente.filter(c => !c.tipoConsulta || c.tipoConsulta === 'soporte').length;
+  const programacion = consultasDelCliente.filter(c => c.tipoConsulta === 'programacion').length;
+  const comercial    = consultasDelCliente.filter(c => c.tipoConsulta === 'comercial').length;
+
+  const item = (tipo, emoji, label, count, color) => `
+    <div onclick="filtrarDetalleTipo('${tipo}')" title="Filtrar por ${label}"
+      style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px;
+             cursor:pointer;border-radius:8px;transition:background .15s"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+      <div style="font-size:22px;font-weight:700;color:${color}">${count}</div>
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${emoji} ${label}</div>
+    </div>`;
+
+  return `
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:16px">
+      <div style="padding:10px 20px 6px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)">
+        Consultas por tipo
+      </div>
+      <div style="display:flex;gap:0">
+        ${item('soporte',      '🎧', 'Soporte',      soporte,      'var(--accent)')}
+        <div style="width:1px;background:var(--border);margin:8px 0"></div>
+        ${item('programacion', '🐛', 'Programación', programacion, 'var(--red)')}
+        <div style="width:1px;background:var(--border);margin:8px 0"></div>
+        ${item('comercial',    '💼', 'Comercial',    comercial,    'var(--green)')}
       </div>
     </div>
   `;
@@ -267,13 +312,19 @@ function _renderDetalleFiltroYTabla(cliente, consultasDelCliente) {
     .map(([key, label]) => `<option value="${key}">${label}</option>`)
     .join('');
 
-  const filas = _buildFilasTabla(cliente, consultasDelCliente, _detalleMesFiltro);
+  const filas = _buildFilasTabla(cliente, consultasDelCliente, _detalleMesFiltro, _detalleTipoFiltro);
 
   return `
     <div class="card" style="padding: 0; overflow: hidden">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 14px;border-bottom:1px solid var(--border);">
         <div class="card-title" style="margin:0">Historial de consultas</div>
-        <div style="display:flex;align-items:center;gap:10px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <select id="detalle-tipo-filtro" style="margin-bottom:0;width:auto;min-width:150px" onchange="filtrarDetalleTipo(this.value)">
+            <option value="">Todos los tipos</option>
+            <option value="soporte">🎧 Soporte</option>
+            <option value="programacion">🐛 Programación</option>
+            <option value="comercial">💼 Comercial</option>
+          </select>
           <select id="detalle-mes-filtro" style="margin-bottom:0;width:auto;min-width:160px" onchange="filtrarDetalleMes(this.value)">
             <option value="">Todos los meses</option>
             ${opcionesMeses}
@@ -284,11 +335,12 @@ function _renderDetalleFiltroYTabla(cliente, consultasDelCliente) {
         <table class="tbl">
           <thead>
             <tr>
-              <th style="width:16%">Fecha</th>
-              <th style="width:20%">Categoría</th>
-              <th style="width:22%">Subtema</th>
-              <th style="width:14%">Asesor</th>
-              <th style="width:12%">Repetida</th>
+              <th style="width:12%">Fecha</th>
+              <th style="width:12%">Tipo</th>
+              <th style="width:18%">Categoría</th>
+              <th style="width:20%">Subtema</th>
+              <th style="width:12%">Asesor</th>
+              <th style="width:10%">Repetida</th>
               <th style="width:16%">Descripción</th>
             </tr>
           </thead>
@@ -301,10 +353,15 @@ function _renderDetalleFiltroYTabla(cliente, consultasDelCliente) {
   `;
 }
 
-function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro) {
+function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro, tipoFiltro) {
   const CATS_LABELS = {
     liquidacion: 'Liquidación', errores: 'Errores', configuracion: 'Configuración',
     actualizaciones: 'Actualizaciones', fuera: 'Fuera del sistema'
+  };
+  const TIPO_BADGES = {
+    soporte:      '<span class="badge b-blue"  style="font-size:10px">🎧 Soporte</span>',
+    programacion: '<span class="badge b-red"   style="font-size:10px">🐛 Prog.</span>',
+    comercial:    '<span class="badge b-green" style="font-size:10px">💼 Comercial</span>',
   };
 
   let lista = consultasDelCliente;
@@ -317,12 +374,16 @@ function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro) {
     });
   }
 
+  if (tipoFiltro) {
+    lista = lista.filter(c => (c.tipoConsulta || 'soporte') === tipoFiltro);
+  }
+
   // Ordenar de más reciente a más antigua
   lista = [...lista].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   if (lista.length === 0) {
-    return `<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:28px">
-      ${mesFiltro ? 'Sin consultas en ese mes.' : 'Sin consultas registradas todavía.'}
+    return `<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:28px">
+      Sin consultas para los filtros seleccionados.
     </td></tr>`;
   }
 
@@ -330,12 +391,13 @@ function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro) {
     const fecha = new Date(c.timestamp).toLocaleDateString('es-AR', {
       day: '2-digit', month: '2-digit', year: '2-digit'
     });
-    const cat     = CATS_LABELS[c.categoria] || (c.categoria || '—');
-    const subtema = c.subtema || '—';
-    const asesor  = c.asesor  || '—';
+    const cat      = CATS_LABELS[c.categoria] || (c.categoria || '—');
+    const subtema  = c.subtema || '—';
+    const asesor   = c.asesor  || '—';
     const repBadge = c.repetida === 'si'
       ? '<span class="badge b-red" style="font-size:10px">Repetida</span>'
       : '<span class="badge b-green" style="font-size:10px">Nueva</span>';
+    const tipoBadge = TIPO_BADGES[c.tipoConsulta || 'soporte'] || TIPO_BADGES.soporte;
     const desc = c.descripcion
       ? `<span title="${_escHtml(c.descripcion)}" style="cursor:help">${_escHtml(c.descripcion.substring(0, 40))}${c.descripcion.length > 40 ? '…' : ''}</span>`
       : '<span style="color:var(--text3)">—</span>';
@@ -343,6 +405,7 @@ function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro) {
     return `
       <tr>
         <td style="color:var(--text3);font-size:12px">${fecha}</td>
+        <td>${tipoBadge}</td>
         <td>${_escHtml(cat)}</td>
         <td style="font-size:12px">${_escHtml(subtema)}</td>
         <td style="font-size:12px">${_escHtml(asesor)}</td>
@@ -353,24 +416,36 @@ function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro) {
   }).join('');
 }
 
-// ────────── Filtro por mes (interactivo) ──────────
+// ────────── Filtros interactivos ──────────
 
-function filtrarDetalleMes(valor) {
-  _detalleMesFiltro = valor || null;
-
+function _getConsultasDelClienteActual() {
   const cliente = (typeof clientes !== 'undefined')
     ? clientes.find(c => c.id === _detalleClienteId)
     : null;
-  if (!cliente) return;
-
-  const consultasDelCliente = (typeof consultas !== 'undefined')
+  if (!cliente) return null;
+  const lista = (typeof consultas !== 'undefined')
     ? consultas.filter(c => c.cliente === cliente.nombre)
     : [];
+  return { cliente, lista };
+}
 
+function filtrarDetalleMes(valor) {
+  _detalleMesFiltro = valor || null;
+  const res = _getConsultasDelClienteActual();
+  if (!res) return;
   const tbody = document.getElementById('detalle-tabla-body');
-  if (tbody) {
-    tbody.innerHTML = _buildFilasTabla(cliente, consultasDelCliente, _detalleMesFiltro);
-  }
+  if (tbody) tbody.innerHTML = _buildFilasTabla(res.cliente, res.lista, _detalleMesFiltro, _detalleTipoFiltro);
+}
+
+function filtrarDetalleTipo(valor) {
+  _detalleTipoFiltro = valor || null;
+  // Sincronizar el select si se llamó desde el panel de contadores (click en número)
+  const sel = document.getElementById('detalle-tipo-filtro');
+  if (sel) sel.value = valor || '';
+  const res = _getConsultasDelClienteActual();
+  if (!res) return;
+  const tbody = document.getElementById('detalle-tabla-body');
+  if (tbody) tbody.innerHTML = _buildFilasTabla(res.cliente, res.lista, _detalleMesFiltro, _detalleTipoFiltro);
 }
 
 // ────────── Volver ──────────
@@ -378,6 +453,7 @@ function filtrarDetalleMes(valor) {
 function volverAClientes() {
   _detalleClienteId  = null;
   _detalleMesFiltro  = null;
+  _detalleTipoFiltro = null;
   if (_detalleChartInstance) {
     _detalleChartInstance.destroy();
     _detalleChartInstance = null;

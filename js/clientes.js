@@ -22,6 +22,8 @@ function dbRowToCliente(row) {
     adopcion:                    row.adopcion || 0,
     score:                       row.score || 0,
     nota:                        row.nota,
+    razon_social:                row.razon_social || null,
+    cuit:                        row.cuit || null,
     whaticket_url:               row.whaticket_url,
     fecha_inicio_implementacion: row.fecha_inicio_implementacion,
     fecha_fin_objetivo:          row.fecha_fin_objetivo
@@ -63,6 +65,8 @@ async function initClientes() {
     refrescarSelectsCliente(clientes.map(c => c.nombre));
     // Actualizar métricas del panel con el conteo real de clientes
     if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
+    // Refrescar facturación ahora que clientes está cargado (evita que aparezca en 0)
+    if (typeof renderAdministracion === 'function') renderAdministracion();
     suscribirClientes();
   } catch (e) {
     console.error('Error cargando clientes', e);
@@ -190,7 +194,9 @@ function renderClienteCard(c) {
          data-aut="${c.autonomia}"
          data-score="${c.score}"
          data-nombre="${escapeHtml(c.nombre)}"
-         data-tipo="${c.tipo}">
+         data-tipo="${c.tipo}"
+         onclick="goClienteDetail('${c.id}')"
+         style="cursor:pointer">
 
       <!-- Header -->
       <div class="cli-card__header">
@@ -243,15 +249,11 @@ function renderClienteCard(c) {
         ${c.nota ? `<div class="cli-card__nota">"${escapeHtml(c.nota)}"</div>` : ''}
       </div>
 
-      <!-- Footer: botones claramente dentro de la card -->
-      <div class="cli-card__footer">
+      <!-- Footer: botones — stopPropagation para no abrir el detalle al clickearlos -->
+      <div class="cli-card__footer" onclick="event.stopPropagation()">
         <button class="btn-sm btn-primary" style="font-size:12px"
           onclick="goTo(document.querySelector('.nav-item[onclick*=registrar]'),'registrar')">
           + Consulta
-        </button>
-        <button class="btn-sm" style="font-size:12px"
-          onclick="goClienteDetail('${c.id}')">
-          📋 Historial
         </button>
         ${c.whaticket_url
           ? `<a class="btn-sm wt-btn" href="${escapeHtml(c.whaticket_url)}" target="_blank" rel="noopener">🎫 Whaticket</a>`
@@ -273,13 +275,14 @@ function showClienteForm() {
 
 async function guardarCliente() {
   const nombre = document.getElementById('cf-nombre').value.trim();
-  if (!nombre) { alert('Ingresa un nombre.'); return; }
+  if (!nombre) { alert('Ingresá el nombre comercial del cliente.'); return; }
 
-  const tipo      = document.getElementById('cf-tipo').value;
-  const area      = document.getElementById('cf-area').value;
-  const asesor    = document.getElementById('cf-asesor').value;
-  const nota      = document.getElementById('cf-nota').value.trim();
-  const wtRaw     = ((document.getElementById('cf-whaticket') || {}).value || '').trim();
+  const tipo         = document.getElementById('cf-tipo').value;
+  const area         = document.getElementById('cf-area').value;
+  const razon_social = (document.getElementById('cf-razon')?.value || '').trim() || null;
+  const cuit         = (document.getElementById('cf-cuit')?.value || '').replace(/[^0-9]/g, '') || null;
+  const nota         = document.getElementById('cf-nota').value.trim();
+  const wtRaw        = ((document.getElementById('cf-whaticket') || {}).value || '').trim();
 
   // Verificar duplicado por nombre (case-insensitive)
   if (clientes.some(c => c.nombre.toLowerCase() === nombre.toLowerCase())) {
@@ -297,11 +300,14 @@ async function guardarCliente() {
     }
   }
 
-  const iniciales = (nombre.replace(/[^A-Za-z0-9]/g, '').substring(0, 2) || 'XX').toUpperCase();
+  const palabras = nombre.replace(/[^A-Za-z0-9áéíóúÁÉÍÓÚñÑ ]/g, ' ').split(' ').filter(p => p);
+  const iniciales = palabras.length >= 2
+    ? (palabras[0][0] + palabras[1][0]).toUpperCase()
+    : (palabras[0] || 'XX').substring(0, 2).toUpperCase();
 
   const row = {
-    nombre, tipo, area, asesor, iniciales,
-    autonomia: null,   // se calcula automáticamente a partir de las consultas
+    nombre, razon_social, cuit, tipo, area, iniciales,
+    autonomia: 'media',
     adopcion: 0, score: 0,
     nota: nota || null,
     whaticket_url
@@ -315,21 +321,28 @@ async function guardarCliente() {
     refrescarSelectsCliente(clientes.map(c => c.nombre));
     renderClientes();
 
-    // Si el cliente es de implementacion, sembrar las 23 tareas estandar
+    // Si el cliente es de implementacion, crear las etapas desde la plantilla
+    // que corresponde al tipo del cliente (empresa, estudio, colegio, municipalidad)
     if (area === 'impl') {
       try {
-        await sb().rpc('crear_implementacion_para_cliente', { p_cliente_id: inserted.id });
+        await sb().rpc('crear_implementacion_para_cliente', {
+          p_cliente_id: inserted.id,
+          p_tipo:       tipo   // usa el tipo seleccionado en el form
+        });
+        toast(`Cliente agregado y etapas creadas desde plantilla ${tipo}`);
       } catch (errImpl) {
         console.warn('No se pudieron crear tareas de implementacion automaticamente', errImpl);
+        toast('Cliente agregado. Creá las etapas manualmente desde Implementación.');
       }
     }
 
     // Reset form
-    document.getElementById('cf-nombre').value = '';
-    document.getElementById('cf-nota').value = '';
-    if (document.getElementById('cf-whaticket')) document.getElementById('cf-whaticket').value = '';
+    ['cf-nombre', 'cf-razon', 'cf-cuit', 'cf-nota', 'cf-whaticket'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
     document.getElementById('cliente-form').style.display = 'none';
-    toast('Cliente agregado correctamente');
+    if (area !== 'impl') toast('Cliente agregado correctamente');
   } catch (e) {
     console.error('Error guardando cliente', e);
     if (e.code === '23505') {
@@ -404,7 +417,7 @@ async function eliminarCliente(id) {
 
 function filterClientes(v) {
   const q = (v || '').toLowerCase();
-  document.querySelectorAll('#client-cards .card').forEach(c => {
+  document.querySelectorAll('#client-cards .cli-card').forEach(c => {
     c.style.display = c.dataset.nombre && c.dataset.nombre.toLowerCase().includes(q) ? '' : 'none';
   });
 }
