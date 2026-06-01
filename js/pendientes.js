@@ -253,18 +253,28 @@ function toggleGroupByCliente() {
 }
 
 function renderPendienteCard(p) {
-  // Internos: borde naranja siempre. Clientes: accent (indigo) alta, azul media, gris baja
-  const baseColor = p.interno
-    ? 'var(--amber)'
-    : { alta: 'var(--accent)', media: 'var(--blue)', baja: 'var(--border2)' }[p.prioridad] || 'var(--border2)';
-  const borderColor = baseColor;
+  // Color por tipo de pendiente (pastel)
+  const TIPO_COLORES = {
+    soporte:        { border: '#3b82f6', bg: 'rgba(59,130,246,0.06)'  },  // azul
+    implementacion: { border: '#f59e0b', bg: 'rgba(245,158,11,0.07)'  },  // ámbar
+    bug:            { border: '#ef4444', bg: 'rgba(239,68,68,0.06)'   },  // rojo
+    comercial:      { border: '#22c55e', bg: 'rgba(34,197,94,0.07)'   },  // verde
+    interno:        { border: '#8b5cf6', bg: 'rgba(139,92,246,0.07)'  },  // violeta
+  };
+
+  const tipoClave  = p.interno ? 'interno' : (p.tipoPendiente || 'soporte');
+  const tipoColor  = TIPO_COLORES[tipoClave] || TIPO_COLORES.soporte;
+
+  const borderColor = tipoColor.border;
+  const cardBg      = tipoColor.bg;
+
   const prioBadge   = { alta: 'b-red', media: 'b-amber', baja: 'b-gray' }[p.prioridad] || 'b-gray';
   const prioLabel   = { alta: 'Alta prioridad', media: 'Media prioridad', baja: 'Baja prioridad' }[p.prioridad] || p.prioridad;
   const tipoLabel   = TIPO_LABELS[p.tipo] || '';
   const tipoPend    = TIPO_PENDIENTE[p.tipoPendiente] || null;
   const venc        = vencimientoInfo(p.createdAt);
-  // Si está vencido o vence hoy, forzar borde rojo (solo en pendientes de clientes)
-  const finalBorder = (!p.interno && venc && venc.urgente) ? 'var(--red)' : borderColor;
+  // Si está vencido o vence hoy, forzar borde rojo
+  const finalBorder = (!p.interno && venc && venc.urgente) ? '#ef4444' : borderColor;
   const notas = notasByPendiente[p.id] || [];
   // Whaticket URL viene del cliente vinculado (CLIENTES_LOOKUP se llena en clientes.js)
   const whaticketUrl = (CLIENTES_LOOKUP[p.cliente] || {}).whaticket_url;
@@ -272,7 +282,7 @@ function renderPendienteCard(p) {
   const puedoEditar = puedeEditarPendiente(p);
 
   return `
-    <div class="card" data-pend-id="${p.id}" style="border-left:3px solid ${finalBorder};${p.interno ? 'background:var(--amber-bg,#fef8ee)' : ''}">
+    <div class="card" data-pend-id="${p.id}" style="border-left:5px solid ${finalBorder};${(!p.interno && venc && venc.urgente) ? 'background:rgba(239,68,68,0.08)' : ''}">
       <div class="card-header-row" style="margin-bottom:12px">
         <div class="identity-row identity-row--top">
           ${p.interno
@@ -526,13 +536,11 @@ let _cierreState = null; // { p, btn, solucionId }
 // Abre el modal de cierre: tiempo obligatorio + solución opcional.
 // Alfred y Daniel Ferro ven solo el campo de tiempo (sin selector de solución).
 function abrirModalCierrePendiente(p, btn) {
-  // Alfred ve el modal de tiempo pero sin selector de soluciones (es programador)
-  const sinSolucion = ['Alfredo Cesar'];
-  const mostrarSolucion = !sinSolucion.includes(getCurrentUserName());
+  const esProg      = p.tipoPendiente === 'bug';
+  const mostrarSolucion = !esProg && !['Alfredo Cesar'].includes(getCurrentUserName());
 
   _cierreState = { p, btn, solucionId: null };
 
-  // Eliminar modal anterior si quedó abierto
   const anterior = document.getElementById('modal-cierre-pendiente');
   if (anterior) anterior.remove();
 
@@ -550,26 +558,28 @@ function abrirModalCierrePendiente(p, btn) {
       </div>
 
       <div class="modal-body">
-      <!-- Tiempo: obligatorio -->
+      <!-- Tiempo: siempre -->
       <div class="form-group" style="margin-bottom:18px">
         <label class="fl">
-          ⏱ Tiempo de resolución (hs)
+          ⏱ Tiempo de ${esProg ? 'programación' : 'resolución'} (hs)
           <span style="color:var(--red);margin-left:2px">*</span>
         </label>
-        <input
-          type="number"
-          id="cierre-tiempo"
-          placeholder="Ej: 1.5"
-          step="0.5"
-          min="0.1"
-          style="font-size:15px;font-weight:600"
-        />
+        <input type="number" id="cierre-tiempo" placeholder="Ej: 1.5" step="0.5" min="0.1"
+          style="font-size:15px;font-weight:600" />
         <div style="font-size:11px;color:var(--text3);margin-top:5px">
           Obligatorio. Nos permite medir cuánto consume cada cliente.
         </div>
       </div>
 
-      <!-- Repetida: obligatorio -->
+      <!-- Qué se programó: solo programación -->
+      ${esProg ? `
+      <div class="form-group" style="margin-bottom:18px">
+        <label class="fl">🐛 ¿Qué se programó? <span style="color:var(--red);margin-left:2px">*</span></label>
+        <textarea id="cierre-prog-realizada" placeholder="Describí qué fue lo que se desarrolló o modificó para el cliente..."
+          style="min-height:80px;font-size:13px;resize:vertical"></textarea>
+      </div>
+      ` : `
+      <!-- Repetida: solo soporte/comercial -->
       <div class="form-group" style="margin-bottom:18px">
         <label class="fl">
           🔁 ¿Es una consulta repetida?
@@ -584,13 +594,10 @@ function abrirModalCierrePendiente(p, btn) {
         </div>
       </div>
 
-      <!-- Material + Remota en una fila -->
+      <!-- Material + Remota -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px">
         <div class="form-group" style="margin-bottom:0">
-          <label class="fl">
-            📎 Material enviado
-            <span style="color:var(--red);margin-left:2px">*</span>
-          </label>
+          <label class="fl">📎 Material enviado <span style="color:var(--red);margin-left:2px">*</span></label>
           <select id="cierre-material" style="font-size:13px">
             <option value="ninguno">Ninguno</option>
             <option value="video">Video</option>
@@ -599,10 +606,7 @@ function abrirModalCierrePendiente(p, btn) {
           </select>
         </div>
         <div class="form-group" style="margin-bottom:0">
-          <label class="fl">
-            🖥 Conexión remota
-            <span style="color:var(--red);margin-left:2px">*</span>
-          </label>
+          <label class="fl">🖥 Conexión remota <span style="color:var(--red);margin-left:2px">*</span></label>
           <select id="cierre-remota" style="font-size:13px">
             <option value="no">No — solo por chat</option>
             <option value="si">Sí — nos conectamos</option>
@@ -611,30 +615,24 @@ function abrirModalCierrePendiente(p, btn) {
         </div>
       </div>
 
-      <!-- Solución: opcional, solo para el equipo de soporte -->
+      <!-- Solución: solo soporte -->
       ${mostrarSolucion ? `
       <div class="form-group" id="cierre-sol-section" style="margin-bottom:18px">
         <label class="fl">¿Cómo lo resolviste? <span style="color:var(--text3)">(opcional)</span></label>
-
-        <!-- Opción A: elegir de la base -->
         <div id="cierre-sol-elegida" style="display:none;margin-bottom:8px"></div>
         <button type="button" class="btn-sm" onclick="elegirSolucionCierre()" id="cierre-btn-elegir">
           🔗 Elegir de la base de soluciones
         </button>
-
-        <!-- Opción B: escribir solución nueva -->
         <div style="margin-top:10px">
           <div style="font-size:11px;color:var(--text3);margin-bottom:5px">
             O escribí los pasos directamente — se van a guardar en la base de soluciones:
           </div>
-          <textarea
-            id="cierre-sol-nueva"
-            placeholder="Paso 1: ...&#10;Paso 2: ...&#10;Paso 3: ..."
-            style="min-height:80px;font-size:12px;resize:vertical"
-          ></textarea>
+          <textarea id="cierre-sol-nueva" placeholder="Paso 1: ...&#10;Paso 2: ...&#10;Paso 3: ..."
+            style="min-height:80px;font-size:12px;resize:vertical"></textarea>
         </div>
       </div>
       ` : ''}
+      `}
       </div><!-- /.modal-body -->
 
       <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:12px;border-top:1px solid var(--border);flex-shrink:0">
@@ -719,13 +717,22 @@ async function confirmarCierrePendiente() {
     return;
   }
 
-  // Leer textarea de solución nueva (si escribieron algo)
-  const solNuevaTexto = (document.getElementById('cierre-sol-nueva')?.value || '').trim();
-  const repetida = document.getElementById('cierre-repetida')?.value || 'no';
-  const material = document.getElementById('cierre-material')?.value || 'ninguno';
-  const remota   = document.getElementById('cierre-remota')?.value || 'no';
-
   const { p, btn, solucionId } = _cierreState;
+  const esProg = p.tipoPendiente === 'bug';
+
+  // Para programación: leer qué se programó (obligatorio)
+  const progRealizada = (document.getElementById('cierre-prog-realizada')?.value || '').trim();
+  if (esProg && !progRealizada) {
+    alert('Describí qué se programó para el cliente.');
+    document.getElementById('cierre-prog-realizada')?.focus();
+    return;
+  }
+
+  // Para soporte/comercial: leer campos estándar
+  const solNuevaTexto = esProg ? '' : (document.getElementById('cierre-sol-nueva')?.value || '').trim();
+  const repetida = esProg ? 'no' : (document.getElementById('cierre-repetida')?.value || 'no');
+  const material = esProg ? 'ninguno' : (document.getElementById('cierre-material')?.value || 'ninguno');
+  const remota   = esProg ? 'no'     : (document.getElementById('cierre-remota')?.value   || 'no');
 
   // Si eligieron solución de la base → sumar uso
   // Si escribieron pasos → crear nueva solución en la base
@@ -769,19 +776,26 @@ async function confirmarCierrePendiente() {
   await cerrarPendienteEjecutar(p.id, btn);
 
   // 2. Crear consulta para alimentar las métricas
-  await crearConsultaDesdePendiente(p, tiempo, solucionIdFinal, repetida, material, remota);
+  await crearConsultaDesdePendiente(p, tiempo, solucionIdFinal, repetida, material, remota, progRealizada);
 }
 
 // Crea un registro en la tabla consultas a partir de un pendiente cerrado.
 // Esto alimenta las métricas del panel (gráficos, score de cliente, etc.).
-async function crearConsultaDesdePendiente(p, tiempo, solucionId, repetida = 'no', material = 'ninguno', remota = 'no') {
+async function crearConsultaDesdePendiente(p, tiempo, solucionId, repetida = 'no', material = 'ninguno', remota = 'no', progRealizada = '') {
   const asesor     = (typeof currentMember !== 'undefined' && currentMember) ? currentMember.nombre : 'Equipo';
   const clienteObj = (typeof clientes !== 'undefined') ? clientes.find(c => c.nombre === p.cliente) : null;
 
-  // Mapear categoria del pendiente a categoria de consulta
-  const categoria = (typeof CATS !== 'undefined' && p.categoriaLabel && CATS[p.categoriaLabel])
-    ? p.categoriaLabel
-    : ({ bug: 'errores', comercial: 'fuera', soporte: 'fuera' }[p.tipoPendiente] || 'fuera');
+  const esProg = p.tipoPendiente === 'bug';
+
+  // Categoría: programación usa su propia categoría, el resto mapea desde el pendiente
+  const categoria = esProg
+    ? 'programacion'
+    : ((typeof CATS !== 'undefined' && p.categoriaLabel && CATS[p.categoriaLabel])
+        ? p.categoriaLabel
+        : ({ comercial: 'fuera', soporte: 'fuera' }[p.tipoPendiente] || 'fuera'));
+
+  const tipoConsulta = esProg ? 'programacion'
+    : (p.tipoPendiente === 'comercial' ? 'comercial' : 'soporte');
 
   try {
     const inserted = await dbInsert('consultas', {
@@ -789,29 +803,33 @@ async function crearConsultaDesdePendiente(p, tiempo, solucionId, repetida = 'no
       cliente_nombre:    p.cliente,
       asesor,
       categoria,
-      subtema:           'Seguimiento',
-      repetida:          repetida === 'si',
-      descripcion:       p.descripcion || null,
+      subtema:           esProg ? (p.categoriaLabel || 'Programación') : 'Seguimiento',
+      repetida:          esProg ? false : repetida === 'si',
+      descripcion:       esProg && progRealizada
+                           ? (p.descripcion ? p.descripcion + '\n\n✅ Programado: ' + progRealizada : '✅ Programado: ' + progRealizada)
+                           : (p.descripcion || null),
       tiempo_resolucion: tiempo,
-      solucion_id:       solucionId || null,
-      material:          material !== 'ninguno' ? material : null,
-      conexion_remota:   remota === 'si'
+      solucion_id:       esProg ? null : (solucionId || null),
+      material:          esProg ? null : (material !== 'ninguno' ? material : null),
+      conexion_remota:   esProg ? false : remota === 'si',
+      tipo_consulta:     tipoConsulta
     });
 
-    // Agregar al array global para que los gráficos se actualicen sin esperar el realtime
     if (typeof consultas !== 'undefined') {
       consultas.unshift({
-        id:          inserted.id,
-        cliente:     p.cliente,
+        id:           inserted.id,
+        cliente:      p.cliente,
         asesor,
         categoria,
-        subtema:     'Seguimiento',
-        repetida:    repetida === 'si' ? 'si' : 'no',
-        descripcion: p.descripcion || null,
-        solucionId:  solucionId || null,
-        material:    material !== 'ninguno' ? material : null,
-        remota:      remota === 'si',
-        timestamp:   inserted.created_at || new Date().toISOString()
+        subtema:      esProg ? (p.categoriaLabel || 'Programación') : 'Seguimiento',
+        repetida:     esProg ? 'no' : (repetida === 'si' ? 'si' : 'no'),
+        descripcion:  p.descripcion || null,
+        solucionId:   esProg ? null : (solucionId || null),
+        material:     esProg ? null : (material !== 'ninguno' ? material : null),
+        remota:       esProg ? false : remota === 'si',
+        tipoConsulta: tipoConsulta,
+        tiempo:       tiempo,
+        timestamp:    inserted.created_at || new Date().toISOString()
       });
     }
 
@@ -1489,10 +1507,9 @@ function actualizarSugerenciasKB() {
 function filtrarOpcionesTipoPendiente() {
   const sel = document.getElementById('pf-tipo');
   if (!sel) return;
-  const email         = currentMember ? (currentMember.email || '').toLowerCase() : '';
-  const nombre        = currentMember ? (currentMember.nombre || '').toLowerCase() : '';
-  const esAlfredo     = email === 'alfred@salario.local'      || nombre.includes('alfred');
-  const esDanielFerro = email === 'danielferro@salario.local' || nombre.includes('ferro');
+  const email         = (window._currentAuthEmail || '').toLowerCase();
+  const esAlfredo     = email.includes('alfredo');
+  const esDanielFerro = email.includes('danielferro') || email.includes('daniel.ferro');
 
   // Reconstruir las opciones para evitar problemas de display:none en Safari/Firefox
   const valorActual = sel.value;

@@ -260,7 +260,9 @@ function refreshPanelMetrics() {
   const catCounts = {};
   mesActual.forEach(c => {
     if (!c.categoria) return;
-    const label = catLabelMap[c.categoria] || c.categoria; // custom queda como está
+    const rawLabel = catLabelMap[c.categoria] || c.categoria;
+    // Primera letra siempre en mayúscula
+    const label = rawLabel ? rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1) : rawLabel;
     catCounts[label] = (catCounts[label] || 0) + 1;
   });
 
@@ -416,9 +418,9 @@ function renderScoreRow(c) {
 // ────────── Métricas de equipo (alimentadas por consultas del mes actual) ──────────
 // Recibe el array ya filtrado por mes para no recalcular.
 
-// Los 4 asesores del equipo de soporte/implementación.
+// Los 6 miembros del equipo.
 // Se muestran siempre, incluso si no tienen consultas en el mes actual.
-const ASESORES_EQUIPO = ['Ignacio Talon', 'Matias Ferro', 'Daniel Colomer', 'Renzo Moretti'];
+const ASESORES_EQUIPO = ['Ignacio Talon', 'Matias Ferro', 'Daniel Colomer', 'Renzo Moretti', 'Alfredo Cesar', 'Daniel Ferro'];
 
 function refreshEquipoMetrics(mesActual) {
   if (!mesActual) return;

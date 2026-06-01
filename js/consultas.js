@@ -89,14 +89,19 @@ function onTipoConsultaChange() {
 function initTipoConsulta() {
   const sel = document.getElementById('r-tipo-consulta');
   if (!sel) return;
-  const email         = currentMember ? (currentMember.email || '').toLowerCase() : '';
-  const nombre        = currentMember ? (currentMember.nombre || '').toLowerCase() : '';
-  const esAlfredo     = email === 'alfred@salario.local'   || nombre.includes('alfred');
-  const esDanielFerro = email === 'danielferro@salario.local' || nombre.includes('ferro');
 
+  // window._currentAuthEmail se setea en auth.js al momento del login
+  const email = (window._currentAuthEmail || '').toLowerCase();
+
+  const esAlfredo     = email.includes('alfredo');
+  const esDanielFerro = email.includes('danielferro') || email.includes('daniel.ferro');
+
+  const valorActual = sel.value;
   sel.innerHTML = '<option value="soporte">Soporte</option>';
   if (esAlfredo)     sel.innerHTML += '<option value="programacion">Programación</option>';
   if (esDanielFerro) sel.innerHTML += '<option value="comercial">Comercial</option>';
+
+  if (sel.querySelector('option[value="' + valorActual + '"]')) sel.value = valorActual;
 }
 
 async function initConsultas() {
@@ -106,6 +111,8 @@ async function initConsultas() {
     consultas = rows.map(dbRowToConsulta);
     // Refrescar métricas del panel con los datos reales
     if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
+    // Re-renderizar cards de clientes para que muestren las stats correctas
+    if (typeof renderClientes === 'function') renderClientes();
     suscribirConsultas();
     // Filtrar opciones del select según el rol y ajustar el form
     initTipoConsulta();
@@ -258,15 +265,11 @@ function renderSolucionElegida() {
 async function guardarConsulta() {
   const cliente    = (document.getElementById('r-cliente') || {}).value || '';
 
-  // Categoría: puede ser un valor conocido o "otro" con texto custom
+  // Categoría y subtema: se calculan más abajo según el tipo de consulta
   const catSelect  = (document.getElementById('r-cat') || {}).value || '';
   const catCustom  = ((document.getElementById('r-cat-custom') || {}).value || '').trim();
-  const cat        = catSelect === 'otro' ? catCustom : catSelect;
-
-  // Subtema: puede ser un valor conocido o "otro" con texto custom
   const subSelect  = (document.getElementById('r-sub') || {}).value || '';
   const subCustom  = ((document.getElementById('r-sub-custom') || {}).value || '').trim();
-  const subtema    = subSelect === 'otro' ? subCustom : subSelect;
 
   const repetida = (document.getElementById('r-rep')     || {}).value || 'no';
   const desc     = ((document.getElementById('r-desc')   || {}).value || '').trim();
@@ -365,8 +368,10 @@ async function guardarConsulta() {
       categoria:         cat,
       subtema,
       repetida:          esProg ? false : repetida === 'si',
-      descripcion:       desc || null,
-      // Para programación: guardamos qué se programó en el campo solucion (texto libre, sin KB)
+      descripcion:       esProg && progRealizada
+                           ? (desc ? desc + '\n\n✅ Programado: ' + progRealizada : '✅ Programado: ' + progRealizada)
+                           : (desc || null),
+      // Para programación: no usa base de soluciones
       solucion_id:       esProg ? null : (consultaSolucionId || nuevaSolucionId || null),
       tiempo_resolucion: (tiempoFinal && !isNaN(tiempoFinal) && tiempoFinal > 0) ? tiempoFinal : null,
       material:          esProg ? null : (material !== 'ninguno' ? material : null),

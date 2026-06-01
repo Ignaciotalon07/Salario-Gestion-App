@@ -28,7 +28,7 @@ function getEscalaCliente(cid) { return window._implClienteEscala[cid] || 'seman
 window._implClienteExpanded = window._implClienteExpanded || {};
 window._implEditMode        = window._implEditMode        || {}; // cid -> true cuando está en modo edición de plantilla
 
-const IMPL_TEAM = ['Ignacio', 'Matias', 'Daniel', 'Daniel Ferro', 'Renzo', 'Alfred'];
+const IMPL_TEAM = ['Ignacio Talon', 'Matias Ferro', 'Daniel Colomer', 'Daniel Ferro', 'Renzo Moretti', 'Alfredo Cesar'];
 
 // ────────── Panel "¿Qué hago hoy?" ──────────
 
@@ -1101,6 +1101,7 @@ function toggleFaseExpanded(clienteId, faseIdx) {
 function renderListaFases(c, tareasCliente, tareasVisibles) {
   const fases = calcularFases(tareasCliente);
   const hayFiltro = implFiltroAsesor || implFiltroEstado || implFiltroResp;
+  const enEdicionCliente = !!(window._implEditMode && window._implEditMode[c.id]);
 
   return `<div class="impl-fases-acordeon">
     ${fases.map((f, i) => {
@@ -1133,6 +1134,8 @@ function renderListaFases(c, tareasCliente, tareasVisibles) {
             </div>
             <div class="impl-fase-header__right">
               ${badge}
+              ${enEdicionCliente ? `<button class="btn-sm" style="font-size:11px;padding:2px 8px;margin-right:4px"
+                onclick="event.stopPropagation();agregarTareaCliente('${c.id}','${f.key}')">+ Agregar tarea</button>` : ''}
               <div class="impl-fase-minibar">
                 <div class="impl-fase-minibar__fill" style="width:${f.pct}%;background:${colorBar}"></div>
               </div>
@@ -1142,8 +1145,8 @@ function renderListaFases(c, tareasCliente, tareasVisibles) {
           ${isExpanded ? `
             <div class="impl-fase-tareas">
               ${tareasRender.length > 0
-                ? tareasRender.map(renderImplTarea).join('')
-                : '<div style="text-align:center;color:var(--text3);font-size:12px;padding:16px">Sin tareas visibles con los filtros actuales.</div>'}
+                ? tareasRender.map((t, ti) => renderImplTarea(t, ti, tareasDeFase)).join('')
+                : '<div style="text-align:center;color:var(--text3);font-size:12px;padding:16px">Sin tareas. Usá "+ Agregar tarea" para añadir una.</div>'}
             </div>` : ''}
         </div>`;
     }).join('')}
@@ -1169,7 +1172,7 @@ function renderClienteViewToggle(c) {
     </div>`;
 }
 
-function renderImplTarea(t) {
+function renderImplTarea(t, idxEnFase, tareasDeFase) {
   const respLabel = ({ cliente: 'Cliente', equipo: 'Equipo', ambos: 'Ambos' })[t.responsable_tipo] || t.responsable_tipo;
   const respBadge = ({ cliente: 'b-amber', equipo: 'b-blue', ambos: 'b-purple' })[t.responsable_tipo] || 'b-gray';
 
@@ -1278,9 +1281,19 @@ function renderImplTarea(t) {
       }
       ${fechaCell}
       ${predBtn}
-      ${notasIndicator}
+      ${enEdicion && tareasDeFase ? (() => {
+          const ordenados = [...tareasDeFase].sort((a, b) => a.orden - b.orden);
+          const idx = ordenados.findIndex(x => x.id === t.id);
+          const isFirst = idx === 0;
+          const isLast  = idx === ordenados.length - 1;
+          return `<div class="impl-tarea__edit-btns" onclick="event.stopPropagation()">
+            <button class="plantilla-row__btn" onclick="moverTareaCliente('${t.id}', -1)" title="Subir" ${isFirst ? 'disabled' : ''}>↑</button>
+            <button class="plantilla-row__btn" onclick="moverTareaCliente('${t.id}', 1)"  title="Bajar" ${isLast  ? 'disabled' : ''}>↓</button>
+            <button class="plantilla-row__btn plantilla-row__btn--delete" onclick="eliminarTareaCliente('${t.id}')" title="Eliminar">×</button>
+          </div>`;
+        })() : notasIndicator}
     </div>
-    ${renderImplNotasSection(t.id, notasTarea, isExpanded)}`;
+    ${enEdicion ? '' : renderImplNotasSection(t.id, notasTarea, isExpanded)}`;
 }
 
 // Devuelve true si el usuario actual puede modificar esta tarea.
@@ -2032,16 +2045,6 @@ function renderPlantilla() {
       const isFirst = i === 0;
       const isLast  = i === implPlantilla.length - 1;
 
-      // Selector de asesor: visible solo cuando responsable_tipo = 'equipo'
-      const esEquipo = e.responsable_tipo === 'equipo';
-      const asesorSel = `
-        <select class="plantilla-row__asesor" style="display:${esEquipo ? '' : 'none'}"
-          onchange="editarEtapaCampo('${e.id}', 'asesor', this.value || null)" title="Asesor del equipo">
-          <option value="" ${!e.asesor ? 'selected' : ''}>Sin asignar</option>
-          <option value="Matias Ferro"   ${e.asesor === 'Matias Ferro'   ? 'selected' : ''}>Matias Ferro</option>
-          <option value="Ignacio Talon"  ${e.asesor === 'Ignacio Talon'  ? 'selected' : ''}>Ignacio Talon</option>
-        </select>`;
-
       html += `
         <div class="plantilla-row" data-etapa-id="${e.id}" draggable="true"
              ondragstart="plantillaDragStart(event, '${e.id}')"
@@ -2049,17 +2052,7 @@ function renderPlantilla() {
           <div class="plantilla-row__drag" title="Arrastrá para cambiar de fase">⠿</div>
           <div class="plantilla-row__num">${String(e.orden).padStart(2, '0')}</div>
           <input type="text" class="plantilla-row__nombre" value="${escapeHtmlImpl(e.tarea)}"
-            onchange="editarEtapaCampo('${e.id}', 'tarea', this.value)" placeholder="Nombre de la etapa">
-          <select class="plantilla-row__resp" onchange="onPlantillaRespChange(this, '${e.id}')">
-            <option value="cliente" ${e.responsable_tipo === 'cliente' ? 'selected' : ''}>Cliente</option>
-            <option value="equipo"  ${e.responsable_tipo === 'equipo'  ? 'selected' : ''}>Equipo</option>
-            <option value="ambos"   ${e.responsable_tipo === 'ambos'   ? 'selected' : ''}>Ambos</option>
-          </select>
-          ${asesorSel}
-          <input type="number" min="1" max="365" class="plantilla-row__dur"
-            value="${e.duracion_dias != null ? e.duracion_dias : 3}"
-            onchange="editarEtapaCampo('${e.id}', 'duracion_dias', parseInt(this.value, 10) || 1)"
-            title="Duración en días">
+            onchange="editarEtapaCampo('${e.id}', 'tarea', this.value)" placeholder="Nombre de la tarea">
           <button class="plantilla-row__btn" onclick="moverEtapa('${e.id}', -1)" title="Subir"  ${isFirst ? 'disabled' : ''}>↑</button>
           <button class="plantilla-row__btn" onclick="moverEtapa('${e.id}', 1)"  title="Bajar"  ${isLast  ? 'disabled' : ''}>↓</button>
           <button class="plantilla-row__btn plantilla-row__btn--delete" onclick="eliminarEtapaPlantilla('${e.id}')" title="Eliminar">×</button>
@@ -2138,6 +2131,94 @@ function onPlantillaRespChange(sel, etapaId) {
   if (sel.value !== 'equipo') editarEtapaCampo(etapaId, 'asesor', null);
 }
 
+// ────────── Agregar / eliminar / reordenar tareas del cliente ──────────
+
+async function agregarTareaCliente(clienteId, faseKey) {
+  const nombre = prompt(`Nueva tarea en ${IMPL_FASES.find(f => f.key === faseKey)?.nombre || faseKey}:`);
+  if (!nombre || !nombre.trim()) return;
+
+  const tareasDelCliente = implTareas.filter(t => t.cliente_id === clienteId);
+
+  // Insertar DESPUÉS de la última tarea de esta fase (no al final global)
+  const tareasEnFase = tareasDelCliente.filter(t => (t.fase || 'relevamiento') === faseKey);
+  const ordenInsercion = tareasEnFase.length > 0
+    ? Math.max(...tareasEnFase.map(t => t.orden)) + 1
+    : (tareasDelCliente.length > 0 ? Math.max(...tareasDelCliente.map(t => t.orden)) + 1 : 1);
+
+  // Renumerar todas las tareas del cliente con orden >= ordenInsercion para hacer espacio
+  const tareasADesplazar = tareasDelCliente
+    .filter(t => t.orden >= ordenInsercion)
+    .sort((a, b) => b.orden - a.orden); // de mayor a menor para evitar conflictos de unique
+
+  try {
+    // Desplazar en orden descendente para no chocar con el unique constraint (orden, cliente_id)
+    for (const t of tareasADesplazar) {
+      await dbUpdate('implementacion_tareas', t.id, { orden: t.orden + 1 });
+      t.orden = t.orden + 1;
+    }
+
+    const inserted = await dbInsert('implementacion_tareas', {
+      cliente_id:       clienteId,
+      orden:            ordenInsercion,
+      tarea:            nombre.trim(),
+      responsable_tipo: 'equipo',
+      duracion_dias:    3,
+      fase:             faseKey,
+      estado:           'pendiente'
+    });
+    implTareas.push(dbRowToImplTarea(inserted));
+    renderImplementacion();
+    toast('Tarea agregada');
+  } catch (e) {
+    console.error('Error agregando tarea', e);
+    alert('No se pudo agregar: ' + e.message);
+  }
+}
+
+async function eliminarTareaCliente(tareaId) {
+  const t = implTareas.find(x => x.id === tareaId);
+  if (!t) return;
+  if (!confirm(`¿Eliminar la tarea "${t.tarea}"?\n\nEsta acción no se puede deshacer.`)) return;
+  try {
+    await dbDelete('implementacion_tareas', tareaId);
+    implTareas = implTareas.filter(x => x.id !== tareaId);
+    renderImplementacion();
+    toast('Tarea eliminada');
+  } catch (e) {
+    console.error('Error eliminando tarea', e);
+    alert('No se pudo eliminar: ' + e.message);
+  }
+}
+
+async function moverTareaCliente(tareaId, delta) {
+  const t = implTareas.find(x => x.id === tareaId);
+  if (!t) return;
+
+  // Ordenar las tareas de la misma fase del mismo cliente
+  const enFase = implTareas
+    .filter(x => x.cliente_id === t.cliente_id && (x.fase || 'relevamiento') === (t.fase || 'relevamiento'))
+    .sort((a, b) => a.orden - b.orden);
+
+  const idx = enFase.findIndex(x => x.id === tareaId);
+  const targetIdx = idx + delta;
+  if (targetIdx < 0 || targetIdx >= enFase.length) return;
+
+  const otro = enFase[targetIdx];
+  const tempOrden = 9999 + Math.floor(Math.random() * 1000);
+  try {
+    await dbUpdate('implementacion_tareas', t.id,    { orden: tempOrden });
+    await dbUpdate('implementacion_tareas', otro.id, { orden: t.orden });
+    await dbUpdate('implementacion_tareas', t.id,    { orden: otro.orden });
+    const tOrden = t.orden;
+    t.orden    = otro.orden;
+    otro.orden = tOrden;
+    renderImplementacion();
+  } catch (e) {
+    console.error('Error reordenando tarea', e);
+    alert('No se pudo reordenar: ' + e.message);
+  }
+}
+
 // ────────── Drag & drop entre fases ──────────
 
 let _plantillaDragId = null; // id de la etapa que se está arrastrando
@@ -2197,14 +2278,25 @@ async function agregarEtapaEnFase(faseKey) {
   const nombre = prompt(`Nombre de la nueva etapa (fase: ${IMPL_FASES.find(f => f.key === faseKey)?.nombre || faseKey}):`);
   if (!nombre || !nombre.trim()) return;
 
-  // El orden debe ser único por tipo — usamos el máximo global de la plantilla
-  const maxOrdenFase = implPlantilla.length > 0
-    ? Math.max(...implPlantilla.map(e => e.orden))
-    : 0;
+  // Insertar DESPUÉS de la última tarea de esta fase, no al final global
+  const etapasDeFase = implPlantilla.filter(e => (e.fase || 'relevamiento') === faseKey);
+  const ordenInsercion = etapasDeFase.length > 0
+    ? Math.max(...etapasDeFase.map(e => e.orden)) + 1
+    : (implPlantilla.length > 0 ? Math.max(...implPlantilla.map(e => e.orden)) + 1 : 1);
+
+  // Renumerar en orden descendente para respetar el unique constraint (orden, tipo)
+  const aDesplazar = implPlantilla
+    .filter(e => e.orden >= ordenInsercion)
+    .sort((a, b) => b.orden - a.orden);
 
   try {
+    for (const e of aDesplazar) {
+      await dbUpdate('implementacion_plantilla', e.id, { orden: e.orden + 1 });
+      e.orden = e.orden + 1;
+    }
+
     const inserted = await dbInsert('implementacion_plantilla', {
-      orden:            maxOrdenFase + 1,
+      orden:            ordenInsercion,
       tarea:            nombre.trim(),
       responsable_tipo: 'equipo',
       tipo:             implPlantillaTipo,
@@ -2213,9 +2305,9 @@ async function agregarEtapaEnFase(faseKey) {
     implPlantilla.push(inserted);
     implPlantilla.sort((a, b) => a.orden - b.orden);
     renderPlantilla();
-    toast('Etapa agregada');
+    toast('Tarea agregada');
   } catch (e) {
-    console.error('Error agregando etapa', e);
+    console.error('Error agregando tarea', e);
     alert('No se pudo agregar: ' + e.message);
   }
 }

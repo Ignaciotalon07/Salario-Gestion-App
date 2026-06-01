@@ -9,6 +9,11 @@ function goTo(btn, id) {
   if (btn) btn.classList.add('active');
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
+  // Re-inicializar el selector de tipo de consulta cada vez que se abre la página
+  if (id === 'registrar' && typeof initTipoConsulta === 'function') {
+    initTipoConsulta();
+    if (typeof onTipoConsultaChange === 'function') onTipoConsultaChange();
+  }
 }
 
 // goClienteDetail es re-definida por cliente-detalle.js para navegar a la vista de historial.

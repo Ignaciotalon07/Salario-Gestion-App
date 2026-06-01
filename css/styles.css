@@ -2417,6 +2417,13 @@ input[type=date]:focus {
   color: var(--text3);
   white-space: nowrap;
 }
+.impl-tarea__edit-btns {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .impl-tarea__resp-sel {
   font-size: 11px;
   padding: 3px 6px;
@@ -2634,8 +2641,8 @@ input[type=date]:focus {
 
 .plantilla-row {
   display: grid;
-  /* drag | num | nombre | responsable | asesor | duración | ↑ | ↓ | × */
-  grid-template-columns: 18px 32px 1fr 90px 120px 60px 28px 28px 28px;
+  /* drag | num | nombre | ↑ | ↓ | × */
+  grid-template-columns: 18px 32px 1fr 28px 28px 28px;
   gap: 8px;
   align-items: center;
   padding: 6px 8px;

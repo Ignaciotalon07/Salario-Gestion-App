@@ -160,7 +160,7 @@ Hay 6 cuentas en `team_members` (tabla en Supabase):
 - daniel@salario.local (password)
 - danielferro@salario.local (password)
 - renzo@salario.local (password)
-- alfred@salario.local (password)
+- Alfredo.Cesar@consultoraferro.com.ar (password)
 
 Password por defecto para los 5 emails con dominio salario.local: `123456`
 (cambiar en producción).

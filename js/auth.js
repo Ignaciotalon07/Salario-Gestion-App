@@ -37,6 +37,8 @@ async function bootAuth() {
     }
 
     currentMember = member;
+    // Guardar email del auth en variable global accesible desde cualquier módulo
+    window._currentAuthEmail = (user.email || '').toLowerCase();
     overlay.style.display = 'none';
     app.style.display = '';
     renderUserChip(user, member);
