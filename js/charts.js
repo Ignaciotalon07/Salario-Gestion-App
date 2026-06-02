@@ -184,7 +184,10 @@ function refreshPanelMetrics() {
   if (elConsultas) elConsultas.textContent = total;
 
   const elRep = document.getElementById('metric-rep-pct');
-  if (elRep) elRep.textContent = pctRep + '%';
+  if (elRep) {
+    elRep.textContent = pctRep + '%';
+    elRep.style.color = pctRep <= 20 ? 'var(--green)' : pctRep <= 30 ? 'var(--amber)' : 'var(--red)';
+  }
 
   const elAnio = document.getElementById('metric-consultas-anio');
   if (elAnio) elAnio.textContent = anioActual.length;
@@ -401,8 +404,10 @@ function renderScoreRow(c) {
 
   return `<tr onclick="goClienteDetail('${c.id}')" style="cursor:pointer">
     <td style="font-weight:500">
-      ${escapeHtmlPanel(c.nombre)}
-      <span class="tipo-tag tipo-${c.tipo}" style="font-size:9px">${tipoLabel}</span>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span>${escapeHtmlPanel(c.nombre)}</span>
+        <span class="tipo-tag tipo-${c.tipo}" style="font-size:9px;flex-shrink:0">${tipoLabel}</span>
+      </div>
     </td>
     <td><span class="badge ${scoreClass}">${score}/10</span></td>
     <td style="color:${repColor}">${repTexto}</td>
