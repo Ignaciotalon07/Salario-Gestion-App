@@ -700,9 +700,6 @@
                 <div class="page-sub" id="clientes-page-sub">0 clientes activos</div>
               </div>
               <div class="btn-row">
-                <button class="btn-secondary" onclick="abrirModalConsulta()">
-                  + Registrar consulta
-                </button>
                 <button class="btn-primary" onclick="showClienteForm()">
                   + Agregar cliente
                 </button>
@@ -1945,14 +1942,14 @@ Paso 2: ..."
         </div>
         <div class="form-group">
           <label class="fl">Tiempo de resolución (hs)</label>
-          <input id="r-tiempo" type="number" placeholder="Ej: 1.5" step="0.5" />
+          <input id="r-tiempo" type="number" placeholder="Ej: 1.5" step="0.5" min="0" />
         </div>
       </div>
 
       <div class="form-row" id="r-row-tiempo-solo" style="display:none">
         <div class="form-group" style="max-width:200px">
           <label class="fl">Tiempo de programación (hs)</label>
-          <input id="r-tiempo-prog" type="number" placeholder="Ej: 2.5" step="0.5" />
+          <input id="r-tiempo-prog" type="number" placeholder="Ej: 2.5" step="0.5" min="0" />
         </div>
       </div>
 

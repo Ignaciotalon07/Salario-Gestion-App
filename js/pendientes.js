@@ -564,7 +564,7 @@ function abrirModalCierrePendiente(p, btn) {
           ⏱ Tiempo de ${esProg ? 'programación' : 'resolución'} (hs)
           <span style="color:var(--red);margin-left:2px">*</span>
         </label>
-        <input type="number" id="cierre-tiempo" placeholder="Ej: 1.5" step="0.5" min="0.1"
+        <input type="number" id="cierre-tiempo" placeholder="Ej: 1.5" step="0.5" min="0"
           style="font-size:15px;font-weight:600" />
         <div style="font-size:11px;color:var(--text3);margin-top:5px">
           Obligatorio. Nos permite medir cuánto consume cada cliente.

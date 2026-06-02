@@ -39,6 +39,9 @@ function abrirModalConsulta(clientePreseleccionado) {
   modal.style.display = 'block';
   document.body.style.overflow = 'hidden'; // evitar scroll del fondo
 
+  // Inyectar categorías custom al desplegable
+  cargarCategoriasCustom();
+
   // Si viene con cliente pre-seleccionado, rellenarlo
   if (clientePreseleccionado) {
     setTimeout(() => elegirClienteSearch(clientePreseleccionado), 50);
@@ -176,6 +179,60 @@ function suscribirConsultas() {
     .subscribe();
 }
 
+// ────────── Categorías y subtemas custom (persistidos en consultas) ──────────
+
+// Devuelve las categorías custom: las que aparecen en consultas pero no están en CATS
+function getCategoriasCustom() {
+  if (typeof consultas === 'undefined') return [];
+  const conocidas = new Set(Object.keys(CATS));
+  const todas = [...new Set(consultas.map(c => c.categoria).filter(Boolean))];
+  return todas.filter(c => !conocidas.has(c)).sort();
+}
+
+// Devuelve los subtemas custom usados para una categoría (no están en CATS[cat].sub)
+function getSubtemasCustom(cat) {
+  if (typeof consultas === 'undefined') return [];
+  // Mapeo inverso: clave corta → label
+  const catLabelMap = {};
+  Object.entries(CATS).forEach(([k, cfg]) => { catLabelMap[k] = cfg.label; });
+  const labelCat = catLabelMap[cat] || cat; // puede ser clave o label
+
+  const conocidos = new Set(CATS[cat]?.sub || []);
+  return [...new Set(
+    consultas
+      .filter(c => c.categoria === cat || c.categoria === labelCat)
+      .map(c => c.subtema)
+      .filter(s => s && !conocidos.has(s))
+  )].sort();
+}
+
+// Inyecta las categorías custom al select r-cat (antes de "Otro")
+function cargarCategoriasCustom() {
+  const sel = document.getElementById('r-cat');
+  if (!sel) return;
+
+  // Quitar opciones custom previas (las que no son conocidas ni "otro")
+  Array.from(sel.options).forEach(opt => {
+    if (opt.value && !Object.keys(CATS).includes(opt.value) && opt.value !== '' && opt.value !== 'otro') {
+      opt.remove();
+    }
+  });
+
+  // Agregar las custom antes del "Otro"
+  const custom = getCategoriasCustom();
+  if (custom.length === 0) return;
+
+  const otroOpt = sel.querySelector('option[value="otro"]');
+  custom.forEach(cat => {
+    // Evitar duplicados
+    if (sel.querySelector(`option[value="${cat}"]`)) return;
+    const opt = document.createElement('option');
+    opt.value = cat;
+    opt.text  = cat;
+    sel.insertBefore(opt, otroOpt);
+  });
+}
+
 // ────────── Form: subtemas ──────────
 
 function updateRegSubtemas() {
@@ -205,9 +262,18 @@ function updateRegSubtemas() {
     return;
   }
 
-  // Categoría conocida: llenar lista + "Otro" al final
-  sel.innerHTML = CATS[cat].sub.map(s => `<option>${s}</option>`).join('')
-    + '<option value="otro">Otro — nuevo subtema</option>';
+  if (CATS[cat]) {
+    // Categoría conocida: subtemas fijos + custom ya usados + "Otro"
+    const subCustomPrev = getSubtemasCustom(cat);
+    sel.innerHTML = CATS[cat].sub.map(s => `<option>${s}</option>`).join('')
+      + subCustomPrev.map(s => `<option>${escapeHtmlConsulta(s)}</option>`).join('')
+      + '<option value="otro">Otro — nuevo subtema</option>';
+  } else {
+    // Categoría custom: subtemas previos usados con ella + "Otro"
+    const subCustomPrev = getSubtemasCustom(cat);
+    sel.innerHTML = subCustomPrev.map(s => `<option>${escapeHtmlConsulta(s)}</option>`).join('')
+      + '<option value="otro">Otro — nuevo subtema</option>';
+  }
 }
 
 function toggleRSubCustom() {
