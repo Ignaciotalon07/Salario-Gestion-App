@@ -155,9 +155,13 @@ function getVisiblePendientes() {
   let arr = pendientes;
 
   // Filtro Mis / Equipo
+  // "Mis pendientes"  → solo los asignados a mí
+  // "Todos del equipo" → solo los de los demás (los míos ya los veo en "Mis pendientes")
+  const me = getCurrentUserName();
   if (viewMode === 'mis') {
-    const me = getCurrentUserName();
     arr = me ? arr.filter(p => p.asesor === me) : [];
+  } else if (viewMode === 'equipo') {
+    arr = me ? arr.filter(p => p.asesor !== me) : arr;
   }
 
   // Filtro por categoria (matchea substring en categoriaLabel, o flag interno)
