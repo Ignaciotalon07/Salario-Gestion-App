@@ -31,6 +31,38 @@ function dbRowToConsulta(row) {
   };
 }
 
+// ────────── Modal de registrar consulta ──────────
+
+function abrirModalConsulta(clientePreseleccionado) {
+  const modal = document.getElementById('modal-consulta');
+  if (!modal) return;
+  modal.style.display = 'block';
+  document.body.style.overflow = 'hidden'; // evitar scroll del fondo
+
+  // Si viene con cliente pre-seleccionado, rellenarlo
+  if (clientePreseleccionado) {
+    setTimeout(() => elegirClienteSearch(clientePreseleccionado), 50);
+  }
+}
+
+function cerrarModalConsulta() {
+  const modal = document.getElementById('modal-consulta');
+  if (!modal) return;
+  modal.style.display = 'none';
+  document.body.style.overflow = '';
+  resetFormConsulta();
+}
+
+// Guardar y dejar el modal abierto para registrar otra consulta
+async function guardarConsultaYOtra() {
+  await guardarConsulta(true); // true = no cerrar modal
+}
+
+// Navegación desde card de cliente → abre el modal con cliente pre-seleccionado
+function irARegistrarConsulta(nombreCliente) {
+  abrirModalConsulta(nombreCliente);
+}
+
 // ────────── Init ──────────
 
 // Muestra u oculta campos del form según el tipo de consulta seleccionado.
@@ -262,7 +294,7 @@ function renderSolucionElegida() {
 
 // ────────── Guardar consulta ──────────
 
-async function guardarConsulta() {
+async function guardarConsulta(mantenerAbierto = false) {
   const cliente    = (document.getElementById('r-cliente') || {}).value || '';
 
   // Categoría y subtema: se calculan más abajo según el tipo de consulta
@@ -405,17 +437,24 @@ async function guardarConsulta() {
     return;
   }
 
-  // ── Reset completo del form ──
+  // ── Reset y cierre del modal ──
   resetFormConsulta();
 
-  const ok = document.getElementById('reg-ok');
-  if (ok) {
-    ok.style.display = 'flex';
-    ok.innerHTML = nuevaSolucionId
-      ? '<strong>Consulta guardada.</strong>&nbsp;Se agregó una nueva solución a la base de conocimiento.'
-      : '<strong>Consulta guardada.</strong>&nbsp;Se sumó 1 al contador de la solución vinculada.';
-    setTimeout(() => ok.style.display = 'none', 4000);
+  if (mantenerAbierto) {
+    // "Guardar y registrar otra": mostrar confirmación brevemente dentro del modal
+    const ok = document.getElementById('reg-ok');
+    if (ok) {
+      ok.style.display = 'flex';
+      ok.innerHTML = nuevaSolucionId
+        ? '<strong>Consulta guardada.</strong>&nbsp;Se agregó una nueva solución a la base.'
+        : '<strong>Consulta guardada.</strong>&nbsp;Podés registrar otra.';
+      setTimeout(() => ok.style.display = 'none', 3000);
+    }
+  } else {
+    // Cierre normal: cerrar modal y mostrar toast
+    cerrarModalConsulta();
   }
+
   toast(nuevaSolucionId ? 'Consulta guardada y nueva solución agregada a la base' : 'Consulta guardada correctamente');
 }
 
@@ -557,9 +596,75 @@ async function recalcularAutonomiaCliente(nombreCliente) {
   }
 }
 
+// ────────── Buscador de clientes (reemplaza el select nativo) ──────────
+
+let _clienteSearchTimeout = null;
+
+function filtrarClienteSearch() {
+  const input    = document.getElementById('r-cliente-search');
+  const dropdown = document.getElementById('r-cliente-dropdown');
+  const select   = document.getElementById('r-cliente');
+  if (!input || !dropdown || !select) return;
+
+  // Posicionar el dropdown justo debajo del input
+  const rect = input.getBoundingClientRect();
+  dropdown.style.top   = (rect.bottom + 2) + 'px';
+  dropdown.style.left  = rect.left + 'px';
+  dropdown.style.width = rect.width + 'px';
+
+  const q = input.value.trim().toLowerCase();
+
+  // Obtener la lista de opciones del select oculto
+  const opciones = Array.from(select.options)
+    .map(o => o.text)
+    .filter(t => t && t !== 'Cargando clientes...');
+
+  const filtradas = q
+    ? opciones.filter(n => n.toLowerCase().includes(q))
+    : opciones;
+
+  if (filtradas.length === 0) {
+    dropdown.innerHTML = `<div style="padding:10px 14px;color:var(--text3);font-size:13px">Sin resultados</div>`;
+  } else {
+    dropdown.innerHTML = filtradas.map(n => `
+      <div
+        class="cliente-search-opt"
+        onmousedown="elegirClienteSearch('${n.replace(/'/g, "\\'")}')"
+        style="padding:9px 14px;cursor:pointer;font-size:13px;border-radius:6px"
+      >${n}</div>`).join('');
+  }
+  // Forzar fondo sólido tomando el color computado del body/html
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#1e1e2e';
+  dropdown.style.background = bg;
+  dropdown.style.display = 'block';
+}
+
+function elegirClienteSearch(nombre) {
+  const input    = document.getElementById('r-cliente-search');
+  const select   = document.getElementById('r-cliente');
+  const dropdown = document.getElementById('r-cliente-dropdown');
+  if (input)    input.value  = nombre;
+  if (select)   select.value = nombre;
+  if (dropdown) dropdown.style.display = 'none';
+}
+
+function cerrarClienteSearch() {
+  // Pequeño delay para que el onmousedown del item alcance a disparar primero
+  setTimeout(() => {
+    const dropdown = document.getElementById('r-cliente-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+  }, 150);
+}
+
 // ────────── Reset del form ──────────
 
 function resetFormConsulta() {
+  // Limpiar buscador de cliente
+  const clienteSearch = document.getElementById('r-cliente-search');
+  if (clienteSearch) clienteSearch.value = '';
+  const clienteDrop = document.getElementById('r-cliente-dropdown');
+  if (clienteDrop) clienteDrop.style.display = 'none';
+
   // Selects y inputs con ID
   const ids = ['r-cliente', 'r-rep', 'r-material', 'r-remota'];
   ids.forEach(id => {

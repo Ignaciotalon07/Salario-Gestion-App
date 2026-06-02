@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Salario — Gestión de Clientes</title>
+    <link rel="icon" type="image/png" href="assets/img/isologotipo.png" />
 
     <!-- Tipografía -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -165,6 +166,9 @@
             </div>
 
             <div class="login-form-header">
+              <div style="text-align:center;margin-bottom:28px">
+                <img src="assets/img/isologotipo.png" alt="Logo" style="width:52px;height:52px;object-fit:contain" />
+              </div>
               <div class="login-form-eyebrow">Iniciar sesión</div>
               <div class="login-form-title">Bienvenido de vuelta</div>
               <div class="login-form-subtitle">
@@ -269,7 +273,10 @@
   ════════════════════════════════════ -->
         <nav class="sidebar">
           <div class="sidebar-logo">
-            <div class="brand">Salario</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <img src="assets/img/isologotipo.png" alt="Logo" style="width:28px;height:28px;object-fit:contain" />
+              <div class="brand">Salario</div>
+            </div>
             <div class="sub">Gestión de clientes</div>
           </div>
 
@@ -306,18 +313,6 @@
                 <path d="M14 13c0-2-1-3.5-2-4"></path>
               </svg>
               <span>Clientes</span>
-            </button>
-            <button class="nav-item" onclick="goTo(this, 'registrar')">
-              <svg
-                class="icon"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path d="M8 1v14M1 8h14"></path>
-              </svg>
-              <span>Registrar consulta</span>
             </button>
             <button class="nav-item" onclick="goTo(this, 'pendientes')">
               <svg
@@ -442,15 +437,7 @@
                 <div class="page-title">Panel general</div>
                 <div class="page-sub" id="panel-page-sub">Mayo 2026 — datos en tiempo real</div>
               </div>
-              <button
-                class="btn-primary"
-                onclick="
-                  goTo(
-                    document.querySelector('.nav-item[onclick*=registrar]'),
-                    'registrar',
-                  )
-                "
-              >
+              <button class="btn-primary" onclick="abrirModalConsulta()">
                 + Registrar consulta
               </button>
             </div>
@@ -713,15 +700,7 @@
                 <div class="page-sub" id="clientes-page-sub">0 clientes activos</div>
               </div>
               <div class="btn-row">
-                <button
-                  class="btn-secondary"
-                  onclick="
-                    goTo(
-                      document.querySelector('.nav-item[onclick*=registrar]'),
-                      'registrar',
-                    )
-                  "
-                >
+                <button class="btn-secondary" onclick="abrirModalConsulta()">
                   + Registrar consulta
                 </button>
                 <button class="btn-primary" onclick="showClienteForm()">
@@ -1127,169 +1106,8 @@
           <!-- ════════════════════════════════════
          REGISTRAR CONSULTA
     ════════════════════════════════════ -->
-          <div id="registrar" class="page">
-            <div class="page-header">
-              <div>
-                <div class="page-title">Registrar consulta</div>
-                <div class="page-sub">
-                  Completá después de cada atención por WhatsApp
-                </div>
-              </div>
-            </div>
-
-            <div class="card">
-              <div id="reg-ok" style="display: none" class="alert alert-green">
-                <strong>Consulta guardada.</strong>La solución fue agregada a la
-                base de conocimiento del equipo.
-              </div>
-
-              <div class="info-box">
-                Si el cliente repite la misma consulta, marcala como repetida.
-                Eso alimenta el score de riesgo automáticamente.
-              </div>
-
-              <div class="form-row">
-                <div class="form-group" style="max-width: 50%; flex: 1">
-                  <label class="fl">Cliente</label>
-                  <select id="r-cliente">
-                    <option value="">Cargando clientes...</option>
-                  </select>
-                </div>
-                <div class="form-group" style="max-width: 50%; flex: 1">
-                  <label class="fl">Tipo de consulta</label>
-                  <select id="r-tipo-consulta" onchange="onTipoConsultaChange()">
-                    <!-- Opciones se renderizan por JS según el usuario logueado -->
-                    <option value="soporte">Soporte</option>
-                  </select>
-                </div>
-                <!-- "Asesor que atendió" se asigna automáticamente al usuario logueado -->
-              </div>
-              <!-- Fila categoría/subtema — solo soporte/comercial -->
-              <div class="form-row" id="r-row-cat">
-                <div class="form-group">
-                  <label class="fl">Categoría</label>
-                  <select id="r-cat" onchange="updateRegSubtemas()">
-                    <option value="">Seleccioná...</option>
-                    <option value="liquidacion">Liquidación de sueldos</option>
-                    <option value="errores">Errores del sistema</option>
-                    <option value="configuracion">Configuración</option>
-                    <option value="actualizaciones">Actualizaciones</option>
-                    <option value="fuera">Fuera del sistema</option>
-                    <option value="otro">Otro — nueva categoría</option>
-                  </select>
-                  <input type="text" id="r-cat-custom" placeholder="Escribí la nueva categoría"
-                    style="display:none;margin-top:6px" />
-                </div>
-                <div class="form-group">
-                  <label class="fl">Subtema</label>
-                  <select id="r-sub" onchange="toggleRSubCustom()">
-                    <option>Primero elegí categoría</option>
-                  </select>
-                  <input type="text" id="r-sub-custom" placeholder="Escribí el nuevo subtema"
-                    style="display:none;margin-top:6px" />
-                </div>
-              </div>
-
-              <!-- Subtema libre — solo programación (con autocomplete de subtemas previos) -->
-              <div class="form-row" id="r-row-prog-sub" style="display:none">
-                <div class="form-group" style="flex:1">
-                  <label class="fl">Subtema / Módulo</label>
-                  <input type="text" id="r-sub-prog" list="r-sub-prog-list"
-                    placeholder="Ej: Liquidación final, AFIP F931, Importación..."
-                    autocomplete="off" />
-                  <datalist id="r-sub-prog-list"></datalist>
-                </div>
-              </div>
-
-              <!-- Repetida + Tiempo -->
-              <div class="form-row" id="r-row-rep">
-                <div class="form-group">
-                  <label class="fl">¿Es consulta repetida?</label>
-                  <select id="r-rep">
-                    <option value="no">No, es nueva</option>
-                    <option value="si">Sí, ya lo consultó antes</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="fl">Tiempo de resolución (hs)</label>
-                  <input id="r-tiempo" type="number" placeholder="Ej: 1.5" step="0.5" />
-                </div>
-              </div>
-
-              <!-- Tiempo solo (para programación) -->
-              <div class="form-row" id="r-row-tiempo-solo" style="display:none">
-                <div class="form-group" style="max-width:200px">
-                  <label class="fl">Tiempo de programación (hs)</label>
-                  <input id="r-tiempo-prog" type="number" placeholder="Ej: 2.5" step="0.5" />
-                </div>
-              </div>
-
-              <!-- Material + Remota — solo soporte/comercial -->
-              <div class="form-row" id="r-row-material">
-                <div class="form-group">
-                  <label class="fl">Material enviado</label>
-                  <select id="r-material">
-                    <option value="ninguno">Ninguno</option>
-                    <option value="video">Video</option>
-                    <option value="pdf">PDF / imagen</option>
-                    <option value="varios">Varios materiales</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="fl">¿Se conectó remotamente?</label>
-                  <select id="r-remota">
-                    <option value="no">No, solo por chat</option>
-                    <option value="si">Sí, conexión remota</option>
-                    <option value="llamada">Llamada de voz</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Descripción del problema (todos los tipos) -->
-              <div class="form-group">
-                <label class="fl" id="r-desc-label">Descripción del problema</label>
-                <textarea id="r-desc"
-                  placeholder="Ej: El cliente no sabía liquidar las horas extras en feriado..."></textarea>
-              </div>
-
-              <!-- Qué se programó — solo programación -->
-              <div class="form-group" id="r-group-prog-realizada" style="display:none">
-                <label class="fl">¿Qué se programó?</label>
-                <textarea id="r-prog-realizada"
-                  placeholder="Describí qué fue lo que se desarrolló / modificó para el cliente..."></textarea>
-              </div>
-
-              <!-- Base de soluciones — solo soporte -->
-              <div id="r-group-soluciones">
-                <div class="form-group">
-                  <label class="fl">¿Aplicaste una solución de la base? (opcional)</label>
-                  <div id="r-sol-elegida" class="sol-elegida" style="display:none"></div>
-                  <button type="button" class="btn-sm" onclick="elegirSolucionConsulta()">
-                    🔗 Elegir solución de la base
-                  </button>
-                  <div style="font-size:11px;color:var(--text3);margin-top:6px">
-                    Si elegís una de la base, al guardar le suma 1 al contador de usos.
-                  </div>
-                </div>
-                <div class="form-group" id="r-sol-group">
-                  <label class="fl">Solución aplicada (paso a paso)</label>
-                  <textarea id="r-sol"
-                    placeholder="Paso 1: Se fue a Configuración > Parámetros > Feriados&#10;Paso 2: Se verificó que el porcentaje estuviera en 100%..."></textarea>
-                  <div style="font-size:11px;color:var(--text3);margin-top:6px">
-                    <strong>Obligatorio.</strong> Al guardar, los pasos se agregan como nueva solución a la base.
-                  </div>
-                </div>
-              </div>
-
-              <div style="display: flex; gap: 10px; flex-wrap: wrap">
-                <button class="btn-primary" onclick="guardarConsulta()">
-                  Guardar consulta
-                </button>
-                <button class="btn-secondary">Guardar y registrar otra</button>
-                <button class="btn-secondary" onclick="resetFormConsulta()" style="color:var(--red);border-color:var(--red)">✕ Cancelar registro</button>
-              </div>
-            </div>
-          </div>
+          <!-- MODAL: Registrar consulta — reemplaza la sección de página -->
+          <!-- Se abre con abrirModalConsulta() y se cierra con cerrarModalConsulta() -->
 
           <!-- ════════════════════════════════════
          DETALLE DE CLIENTE — render dinámico desde js/cliente-detalle.js
@@ -2041,5 +1859,153 @@ Paso 2: ..."
     <script src="js/administracion.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/alertas.js"></script>
+
+  <!-- ════════════════════════════════════
+       MODAL — Registrar consulta
+  ════════════════════════════════════ -->
+  <div id="modal-consulta" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.55);backdrop-filter:blur(2px);overflow-y:auto;padding:32px 16px" onclick="if(event.target===this)cerrarModalConsulta()">
+    <div style="background:var(--surface);border-radius:14px;max-width:680px;margin:0 auto;padding:28px 28px 24px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
+
+      <!-- Header del modal -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px">
+        <div>
+          <div style="font-size:17px;font-weight:700;color:var(--text)">Registrar consulta</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">Completá después de cada atención por WhatsApp</div>
+        </div>
+        <button onclick="cerrarModalConsulta()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text3);padding:0;line-height:1;margin-left:16px">✕</button>
+      </div>
+
+      <div id="reg-ok" style="display:none" class="alert alert-green">
+        <strong>Consulta guardada.</strong> La solución fue agregada a la base de conocimiento del equipo.
+      </div>
+
+      <div class="info-box">
+        Si el cliente repite la misma consulta, marcala como repetida. Eso alimenta el score de riesgo automáticamente.
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex:1">
+          <label class="fl">Cliente</label>
+          <div style="position:relative">
+            <input type="text" id="r-cliente-search" placeholder="Escribí para buscar cliente..."
+              autocomplete="off" oninput="filtrarClienteSearch()" onfocus="filtrarClienteSearch()"
+              onblur="cerrarClienteSearch()" style="width:100%;box-sizing:border-box" />
+            <div id="r-cliente-dropdown"
+              style="display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:240px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.35);margin-top:2px;min-width:300px"></div>
+          </div>
+          <select id="r-cliente" style="display:none"><option value="">Cargando clientes...</option></select>
+        </div>
+        <div class="form-group" style="flex:1">
+          <label class="fl">Tipo de consulta</label>
+          <select id="r-tipo-consulta" onchange="onTipoConsultaChange()">
+            <option value="soporte">Soporte</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row" id="r-row-cat">
+        <div class="form-group">
+          <label class="fl">Categoría</label>
+          <select id="r-cat" onchange="updateRegSubtemas()">
+            <option value="">Seleccioná...</option>
+            <option value="liquidacion">Liquidación de sueldos</option>
+            <option value="errores">Errores del sistema</option>
+            <option value="configuracion">Configuración</option>
+            <option value="actualizaciones">Actualizaciones</option>
+            <option value="fuera">Fuera del sistema</option>
+            <option value="otro">Otro — nueva categoría</option>
+          </select>
+          <input type="text" id="r-cat-custom" placeholder="Escribí la nueva categoría" style="display:none;margin-top:6px" />
+        </div>
+        <div class="form-group">
+          <label class="fl">Subtema</label>
+          <select id="r-sub" onchange="toggleRSubCustom()">
+            <option>Primero elegí categoría</option>
+          </select>
+          <input type="text" id="r-sub-custom" placeholder="Escribí el nuevo subtema" style="display:none;margin-top:6px" />
+        </div>
+      </div>
+
+      <div class="form-row" id="r-row-prog-sub" style="display:none">
+        <div class="form-group" style="flex:1">
+          <label class="fl">Subtema / Módulo</label>
+          <input type="text" id="r-sub-prog" list="r-sub-prog-list"
+            placeholder="Ej: Liquidación final, AFIP F931, Importación..." autocomplete="off" />
+          <datalist id="r-sub-prog-list"></datalist>
+        </div>
+      </div>
+
+      <div class="form-row" id="r-row-rep">
+        <div class="form-group">
+          <label class="fl">¿Es consulta repetida?</label>
+          <select id="r-rep">
+            <option value="no">No, es nueva</option>
+            <option value="si">Sí, ya lo consultó antes</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="fl">Tiempo de resolución (hs)</label>
+          <input id="r-tiempo" type="number" placeholder="Ej: 1.5" step="0.5" />
+        </div>
+      </div>
+
+      <div class="form-row" id="r-row-tiempo-solo" style="display:none">
+        <div class="form-group" style="max-width:200px">
+          <label class="fl">Tiempo de programación (hs)</label>
+          <input id="r-tiempo-prog" type="number" placeholder="Ej: 2.5" step="0.5" />
+        </div>
+      </div>
+
+      <div class="form-row" id="r-row-material">
+        <div class="form-group">
+          <label class="fl">Material enviado</label>
+          <select id="r-material">
+            <option value="ninguno">Ninguno</option>
+            <option value="video">Video</option>
+            <option value="pdf">PDF / imagen</option>
+            <option value="varios">Varios materiales</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="fl">¿Se conectó remotamente?</label>
+          <select id="r-remota">
+            <option value="no">No, solo por chat</option>
+            <option value="si">Sí, conexión remota</option>
+            <option value="llamada">Llamada de voz</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="fl" id="r-desc-label">Descripción del problema</label>
+        <textarea id="r-desc" placeholder="Ej: El cliente no sabía liquidar las horas extras en feriado..."></textarea>
+      </div>
+
+      <div class="form-group" id="r-group-prog-realizada" style="display:none">
+        <label class="fl">¿Qué se programó?</label>
+        <textarea id="r-prog-realizada" placeholder="Describí qué fue lo que se desarrolló / modificó para el cliente..."></textarea>
+      </div>
+
+      <div id="r-group-soluciones">
+        <div class="form-group">
+          <label class="fl">¿Aplicaste una solución de la base? (opcional)</label>
+          <div id="r-sol-elegida" class="sol-elegida" style="display:none"></div>
+          <button type="button" class="btn-sm" onclick="elegirSolucionConsulta()">🔗 Elegir solución de la base</button>
+          <div style="font-size:11px;color:var(--text3);margin-top:6px">Si elegís una de la base, al guardar le suma 1 al contador de usos.</div>
+        </div>
+        <div class="form-group" id="r-sol-group">
+          <label class="fl">Solución aplicada (paso a paso)</label>
+          <textarea id="r-sol" placeholder="Paso 1: Se fue a Configuración > Parámetros > Feriados&#10;Paso 2: Se verificó que el porcentaje estuviera en 100%..."></textarea>
+          <div style="font-size:11px;color:var(--text3);margin-top:6px"><strong>Obligatorio.</strong> Al guardar, los pasos se agregan como nueva solución a la base.</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn-primary" onclick="guardarConsulta()">Guardar consulta</button>
+        <button class="btn-secondary" onclick="guardarConsultaYOtra()">Guardar y registrar otra</button>
+      </div>
+    </div>
+  </div>
+
   </body>
 </html>

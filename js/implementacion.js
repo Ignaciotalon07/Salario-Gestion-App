@@ -1263,12 +1263,15 @@ function renderImplTarea(t, idxEnFase, tareasDeFase) {
            </select>`
         : respBadgeConAsesor
       }
-      <select class="impl-tarea__estado-sel" onclick="event.stopPropagation();" onchange="cambiarEstadoTarea('${t.id}', this.value)" title="${puedoEditar ? 'Cambiar estado' : 'Solo ' + t.asesor + ' puede cambiar el estado'}" ${disabledAttr}>
-        <option value="pendiente"   ${t.estado === 'pendiente'   ? 'selected' : ''}>Pendiente</option>
-        <option value="en_progreso" ${t.estado === 'en_progreso' ? 'selected' : ''}>En progreso</option>
-        <option value="completada"  ${t.estado === 'completada'  ? 'selected' : ''}>Completada</option>
-        <option value="demorada"    ${t.estado === 'demorada'    ? 'selected' : ''}>Demorada</option>
-      </select>
+      ${!enEdicion
+        ? `<select class="impl-tarea__estado-sel" onclick="event.stopPropagation();" onchange="cambiarEstadoTarea('${t.id}', this.value)" title="${puedoEditar ? 'Cambiar estado' : 'Solo ' + t.asesor + ' puede cambiar el estado'}" ${disabledAttr}>
+             <option value="pendiente"   ${t.estado === 'pendiente'   ? 'selected' : ''}>Pendiente</option>
+             <option value="en_progreso" ${t.estado === 'en_progreso' ? 'selected' : ''}>En progreso</option>
+             <option value="completada"  ${t.estado === 'completada'  ? 'selected' : ''}>Completada</option>
+             <option value="demorada"    ${t.estado === 'demorada'    ? 'selected' : ''}>Demorada</option>
+           </select>`
+        : ''
+      }
       ${enEdicion
         ? `<select class="impl-tarea__asesor-sel" onclick="event.stopPropagation();"
                onchange="cambiarAsesorTarea('${t.id}', this.value)" title="Asignar asesor">

@@ -252,7 +252,7 @@ function renderClienteCard(c) {
       <!-- Footer: botones — stopPropagation para no abrir el detalle al clickearlos -->
       <div class="cli-card__footer" onclick="event.stopPropagation()">
         <button class="btn-sm btn-primary" style="font-size:12px"
-          onclick="goTo(document.querySelector('.nav-item[onclick*=registrar]'),'registrar')">
+          onclick="irARegistrarConsulta('${escapeHtml(c.nombre)}')">
           + Consulta
         </button>
         ${c.whaticket_url

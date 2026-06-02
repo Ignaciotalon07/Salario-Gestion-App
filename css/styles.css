@@ -609,6 +609,7 @@ textarea { resize: vertical; min-height: 80px; }
   justify-content: center;
   padding: 40px;
   overflow-y: auto;
+  border-left: 4px solid #F77F00;
 }
 
 .login-form-content {
@@ -1248,6 +1249,10 @@ html {
    Sugerencias automaticas de la Base de Soluciones
    (aparecen mientras escribis la descripcion del pendiente)
    ────────────────────────────────────── */
+
+.cliente-search-opt:hover {
+  background: var(--hover);
+}
 
 .kb-suggestions {
   background: #fff8e8;
