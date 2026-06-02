@@ -293,16 +293,21 @@ function renderPendienteCard(p) {
             <div class="tag-row">
               <span class="pendiente-name">${p.interno ? 'Consultora Ferro' : p.cliente}</span>
               ${!p.interno && tipoLabel ? `<span class="tipo-tag tipo-${p.tipo}">${tipoLabel}</span>` : ''}
-              ${tipoPend ? `<span class="badge ${tipoPend.badge}" title="Tipo: ${tipoPend.label}">${tipoPend.emoji} ${tipoPend.label}</span>` : ''}
+              ${p.interno
+                ? (p.categoriaLabel ? `<span class="badge b-blue">${p.categoriaLabel}</span>` : '')
+                : (tipoPend ? `<span class="badge ${tipoPend.badge}" title="Tipo: ${tipoPend.label}">${tipoPend.emoji} ${tipoPend.label}</span>` : '')
+              }
               <span class="badge ${prioBadge}">${prioLabel}</span>
               ${venc ? `<span class="badge ${venc.badge}" title="Plazo de 5 dias">⏰ ${venc.label}</span>` : ''}
-              ${p.interno ? `<span class="badge b-amber">🔒 Interno</span>` : ''}
               <span class="text-meta-sm">${p.cuando} &middot; ${p.asesor}</span>
             </div>
             <div class="pendiente-desc">${p.descripcion}</div>
           </div>
         </div>
-        <span class="badge ${p.categoriaBadge || 'b-gray'}">${p.categoriaLabel || ''}</span>
+        ${p.interno
+          ? `<span class="badge b-amber" style="flex-shrink:0">🔒 Interno</span>`
+          : `<span class="badge ${p.categoriaBadge || 'b-gray'}">${p.categoriaLabel || ''}</span>`
+        }
       </div>
       ${p.intento  ? `<div class="info-pill"><div class="info-pill__label">Lo que se intento</div><div class="info-pill__body">${p.intento}</div></div>` : ''}
       ${p.proxPaso ? `<div class="info-pill info-pill--accent"><div class="info-pill__label">Proximo paso</div><div class="info-pill__body">${p.proxPaso}</div></div>` : ''}
@@ -421,12 +426,56 @@ function showPendForm() {
   f.style.display = f.style.display === 'none' ? 'block' : 'none';
 }
 
-// Muestra/oculta el selector de cliente según si el pendiente es interno
+// Muestra/oculta campos según si el pendiente es interno
 function toggleInternoForm() {
-  const esInterno   = document.getElementById('pf-interno')?.checked;
-  const clienteGrp  = document.getElementById('pf-cliente-group');
-  if (!clienteGrp) return;
-  clienteGrp.style.display = esInterno ? 'none' : '';
+  const esInterno = document.getElementById('pf-interno')?.checked;
+
+  const show = (id, visible) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = visible ? '' : 'none';
+  };
+
+  show('pf-cliente-group',       !esInterno);
+  show('pf-tipo-group',          !esInterno);
+  show('pf-cat-group',           !esInterno);
+  show('pf-intento-row',         !esInterno);  // ocultar "lo que se intentó" en internos
+  show('pf-asesor-group',        !esInterno);
+  show('pf-asesores-multi-group', esInterno);
+  show('pf-tipo-interno-row',     esInterno);
+
+  // Actualizar placeholder del textarea de descripción
+  const lbl = document.getElementById('pf-desc-label');
+  if (lbl) lbl.textContent = esInterno ? 'Descripción / detalle' : '¿Qué quedó pendiente? Describilo en detalle';
+
+  // Limpiar chips al desactivar
+  if (!esInterno) {
+    document.querySelectorAll('.pf-asesor-chip').forEach(c => c.classList.remove('selected'));
+  }
+}
+
+// Activa/desactiva un chip de asesor
+function toggleAsesorChip(btn) {
+  if (btn.classList.contains('pf-asesor-chip--todos')) return; // maneja toggleTodosAsesores
+  btn.classList.toggle('selected');
+}
+
+// Selecciona / deselecciona todos los asesores
+function toggleTodosAsesores() {
+  const chk   = document.getElementById('pf-todos-check');
+  const chips = document.querySelectorAll('.pf-asesor-chip');
+  const marcar = chk ? chk.checked : !Array.from(chips).every(c => c.classList.contains('selected'));
+  chips.forEach(c => c.classList.toggle('selected', marcar));
+  if (chk) chk.checked = marcar;
+}
+
+// Muestra/oculta el input custom del tipo interno
+function togglePfTipoInternoCustom() {
+  const val    = document.getElementById('pf-tipo-interno')?.value;
+  const custom = document.getElementById('pf-tipo-interno-custom');
+  if (custom) {
+    custom.style.display = val === 'otro' ? 'block' : 'none';
+    if (val !== 'otro') custom.value = '';
+  }
 }
 
 function togglePfCatCustom() {
@@ -457,35 +506,59 @@ async function guardarPendiente() {
   const internoCheck = document.getElementById('pf-interno');
   const esInterno    = internoCheck ? internoCheck.checked : false;
 
-  const row = {
-    // Los internos se asignan a la consultora, no a un cliente
+  // Para internos: leer asesores desde chips y tipo interno
+  let asesoresDestino = [];
+  let categoriaFinal  = cat;
+  if (esInterno) {
+    asesoresDestino = Array.from(document.querySelectorAll('.pf-asesor-chip.selected:not(.pf-asesor-chip--todos)'))
+      .map(c => c.dataset.asesor);
+    if (asesoresDestino.length === 0) {
+      alert('Seleccioná al menos un asesor para el pendiente interno.');
+      return;
+    }
+    const tipoInterno     = document.getElementById('pf-tipo-interno')?.value || 'reunion';
+    const tipoCustom      = document.getElementById('pf-tipo-interno-custom')?.value.trim() || '';
+    const tipoInternoLabels = { reunion: 'Reunión', actualizacion: 'Actualización', revision: 'Revisión', otro: tipoCustom };
+    categoriaFinal = tipoInterno === 'otro' ? (tipoCustom || 'Interno') : (tipoInternoLabels[tipoInterno] || 'Interno');
+  } else {
+    asesoresDestino = [asesor];
+  }
+
+  const baseRow = {
     cliente_nombre: esInterno ? 'Consultora Ferro' : cliente,
-    asesor:         asesor,
     prioridad:      prio,
-    categoria:      cat,
+    categoria:      categoriaFinal,
     descripcion:    desc,
-    intento:        intento || null,
+    intento:        esInterno ? null : (intento || null),
     prox_paso:      prox || null,
-    tipo_pendiente: tipoP,
+    tipo_pendiente: esInterno ? 'soporte' : tipoP,
     resuelto:       false,
     interno:        esInterno
   };
 
   try {
-    const inserted = await dbInsert('pendientes', row);
-    const ya = pendientes.find(p => p.id === inserted.id);
-    if (!ya) pendientes.unshift(dbRowToPendiente(inserted));
-    logEvento(inserted.id, 'creado', `Asignado a ${asesor}, prioridad ${prio}`);
+    // Crear un pendiente por cada asesor seleccionado
+    for (const a of asesoresDestino) {
+      const row = { ...baseRow, asesor: a };
+      const inserted = await dbInsert('pendientes', row);
+      const ya = pendientes.find(p => p.id === inserted.id);
+      if (!ya) pendientes.unshift(dbRowToPendiente(inserted));
+      logEvento(inserted.id, 'creado', `Asignado a ${a}, prioridad ${prio}`);
+    }
+
     document.getElementById('pend-form').style.display = 'none';
     document.getElementById('pf-desc').value = '';
     document.getElementById('pf-intento').value = '';
     document.getElementById('pf-prox').value = '';
     const chk = document.getElementById('pf-interno');
-    if (chk) chk.checked = false;
+    if (chk) { chk.checked = false; toggleInternoForm(); }
+    document.querySelectorAll('.pf-asesor-chip').forEach(c => c.classList.remove('selected'));
     renderPendientes();
     updatePendCount();
     const me = getCurrentUserName();
-    const msg = (me && asesor !== me) ? `Pendiente asignado a ${asesor}` : 'Pendiente guardado';
+    const msg = esInterno && asesoresDestino.length > 1
+      ? `${asesoresDestino.length} pendientes internos creados`
+      : (me && asesoresDestino[0] !== me) ? `Pendiente asignado a ${asesoresDestino[0]}` : 'Pendiente guardado';
     toast(msg);
   } catch (e) {
     console.error('Error guardando pendiente', e);

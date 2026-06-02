@@ -204,6 +204,25 @@ textarea { resize: vertical; min-height: 80px; }
 .filter-chip.active { background: var(--accent); color: white; border-color: var(--accent); font-weight: 500; }
 .filter-chip:hover:not(.active) { background: var(--surface2); color: var(--text); }
 
+/* Chips de asesores en form de pendiente interno */
+.pf-asesor-chip {
+  padding: 6px 14px; border-radius: 99px; font-size: 12px; cursor: pointer;
+  border: 1px solid var(--border2); background: var(--surface); color: var(--text2);
+  transition: var(--transition); font-family: inherit; white-space: nowrap;
+}
+.pf-asesor-chip.selected {
+  background: var(--amber-bg); color: var(--amber-text); border-color: var(--amber);
+  font-weight: 600;
+}
+.pf-asesor-chip:hover:not(.selected) { background: var(--surface2); color: var(--text); }
+.pf-asesor-chip--todos {
+  border-style: dashed; color: var(--text3);
+}
+.pf-asesor-chip--todos.selected {
+  background: var(--amber-bg); color: var(--amber-text); border-color: var(--amber);
+  border-style: solid;
+}
+
 /* Checklist */
 .check-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
 .check-row:last-child { border-bottom: none; }

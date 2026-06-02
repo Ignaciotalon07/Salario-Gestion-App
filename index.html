@@ -902,14 +902,14 @@
                 Nuevo pendiente
               </div>
               <div class="form-row">
-                <div class="form-group">
+                <!-- Tipo de trabajo: solo para pendientes de clientes -->
+                <div class="form-group" id="pf-tipo-group">
                   <label class="fl">Tipo de trabajo</label>
                   <select id="pf-tipo" onchange="onTipoPendienteChange()">
                     <option value="soporte">Soporte</option>
                     <option value="implementacion">Implementación</option>
                     <option value="bug">Programación</option>
-                    <option value="comercial">Comercial (Administración)
-                    </option>
+                    <option value="comercial">Comercial (Administración)</option>
                   </select>
                 </div>
                 <div class="form-group" id="pf-cliente-group">
@@ -918,7 +918,8 @@
                     <option value="">Cargando clientes...</option>
                   </select>
                 </div>
-                <div class="form-group">
+                <!-- Asesor único: solo para pendientes de clientes -->
+                <div class="form-group" id="pf-asesor-group">
                   <label class="fl">Asesor responsable</label>
                   <select id="pf-asesor">
                     <option>Ignacio Talon</option>
@@ -929,9 +930,25 @@
                     <option>Alfredo Cesar</option>
                   </select>
                 </div>
+                <!-- Multi-asesor: solo para pendientes internos -->
+                <div class="form-group" id="pf-asesores-multi-group" style="display:none">
+                  <label class="fl">Para quién es</label>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+                    <button type="button" class="pf-asesor-chip" data-asesor="Ignacio Talon" onclick="toggleAsesorChip(this)">Ignacio</button>
+                    <button type="button" class="pf-asesor-chip" data-asesor="Matias Ferro" onclick="toggleAsesorChip(this)">Matias</button>
+                    <button type="button" class="pf-asesor-chip" data-asesor="Daniel Colomer" onclick="toggleAsesorChip(this)">Daniel</button>
+                    <button type="button" class="pf-asesor-chip" data-asesor="Daniel Ferro" onclick="toggleAsesorChip(this)">Daniel Ferro</button>
+                    <button type="button" class="pf-asesor-chip" data-asesor="Renzo Moretti" onclick="toggleAsesorChip(this)">Renzo</button>
+                    <button type="button" class="pf-asesor-chip" data-asesor="Alfredo Cesar" onclick="toggleAsesorChip(this)">Alfredo</button>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:6px 14px;color:var(--text);user-select:none" id="pf-todos-label">
+                      <input type="checkbox" id="pf-todos-check" onchange="toggleTodosAsesores()" style="width:14px;height:14px;cursor:pointer;accent-color:var(--text)" />
+                      Todos
+                    </label>
+                  </div>
+                </div>
               </div>
-              <div class="form-row">
-                <div class="form-group">
+              <div class="form-row" id="pf-cat-row">
+                <div class="form-group" id="pf-cat-group">
                   <label class="fl">Categoría</label>
                   <select id="pf-cat" onchange="togglePfCatCustom()">
                     <option>Liquidación de sueldos</option>
@@ -948,30 +965,36 @@
                   <label class="fl">Prioridad</label>
                   <select id="pf-prio">
                     <option value="alta">Alta — resolver hoy</option>
-                    <option value="media" selected>
-                      Media — resolver esta semana
-                    </option>
+                    <option value="media" selected>Media — resolver esta semana</option>
                     <option value="baja">Baja — cuando se pueda</option>
                   </select>
                 </div>
               </div>
+              <!-- Tipo de pendiente interno: solo visible cuando es interno -->
+              <div class="form-row" id="pf-tipo-interno-row" style="display:none">
+                <div class="form-group">
+                  <label class="fl">Tipo</label>
+                  <select id="pf-tipo-interno" onchange="togglePfTipoInternoCustom()">
+                    <option value="reunion">📅 Reunión</option>
+                    <option value="actualizacion">📢 Actualización</option>
+                    <option value="revision">🔍 Revisión</option>
+                    <option value="otro">✏️ Otro</option>
+                  </select>
+                  <input type="text" id="pf-tipo-interno-custom" placeholder="Describí el tipo"
+                    style="display:none;margin-top:6px" />
+                </div>
+              </div>
               <div class="form-group">
-                <label class="fl"
-                  >¿Qué quedó pendiente? Describilo en detalle</label
-                >
+                <label class="fl" id="pf-desc-label">¿Qué quedó pendiente? Describilo en detalle</label>
                 <textarea
                   id="pf-desc"
                   style="min-height: 80px"
                   placeholder="Ej: El cliente no pudo generar el F931. Se revisó la configuración pero el botón sigue sin aparecer. Hay que volver a conectarse y revisar los permisos de usuario..."
                   oninput="actualizarSugerenciasKB()"
                 ></textarea>
-                <div
-                  id="kb-suggestions"
-                  class="kb-suggestions"
-                  style="display: none"
-                ></div>
+                <div id="kb-suggestions" class="kb-suggestions" style="display:none"></div>
               </div>
-              <div class="form-row">
+              <div class="form-row" id="pf-intento-row">
                 <div class="form-group">
                   <label class="fl">¿Qué se intentó hasta ahora?</label>
                   <textarea
