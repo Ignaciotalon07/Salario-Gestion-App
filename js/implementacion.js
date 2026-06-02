@@ -694,18 +694,31 @@ function renderImplementacion() {
   if (!cont) return;
   renderPanelHoy();
 
-  // Tomar todos los clientes con area=impl (vienen del array global 'clientes')
-  const todosImpl = (typeof clientes !== 'undefined' ? clientes : []).filter(c => c.area === 'impl');
+  // Todos los clientes con area='impl' O que tienen tareas en implTareas (graduados que pasaron a soporte)
+  const idsConTareas = new Set(implTareas.map(t => t.cliente_id));
+  const todosImpl = (typeof clientes !== 'undefined' ? clientes : [])
+    .filter(c => c.area === 'impl' || (c.area === 'soporte' && idsConTareas.has(c.id)));
+
+  // Separar: finalizados = todas sus tareas completadas; en progreso = el resto
+  const enProgreso = todosImpl.filter(c => {
+    const tareasCli = implTareas.filter(t => t.cliente_id === c.id);
+    if (tareasCli.length === 0) return true; // sin tareas aún → en progreso
+    return !tareasCli.every(t => t.estado === 'completada');
+  });
+  const graduados = todosImpl.filter(c => {
+    const tareasCli = implTareas.filter(t => t.cliente_id === c.id);
+    return tareasCli.length > 0 && tareasCli.every(t => t.estado === 'completada');
+  });
 
   // Render metricas (siempre sobre el total, no afectado por filtros)
   renderImplMetrics(todosImpl);
 
-  // 1. Filtro por nombre (search)
+  // 1. Filtro por nombre (search) — solo aplica a en progreso
   let implClientes = implFiltroNombre
-    ? todosImpl.filter(c => (c.nombre || '').toLowerCase().includes(implFiltroNombre))
-    : todosImpl.slice();
+    ? enProgreso.filter(c => (c.nombre || '').toLowerCase().includes(implFiltroNombre))
+    : enProgreso.slice();
 
-  // 2. Filtros a nivel tarea: si hay filtros activos, ocultar clientes sin matches
+  // 2. Filtros a nivel tarea
   const hayFiltroTarea = implFiltroAsesor || implFiltroEstado || implFiltroResp;
   if (hayFiltroTarea) {
     const me = (typeof getCurrentUserName === 'function') ? getCurrentUserName() : null;
@@ -719,30 +732,52 @@ function renderImplementacion() {
   const countEl = document.getElementById('impl-buscador-count');
   if (countEl) {
     if (implFiltroNombre || hayFiltroTarea) {
-      countEl.textContent = `${implClientes.length} de ${todosImpl.length} cliente${todosImpl.length !== 1 ? 's' : ''}`;
+      countEl.textContent = `${implClientes.length} de ${enProgreso.length} cliente${enProgreso.length !== 1 ? 's' : ''}`;
     } else {
       countEl.textContent = '';
     }
   }
 
-  if (todosImpl.length === 0) {
+  // ── Sección: Implementaciones en progreso ──
+  if (enProgreso.length === 0 && graduados.length === 0) {
     cont.innerHTML = `<div class="card" style="text-align:center;color:var(--text3);padding:40px">
       No hay clientes en implementación. Marcá el área de un cliente como "Implementación" para que aparezca acá con sus 23 etapas.
     </div>`;
-    return;
-  }
-
-  if (implClientes.length === 0) {
+  } else if (implClientes.length === 0 && enProgreso.length > 0) {
     const msg = implFiltroNombre
       ? `No hay clientes en implementación que coincidan con "<strong>${escapeHtmlImpl(implFiltroNombre)}</strong>".`
       : 'Ningún cliente tiene tareas que coincidan con los filtros actuales.';
-    cont.innerHTML = `<div class="card" style="text-align:center;color:var(--text3);padding:32px">${msg}</div>`;
-    return;
+    cont.innerHTML = `
+      <div style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:12px">Implementaciones en progreso</div>
+      <div class="card" style="text-align:center;color:var(--text3);padding:32px">${msg}</div>`;
+  } else {
+    cont.innerHTML = enProgreso.length > 0
+      ? `<div style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:12px">Implementaciones en progreso</div>`
+        + implClientes.map(renderClienteImplCard).join('')
+      : '';
   }
 
-  cont.innerHTML = implClientes.map(renderClienteImplCard).join('');
+  // ── Sección: Implementaciones finalizadas ──
+  let graduadosEl = document.getElementById('impl-graduados-section');
+  if (!graduadosEl) {
+    graduadosEl = document.createElement('div');
+    graduadosEl.id = 'impl-graduados-section';
+    cont.parentNode.insertBefore(graduadosEl, cont.nextSibling);
+  }
 
-  // Métricas avanzadas: re-calcular al final
+  if (graduados.length > 0) {
+    graduadosEl.innerHTML = `
+      <div style="margin-top:32px">
+        <div style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:12px">
+          🎓 Implementaciones finalizadas — ${graduados.length} cliente${graduados.length !== 1 ? 's' : ''}
+        </div>
+        <div style="opacity:0.85">${graduados.map(renderClienteImplCard).join('')}</div>
+      </div>`;
+  } else {
+    graduadosEl.innerHTML = '';
+  }
+
+  // Métricas avanzadas: re-calcular al final (sobre todos)
   renderMetricasAvanzadas(todosImpl);
 }
 
@@ -1477,7 +1512,6 @@ async function cambiarEstadoTarea(tareaId, nuevoEstado) {
     // (porque las tareas siguientes podrian necesitar correr sus fechas)
     if ((estadoAnterior === 'completada') !== (nuevoEstado === 'completada')) {
       // Refrescar la tarea local antes de recalc para que tenga el dato actualizado
-      // (la fecha_completada se setea via trigger en DB; le damos un valor inmediato)
       const idx = implTareas.findIndex(x => x.id === tareaId);
       if (idx !== -1) {
         if (nuevoEstado === 'completada') {
@@ -1488,10 +1522,36 @@ async function cambiarEstadoTarea(tareaId, nuevoEstado) {
         implTareas[idx].estado = nuevoEstado;
       }
       await recalcularGanttCliente(t.cliente_id);
+
+      // ── Graduación: si todas las tareas del cliente están completadas → mover a Soporte ──
+      if (nuevoEstado === 'completada') {
+        const tareasCliente = implTareas.filter(x => x.cliente_id === t.cliente_id);
+        const todasListas   = tareasCliente.length > 0 && tareasCliente.every(x => x.estado === 'completada');
+        if (todasListas) {
+          await graduarClienteAsoporte(t.cliente_id);
+        }
+      }
     }
   } catch (e) {
     console.error('Error cambiando estado', e);
     alert('No se pudo actualizar el estado: ' + e.message);
+  }
+}
+
+// Mueve un cliente de impl → soporte cuando alcanza el 100% de tareas completadas.
+// Actualiza Supabase, el array global y re-renderiza.
+async function graduarClienteAsoporte(clienteId) {
+  try {
+    await dbUpdate('clientes', clienteId, { area: 'soporte' });
+    // Actualizar en memoria
+    const c = (typeof clientes !== 'undefined' ? clientes : []).find(x => x.id === clienteId);
+    if (c) c.area = 'soporte';
+    if (typeof renderClientes   === 'function') renderClientes();
+    if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
+    renderImplementacion();
+    toast(`🎓 ${c ? c.nombre : 'Cliente'} completó la implementación y pasó a Soporte`);
+  } catch (e) {
+    console.warn('No se pudo graduar el cliente a soporte', e);
   }
 }
 
