@@ -1002,8 +1002,10 @@ function renderClienteImplCard(c) {
   }
 
   // Filtros a nivel tarea: si hay filtro activo, solo mostrar las que matchean
+  // Los clientes graduados (finalizados) ignoran los filtros — siempre muestran todo
   const me = (typeof getCurrentUserName === 'function') ? getCurrentUserName() : null;
-  const hayFiltroTarea = implFiltroAsesor || implFiltroEstado || implFiltroResp;
+  const esGraduado = tareasCliente.length > 0 && tareasCliente.every(t => t.estado === 'completada');
+  const hayFiltroTarea = !esGraduado && (implFiltroAsesor || implFiltroEstado || implFiltroResp);
   const tareasVisibles = hayFiltroTarea
     ? tareasCliente.filter(t => tareaMatcheaFiltros(t, me))
     : tareasCliente;

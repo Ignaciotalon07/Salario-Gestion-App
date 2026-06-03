@@ -9,6 +9,7 @@ let _detalleClienteId = null;
 
 // Instancia del mini chart (para destruir antes de recrear)
 let _detalleChartInstance = null;
+let _detalleOrigen = 'clientes'; // página desde la que se navegó al detalle
 
 // Filtros activos en la tabla de historial
 let _detalleMesFiltro  = null;
@@ -20,6 +21,10 @@ function goClienteDetail(clienteId) {
   _detalleClienteId  = clienteId;
   _detalleMesFiltro  = null;
   _detalleTipoFiltro = null;
+
+  // Guardar la página actual antes de navegar
+  const paginaActiva = document.querySelector('.page.active');
+  _detalleOrigen = paginaActiva ? paginaActiva.id : 'clientes';
 
   // Navegar a la página de detalle (sin marcar ningún nav-item activo)
   document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
@@ -92,10 +97,11 @@ function _renderDetalleHeader(cliente) {
 
   return `
     <div class="detalle-header">
-      <button class="btn-secondary detalle-back" onclick="volverAClientes()">
-        ← Volver a Clientes
-      </button>
-      <div class="detalle-header__body">
+      <div style="display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:14px">
+        <button class="btn-secondary detalle-back" onclick="volverAClientes()">← Volver</button>
+        <button class="btn-primary" onclick="irARegistrarConsulta('${_escHtml(cliente.nombre)}')">+ Consulta</button>
+      </div>
+      <div class="detalle-header__body" style="width:100%">
         <div class="av-lg" style="background:${colores[idx]};color:${textColores[idx]};border-radius:14px;width:52px;height:52px;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           ${_escHtml(iniciales)}
         </div>
@@ -315,39 +321,24 @@ function _renderDetalleFiltroYTabla(cliente, consultasDelCliente) {
   const filas = _buildFilasTabla(cliente, consultasDelCliente, _detalleMesFiltro, _detalleTipoFiltro);
 
   return `
-    <div class="card" style="padding: 0; overflow: hidden">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 14px;border-bottom:1px solid var(--border);">
-        <div class="card-title" style="margin:0">Historial de consultas</div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <select id="detalle-tipo-filtro" style="margin-bottom:0;width:auto;min-width:150px" onchange="filtrarDetalleTipo(this.value)">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:14px 16px 12px;border-bottom:1px solid var(--border)">
+        <div class="card-title" style="margin:0 0 10px">Historial de consultas</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select id="detalle-tipo-filtro" style="margin-bottom:0;font-size:11px;padding:4px 8px;height:28px;border-radius:6px" onchange="filtrarDetalleTipo(this.value)">
             <option value="">Todos los tipos</option>
             <option value="soporte">🎧 Soporte</option>
             <option value="programacion">🐛 Programación</option>
             <option value="comercial">💼 Comercial</option>
           </select>
-          <select id="detalle-mes-filtro" style="margin-bottom:0;width:auto;min-width:160px" onchange="filtrarDetalleMes(this.value)">
+          <select id="detalle-mes-filtro" style="margin-bottom:0;font-size:11px;padding:4px 8px;height:28px;border-radius:6px" onchange="filtrarDetalleMes(this.value)">
             <option value="">Todos los meses</option>
             ${opcionesMeses}
           </select>
         </div>
       </div>
-      <div class="tbl-wrap">
-        <table class="tbl">
-          <thead>
-            <tr>
-              <th style="width:12%">Fecha</th>
-              <th style="width:12%">Tipo</th>
-              <th style="width:18%">Categoría</th>
-              <th style="width:20%">Subtema</th>
-              <th style="width:12%">Asesor</th>
-              <th style="width:10%">Repetida</th>
-              <th style="width:16%">Descripción</th>
-            </tr>
-          </thead>
-          <tbody id="detalle-tabla-body">
-            ${filas}
-          </tbody>
-        </table>
+      <div id="detalle-tabla-body" style="padding:8px 0">
+        ${filas}
       </div>
     </div>
   `;
@@ -382,36 +373,55 @@ function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro, tipoFiltro) {
   lista = [...lista].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   if (lista.length === 0) {
-    return `<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:28px">
+    return `<div style="text-align:center;color:var(--text3);padding:28px;font-size:13px">
       Sin consultas para los filtros seleccionados.
-    </td></tr>`;
+    </div>`;
   }
 
-  return lista.map(c => {
+  return lista.map((c, i) => {
     const fecha = new Date(c.timestamp).toLocaleDateString('es-AR', {
       day: '2-digit', month: '2-digit', year: '2-digit'
     });
-    const cat      = CATS_LABELS[c.categoria] || (c.categoria || '—');
-    const subtema  = c.subtema || '—';
-    const asesor   = c.asesor  || '—';
-    const repBadge = c.repetida === 'si'
-      ? '<span class="badge b-red" style="font-size:10px">Repetida</span>'
-      : '<span class="badge b-green" style="font-size:10px">Nueva</span>';
+    const cat       = CATS_LABELS[c.categoria] || (c.categoria || '—');
+    const subtema   = c.subtema || '—';
+    const asesor    = c.asesor  || '—';
+    const esRepetida = c.repetida === 'si';
     const tipoBadge = TIPO_BADGES[c.tipoConsulta || 'soporte'] || TIPO_BADGES.soporte;
-    const desc = c.descripcion
-      ? `<span title="${_escHtml(c.descripcion)}" style="cursor:help">${_escHtml(c.descripcion.substring(0, 40))}${c.descripcion.length > 40 ? '…' : ''}</span>`
-      : '<span style="color:var(--text3)">—</span>';
+    const desc      = c.descripcion ? c.descripcion.substring(0, 60) + (c.descripcion.length > 60 ? '…' : '') : '—';
+
+    // Datos para el modal (JSON escapado)
+    // Buscar texto de la solución en el array global 'soluciones'
+    const solObj = c.solucionId && typeof soluciones !== 'undefined'
+      ? soluciones.find(s => s.id === c.solucionId)
+      : null;
+    const solucionTitulo = solObj ? solObj.titulo : null;
+    const solucionPasos  = solObj && Array.isArray(solObj.pasos) ? solObj.pasos : [];
+
+    const modalData = _escHtml(JSON.stringify({
+      fecha, cat, subtema, asesor, repetida: c.repetida,
+      descripcion: c.descripcion || '',
+      solucionTitulo,
+      solucionPasos,
+      tiempo: c.tiempo || null,
+      tipo: c.tipoConsulta || 'soporte'
+    }));
 
     return `
-      <tr>
-        <td style="color:var(--text3);font-size:12px">${fecha}</td>
-        <td>${tipoBadge}</td>
-        <td>${_escHtml(cat)}</td>
-        <td style="font-size:12px">${_escHtml(subtema)}</td>
-        <td style="font-size:12px">${_escHtml(asesor)}</td>
-        <td>${repBadge}</td>
-        <td style="font-size:12px">${desc}</td>
-      </tr>
+      <button onclick="abrirDetalleConsulta(this)" data-consulta="${modalData}"
+        style="display:flex;align-items:flex-start;gap:12px;width:100%;text-align:left;background:none;border:none;border-bottom:1px solid var(--border);padding:12px 16px;cursor:pointer;font-family:inherit;transition:background 0.1s"
+        onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background='none'">
+        <div style="flex-shrink:0;margin-top:2px">
+          ${tipoBadge}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(cat)} · ${_escHtml(subtema)}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(desc)}</div>
+        </div>
+        <div style="flex-shrink:0;text-align:right">
+          <div style="font-size:11px;color:var(--text3)">${fecha}</div>
+          ${esRepetida ? '<span class="badge b-red" style="font-size:9px;margin-top:4px;display:inline-block">Repetida</span>' : ''}
+        </div>
+      </button>
     `;
   }).join('');
 }
@@ -448,6 +458,73 @@ function filtrarDetalleTipo(valor) {
   if (tbody) tbody.innerHTML = _buildFilasTabla(res.cliente, res.lista, _detalleMesFiltro, _detalleTipoFiltro);
 }
 
+// ────────── Modal detalle de consulta ──────────
+
+function abrirDetalleConsulta(btn) {
+  try {
+    const data = JSON.parse(btn.dataset.consulta);
+    const TIPO_LABELS = { soporte: '🎧 Soporte', programacion: '🐛 Programación', comercial: '💼 Comercial' };
+
+    const html = `
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span class="badge b-blue" style="font-size:11px">${TIPO_LABELS[data.tipo] || data.tipo}</span>
+          ${data.repetida === 'si' ? '<span class="badge b-red" style="font-size:11px">Repetida</span>' : '<span class="badge b-green" style="font-size:11px">Nueva</span>'}
+          <span style="font-size:12px;color:var(--text3);margin-left:auto">${data.fecha}</span>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Categoría</div>
+          <div style="font-size:14px;font-weight:600">${data.cat}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Subtema</div>
+          <div style="font-size:14px">${data.subtema}</div>
+        </div>
+        ${data.descripcion ? `
+        <div>
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Descripción</div>
+          <div style="font-size:13px;line-height:1.5;color:var(--text2)">${data.descripcion}</div>
+        </div>` : ''}
+        <div style="display:flex;gap:16px;padding-top:8px;border-top:1px solid var(--border)">
+          <div><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Asesor</div><div style="font-size:13px;font-weight:500">${data.asesor}</div></div>
+          ${data.tiempo ? `<div><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Tiempo</div><div style="font-size:13px;font-weight:500">${data.tiempo} hs</div></div>` : ''}
+        </div>
+        ${data.solucionTitulo ? `
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Solución aplicada</div>
+          ${data.solucionPasos && data.solucionPasos.length > 0 ? `
+          <ol style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--text2)">
+            ${data.solucionPasos.map(p => `<li>${p}</li>`).join('')}
+          </ol>` : ''}
+        </div>` : `
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--text3)">
+          Sin solución registrada en la base.
+        </div>`}
+      </div>`;
+
+    // Reusar el modal de consulta o crear uno temporal
+    let modal = document.getElementById('modal-detalle-consulta');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'modal-detalle-consulta';
+      modal.style.cssText = 'position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;padding:16px';
+      modal.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
+      document.body.appendChild(modal);
+    }
+    modal.innerHTML = `
+      <div style="background:var(--surface);border-radius:14px;max-width:480px;width:100%;padding:22px;box-shadow:0 16px 48px rgba(0,0,0,0.25);max-height:90vh;overflow-y:auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div style="font-size:15px;font-weight:700">Detalle de consulta</div>
+          <button onclick="document.getElementById('modal-detalle-consulta').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text3)">✕</button>
+        </div>
+        ${html}
+      </div>`;
+    modal.style.display = 'flex';
+  } catch(e) {
+    console.error('Error abriendo detalle consulta', e);
+  }
+}
+
 // ────────── Volver ──────────
 
 function volverAClientes() {
@@ -458,7 +535,25 @@ function volverAClientes() {
     _detalleChartInstance.destroy();
     _detalleChartInstance = null;
   }
-  goTo(document.querySelector('.nav-item[onclick*=clientes]'), 'clientes');
+  const origen = _detalleOrigen || 'clientes';
+  _detalleOrigen = 'clientes'; // reset para la próxima vez
+
+  // Navegar a la página origen
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const paginaDestino = document.getElementById(origen);
+  if (paginaDestino) paginaDestino.classList.add('active');
+
+  // Marcar nav item del sidebar si existe
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  const navBtn = document.querySelector(`.nav-item[onclick*="${origen}"]`);
+  if (navBtn) navBtn.classList.add('active');
+
+  // Marcar mobile nav si existe
+  document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
+  const mobileBtn = document.querySelector(`.mobile-nav-item[onclick*="${origen}"]`);
+  if (mobileBtn) mobileBtn.classList.add('active');
+
+  window.scrollTo(0, 0);
 }
 
 // ────────── Helper: escape HTML ──────────

@@ -175,7 +175,7 @@ function verKBDetalle(id) {
         <div style="font-size:15px;font-weight:600;line-height:1.4;color:var(--accent-text)">${escapeHtmlKB(s.titulo)}</div>
         <div style="font-size:11px;color:var(--text3);margin-top:4px">Por ${escapeHtmlKB(s.autor)} &middot; Actualizado ${s.fecha} &middot; Usado ${s.usos} ${s.usos === 1 ? 'vez' : 'veces'} &middot; ${escapeHtmlKB(s.aplica)}</div>
       </div>
-      <button class="btn-sm" onclick="cerrarKB()">Cerrar</button>
+      <button class="btn-sm" id="kb-cerrar-btn" onclick="cerrarKB()">Cerrar</button>
     </div>
     <div style="margin-bottom:14px">
       <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Pasos</div>

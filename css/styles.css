@@ -4177,6 +4177,9 @@ input[type=date]:focus {
 
 .detalle-header {
   margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .detalle-header__body {
@@ -4224,6 +4227,7 @@ input[type=date]:focus {
 }
 @media (max-width: 480px) {
   .detalle-stats { grid-template-columns: 1fr 1fr; }
+  .detalle-stats > .detalle-stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .detalle-header__body { flex-wrap: wrap; }
 }
 
@@ -4256,4 +4260,590 @@ input[type=date]:focus {
 [data-theme="dark"] .detalle-stat {
   background: var(--surface);
   border-color: var(--border);
+}
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE MOBILE — max-width: 600px
+   Bottom nav, full-width cards, stacked forms
+   ══════════════════════════════════════════════ */
+@media (max-width: 600px) {
+
+  /* ── Layout base ── */
+  .sidebar { display: none !important; }
+  .main {
+    margin-left: 0 !important;
+    padding: 16px 14px 80px !important; /* 80px = espacio para bottom nav */
+    max-width: 100% !important;
+  }
+
+  /* ── Bottom navigation bar ── */
+  #mobile-nav {
+    display: flex !important;
+  }
+
+  /* ── Page header ── */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .page-header .btn-primary,
+  .page-header .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ── Métricas ── */
+  .metrics-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
+  .metric-card  { padding: 14px 12px; }
+  .metric-value { font-size: 28px; }
+
+  /* ── Cards genéricas ── */
+  .card { padding: 16px 14px; border-radius: 12px; }
+
+  /* ── Form rows: apilar en mobile ── */
+  .form-row { flex-direction: column !important; gap: 10px !important; }
+  .form-group { max-width: 100% !important; }
+  /* 16px evita zoom automático en iOS al enfocar inputs */
+  input[type=text], input[type=number], input[type=email],
+  input[type=password], select, textarea { font-size: 16px !important; }
+
+  /* ── Clientes: header ── */
+  #clientes .page-header { flex-direction: row; align-items: flex-start; justify-content: space-between; flex-wrap: nowrap; gap: 8px; margin-bottom: 16px; }
+  #clientes .page-header .btn-row .btn-primary { font-size: 12px; padding: 7px 12px; white-space: nowrap; margin-top: 6px; }
+
+  /* ── Clientes: filtros en grid ── */
+  #clientes .filter-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 6px !important;
+    align-items: center;
+  }
+  /* buscador ocupa todo el ancho */
+  #clientes .filter-row > input[type="text"] {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+  /* chips Todos/Soporte/Impl en la segunda fila (3 columnas) */
+  #clientes .filter-row > .filter-chip { font-size: 11px; padding: 5px 8px; text-align: center; }
+  /* selects chicos */
+  #clientes .filter-row > select {
+    font-size: 11px !important;
+    padding: 5px 4px !important;
+    height: 32px;
+    margin-bottom: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  /* ── Clientes grid ── */
+  #clientes-grid { grid-template-columns: 1fr !important; }
+  .cli-card { padding: 16px; gap: 14px; overflow: hidden; min-width: 0; }
+  .cli-card__stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0;
+    background: var(--surface2);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .cli-card__stat {
+    padding: 12px 10px;
+    background: var(--surface2);
+    border: none !important;
+  }
+  .cli-card__stat:nth-child(1) { border-right: 4px solid var(--surface) !important; border-bottom: 4px solid var(--surface) !important; }
+  .cli-card__stat:nth-child(2) { border-bottom: 4px solid var(--surface) !important; }
+  .cli-card__stat:nth-child(3) { border-right: 4px solid var(--surface) !important; }
+  .cli-card__stat-val { font-size: 18px; }
+  .cli-card__name { white-space: normal; font-size: 15px; }
+  .cli-card__header { flex-wrap: wrap; }
+  .cli-card__footer { flex-wrap: wrap; gap: 6px; }
+  .cli-card__footer .btn-sm,
+  .cli-card__footer .btn-primary { font-size: 12px; }
+  #clientes { overflow-x: hidden; }
+  .score-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  #score-riesgo-tbody td, .score-table th { white-space: nowrap; }
+
+  /* ── Pendientes: métricas centradas ── */
+  #pendientes .metrics-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  #pendientes .metrics-grid .metric-card {
+    text-align: center;
+  }
+  #pendientes .metrics-grid .metric-card:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  /* ── Pendientes: filtros — igual que clientes ── */
+  /* Fila 1: Mis/Todos + buscador + Agrupar */
+  #pendientes .filter-row[style*="margin-bottom: 10px"] {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+  }
+  #pendientes .filter-row[style*="margin-bottom: 10px"] input[type="text"] {
+    grid-column: 1 / -1;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  #pendientes .filter-row[style*="margin-bottom: 10px"] .pend-filter {
+    text-align: center;
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+  #pendientes #group-by-cliente-btn {
+    grid-column: 1 / -1;
+    font-size: 12px;
+    width: 100%;
+  }
+
+  /* Fila 2: categorías */
+  #pendientes .filter-row[style*="margin-bottom: 14px"] {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+  #pendientes .filter-row[style*="margin-bottom: 14px"] .filter-chip {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+  #pendientes .filter-row[style*="margin-bottom: 14px"] .text-meta-sm {
+    width: 100%;
+    margin: 0 !important;
+  }
+
+  /* ── Modal cierre pendiente en mobile ── */
+  #modal-cierre-pendiente .modal-dialog {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    border-radius: 18px 18px 0 0 !important;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+  }
+  #modal-cierre-pendiente .modal-body {
+    overflow-y: auto;
+    flex: 1;
+    scrollbar-color: var(--border) transparent;
+    scrollbar-width: thin;
+  }
+  #modal-cierre-pendiente .modal-body::-webkit-scrollbar { width: 4px; }
+  #modal-cierre-pendiente .modal-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+  #modal-cierre-pendiente .modal-body::-webkit-scrollbar-track { background: transparent; }
+  /* Grid de material/remota → columna */
+  #modal-cierre-pendiente .modal-body > div[style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+  /* Inputs y selects compactos */
+  #modal-cierre-pendiente input[type=number],
+  #modal-cierre-pendiente select {
+    font-size: 15px !important;
+    padding: 8px 10px !important;
+    height: 40px;
+    background: var(--surface2) !important;
+  }
+  #modal-cierre-pendiente textarea {
+    font-size: 13px !important;
+    padding: 8px 10px !important;
+    min-height: 60px !important;
+    resize: none;
+    overflow-y: auto;
+    background: var(--surface2) !important;
+    scrollbar-color: var(--border) transparent;
+    scrollbar-width: thin;
+  }
+  /* Botones: Marcar arriba, Cancelar abajo, ambos full width */
+  #modal-cierre-pendiente > div.modal-dialog > div:last-child {
+    flex-direction: column-reverse !important;
+    gap: 8px !important;
+    justify-content: stretch !important;
+  }
+  #modal-cierre-pendiente > div.modal-dialog > div:last-child .btn-primary,
+  #modal-cierre-pendiente > div.modal-dialog > div:last-child .btn-secondary {
+    width: 100% !important;
+    text-align: center;
+    padding: 12px !important;
+    font-size: 14px !important;
+  }
+  /* Modal pegado abajo */
+  #modal-cierre-pendiente.modal-overlay {
+    align-items: flex-end !important;
+  }
+
+  /* ── Form de pendientes en mobile ── */
+  #pend-form input[type=text],
+  #pend-form input[type=number],
+  #pend-form select {
+    font-size: 14px !important;
+    padding: 8px 10px !important;
+    height: 38px;
+    background: var(--surface2) !important;
+    overflow: hidden;
+  }
+  #pend-form textarea {
+    font-size: 13px !important;
+    padding: 8px 10px !important;
+    min-height: 56px !important;
+    resize: none;
+    overflow-y: auto;
+    background: var(--surface2) !important;
+  }
+  #pend-desc {
+    min-height: 90px !important;
+  }
+  /* Botones full width apilados */
+  #pend-form > div:last-child {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  #pend-form > div:last-child .btn-primary,
+  #pend-form > div:last-child .btn-secondary {
+    width: 100% !important;
+    text-align: center;
+    padding: 12px !important;
+    font-size: 14px !important;
+  }
+
+  /* ── Pendientes: reorganizar botones en cards ── */
+  #pend-list .btn-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  /* "Marcar como resuelto" → última fila, ancho completo */
+  #pend-list .btn-row .btn-primary {
+    order: 10;
+    width: 100%;
+    text-align: center;
+  }
+  /* Los demás van en la fila de arriba */
+  #pend-list .btn-row .btn-secondary,
+  #pend-list .btn-row .btn-sm,
+  #pend-list .btn-row .wt-btn,
+  #pend-list .btn-row .readonly-badge {
+    order: 1;
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+    padding: 7px 6px;
+  }
+
+  /* ── Pendientes: cards ── */
+  .tag-row { flex-wrap: wrap; gap: 4px; }
+  .card-header-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .btn-row { flex-wrap: wrap; gap: 6px; }
+  .btn-row .btn-primary,
+  .btn-row .btn-secondary,
+  .btn-row .btn-sm { font-size: 12px; padding: 7px 12px; }
+  .filter-row { flex-wrap: wrap; gap: 6px; }
+  .filter-chip { font-size: 11px; padding: 5px 10px; }
+
+  /* ── Tabla score → filas limpias en mobile ── */
+  #dashboard .tbl thead { display: none; }
+  #dashboard .tbl,
+  #dashboard .tbl tbody { display: block; width: 100%; }
+
+  #dashboard .tbl tbody tr {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  #dashboard .tbl tbody tr:last-child { border-bottom: none; }
+
+  /* Ocultar todo — sin ningún borde en celdas individuales */
+  #dashboard .tbl tbody tr td { display: none !important; padding: 0 !important; border: none !important; background: none !important; }
+  /* Solo el tr tiene el separador */
+  #dashboard .tbl tbody tr:last-child { border-bottom: none; }
+
+  /* Col 1: nombre */
+  #dashboard .tbl tbody tr td:nth-child(1) {
+    display: block !important;
+    flex: 1 !important;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  /* Col 2: score */
+  #dashboard .tbl tbody tr td:nth-child(2) { display: block !important; flex-shrink: 0; }
+  /* Col 4: autonomía */
+  #dashboard .tbl tbody tr td:nth-child(4) { display: block !important; flex-shrink: 0; }
+  /* Col 7: botón Ver */
+  #dashboard .tbl tbody tr td:nth-child(7) { display: block !important; flex-shrink: 0; }
+
+  /* ── Barras de categoría ── */
+  #cat-bars-container .bar-label { font-size: 12px; }
+
+  /* ── Panel equipo ── */
+  .asesor-row { flex-wrap: wrap; gap: 6px; }
+
+  /* ── Implementación: filtros en mobile ── */
+  .impl-filters { flex-direction: column; gap: 8px; }
+  .impl-filter-group {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  .impl-filter-group__label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text3);
+    min-width: 68px;
+    flex-shrink: 0;
+  }
+  .impl-filter-segmented {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    background: transparent;
+    border: none;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    flex: 1;
+  }
+  .impl-filter-segmented .filter-chip {
+    font-size: 11px;
+    padding: 5px 11px;
+  }
+  .impl-filters-row { flex-wrap: wrap; gap: 6px; }
+  /* Buscador full width + botón masivo abajo */
+  #implementacion .filter-row {
+    flex-wrap: wrap;
+  }
+  #impl-buscador {
+    max-width: 100% !important;
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+  #impl-buscador-count { flex: 1 1 100%; }
+  #implementacion .filter-row .btn-sm {
+    margin-left: 0 !important;
+    width: 100%;
+  }
+  .impl-cliente-card { padding: 14px 12px; }
+  .impl-cliente-main { flex-direction: column; gap: 12px; }
+  .impl-cliente-toolbar { flex-wrap: wrap; gap: 6px; }
+  /* Gantt: scroll solo dentro del contenedor, sin afectar la página */
+  .gantt-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+  .gantt-label-col { width: 100px !important; min-width: 100px !important; font-size: 10px; }
+  /* Tareas en lista: que no rompan el ancho de la pantalla */
+  .impl-tarea { min-width: 0; overflow: hidden; }
+  .impl-tarea__resp-sel,
+  .impl-tarea__asesor-sel { max-width: 120px; }
+  #implementacion { overflow-x: hidden; }
+
+  /* ── Modal consulta: pantalla completa en mobile ── */
+  #modal-consulta {
+    padding: 0 !important;
+    background: var(--bg) !important;
+    backdrop-filter: none !important;
+    overflow-y: auto;
+  }
+  #modal-consulta > div {
+    border-radius: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    min-height: 100vh;
+    box-shadow: none !important;
+    padding: 20px 16px 100px !important;
+  }
+
+  /* ── Modal consulta: solo la cruz, sin texto extra ── */
+  #modal-consulta-close { font-size: 22px !important; }
+
+  /* ── Modal consulta: form compacto en mobile ── */
+  #modal-consulta > div { padding: 16px 14px 80px !important; }
+  #modal-consulta .info-box { font-size: 12px; padding: 8px 12px; margin-bottom: 12px; }
+  #modal-consulta .form-group { margin-bottom: 0; }
+  #modal-consulta .form-row { gap: 8px !important; margin-bottom: 8px; }
+  #modal-consulta label.fl { font-size: 11px; margin-bottom: 3px; }
+  #modal-consulta select,
+  #modal-consulta input[type="text"],
+  #modal-consulta input[type="number"] {
+    font-size: 14px !important;
+    padding: 8px 10px !important;
+    height: 40px;
+  }
+  #modal-consulta textarea {
+    font-size: 13px !important;
+    min-height: 60px !important;
+    padding: 8px 10px !important;
+  }
+  #modal-consulta-btns { flex-wrap: nowrap !important; }
+  #modal-consulta-btns .btn-primary,
+  #modal-consulta-btns .btn-secondary { flex: 1; text-align: center; padding: 12px 8px; font-size: 13px; }
+  #modal-consulta > div > div:first-child { margin-bottom: 12px; }
+  #modal-consulta > div > div:first-child > div > div:first-child { font-size: 15px; }
+  #modal-consulta > div > div:first-child > div > div:last-child { font-size: 11px; }
+
+  /* ── Base de soluciones: tabla → cards ── */
+  #biblioteca .tbl thead { display: none; }
+  #biblioteca .tbl,
+  #biblioteca .tbl tbody { display: block; width: 100%; }
+
+  #biblioteca .tbl tbody tr {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  #biblioteca .tbl tbody tr:last-child { border-bottom: none; }
+  #biblioteca .tbl tbody tr td { display: none !important; padding: 0 !important; border: none !important; background: none !important; }
+
+  /* Col 2: categoría — arriba a la izquierda */
+  #biblioteca .tbl tbody tr td:nth-child(2) {
+    display: block !important;
+    align-self: flex-start;
+  }
+  /* Col 1: título — segunda fila, ancho completo */
+  #biblioteca .tbl tbody tr td:nth-child(1) {
+    display: block !important;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: normal;
+    line-height: 1.4;
+    width: 100%;
+    order: 2;
+  }
+  /* Mover categoría antes del título visualmente */
+  #biblioteca .tbl tbody tr td:nth-child(2) { order: 1; }
+
+  /* Col 7: botón Ver — centrado, 3/4 del ancho */
+  #biblioteca .tbl tbody tr td:nth-child(7) {
+    display: block !important;
+    order: 3;
+    width: 100%;
+    text-align: center;
+  }
+  #biblioteca .tbl tbody tr td:nth-child(7) .btn-sm {
+    width: 75%;
+    text-align: center;
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  /* ── Base de soluciones: botón Cerrar → X ── */
+  #kb-cerrar-btn {
+    font-size: 0 !important;
+    padding: 4px 8px !important;
+    position: absolute;
+    top: 14px;
+    right: 14px;
+  }
+  #kb-cerrar-btn::after {
+    content: '✕';
+    font-size: 13px;
+  }
+  #kb-detail { position: relative; }
+
+  /* ── Base de soluciones: filtros ── */
+  #biblioteca .filter-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 6px !important;
+  }
+  #biblioteca .filter-row > input[type="text"] {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box;
+  }
+  #biblioteca .filter-row > .filter-chip {
+    font-size: 11px;
+    padding: 5px 8px;
+    text-align: center;
+  }
+
+  /* ── Alertas ── */
+  .alert { flex-direction: column; gap: 6px; }
+
+  /* ── Page sub / títulos ── */
+  .page-title { font-size: 22px; }
+  .page-sub   { font-size: 12px; }
+
+  /* ── Sección equipo: ocultar gráfico, priorizar lista ── */
+  #chartEquipo { display: none; }
+
+  /* ── Chips de asesores en form interno ── */
+  #pf-asesores-checks { gap: 6px; }
+  .pf-asesor-chip { font-size: 11px; padding: 5px 10px; }
+}
+
+/* ── Bottom nav bar (oculto en desktop) ── */
+#mobile-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 62px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  z-index: 500;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 4px;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+}
+.mobile-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-size: 10px;
+  font-family: inherit;
+  transition: color 0.15s;
+  position: relative;
+  flex: 1;
+}
+.mobile-nav-item svg { width: 22px; height: 22px; }
+.mobile-nav-item.active { color: var(--accent); }
+.mobile-more-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.mobile-more-item:last-child { border-bottom: none; }
+.mobile-more-item:hover { background: var(--hover); }
+
+.mobile-nav-item .mobile-nav-badge {
+  position: absolute;
+  top: 4px;
+  right: 16px;
+  background: var(--red);
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 99px;
+  padding: 1px 5px;
+  line-height: 1.4;
 }

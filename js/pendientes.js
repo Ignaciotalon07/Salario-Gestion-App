@@ -1234,9 +1234,10 @@ function updatePendCount() {
   const myCount = me ? pendientes.filter(p => p.asesor === me).length : 0;
   const total   = pendientes.length;
 
-  // Badge del sidebar y filtros
+  // Badge del sidebar, filtros y mobile nav
   const navBadge = document.getElementById('pend-nav-badge');
   if (navBadge) navBadge.textContent = myCount;
+  if (typeof syncMobilePendBadge === 'function') syncMobilePendBadge();
 
   const el = document.getElementById('pend-count');
   if (el) el.textContent = viewMode === 'mis' ? myCount : total;
