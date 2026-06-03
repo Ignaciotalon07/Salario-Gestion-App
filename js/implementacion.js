@@ -855,7 +855,7 @@ function renderMetricasAvanzadas(implClientes) {
   const topDemorados = [...completados].sort((a, b) => b.dias - a.dias).slice(0, 3);
 
   body.innerHTML = `
-    <div class="metrics-grid" style="margin-bottom:14px">
+    <div class="metrics-grid" style="margin-bottom:14px;grid-template-columns:repeat(3,1fr)">
       <div class="metric-card">
         <div class="metric-label">Tiempo promedio</div>
         <div class="metric-value" style="color:var(--accent)">${tiempoPromedio !== null ? tiempoPromedio + ' días' : '—'}</div>
@@ -2093,9 +2093,9 @@ function renderPlantilla() {
            ondragover="plantillaDragOver(event, this)"
            ondragleave="plantillaDragLeave(event, this)"
            ondrop="plantillaDrop(event, '${f.key}')">
-        <div class="plantilla-fase-header">
-          <span>${f.icono} Fase ${IMPL_FASES.indexOf(f) + 1}: ${f.nombre}</span>
-          <div style="display:flex;align-items:center;gap:8px">
+        <div class="plantilla-fase-header plantilla-fase-header--mobile">
+          <div class="plantilla-fase-header__title">${f.icono} Fase ${IMPL_FASES.indexOf(f) + 1}: ${f.nombre}</div>
+          <div class="plantilla-fase-header__actions">
             <span style="font-size:11px;color:var(--text3)">${etapasFase.length} tarea${etapasFase.length !== 1 ? 's' : ''}</span>
             <button class="btn-sm" style="font-size:11px;padding:2px 8px" onclick="agregarEtapaEnFase('${f.key}')">+ Agregar tarea</button>
           </div>
@@ -2178,6 +2178,21 @@ async function eliminarEtapaPlantilla(etapaId) {
   try {
     await dbDelete('implementacion_plantilla', etapaId);
     implPlantilla = implPlantilla.filter(x => x.id !== etapaId);
+
+    // Renumerar: recorrer todas las etapas del mismo tipo en orden y actualizar
+    const etapasMismoTipo = implPlantilla
+      .filter(x => x.tipo === implPlantillaTipo)
+      .sort((a, b) => a.orden - b.orden);
+
+    for (let i = 0; i < etapasMismoTipo.length; i++) {
+      const nuevoOrden = i + 1;
+      if (etapasMismoTipo[i].orden !== nuevoOrden) {
+        etapasMismoTipo[i].orden = nuevoOrden;
+        dbUpdate('implementacion_plantilla', etapasMismoTipo[i].id, { orden: nuevoOrden })
+          .catch(err => console.warn('Error renumerando etapa', err));
+      }
+    }
+
     renderPlantilla();
     toast('Etapa eliminada');
   } catch (err) {

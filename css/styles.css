@@ -719,51 +719,43 @@ textarea { resize: vertical; min-height: 80px; }
    sin contornos. Sin scroll. 100svh.
    ──────────────────────────────────────── */
 @media (max-width: 900px) {
+  /* ── Fondo oscuro con gradiente naranja ── */
   .login-overlay {
     height: 100vh;
     height: 100svh;
     overflow: hidden;
-    background: #fdfaf6; /* fallback en caso de que login-bg no se vea */
+    background: #0f0f14;
   }
-
-  /* Fondo claro con gradientes calidos suaves */
   .login-bg {
     background:
-      radial-gradient(ellipse at top, #fff5ec 0%, transparent 55%),
-      linear-gradient(180deg, #ffffff 0%, #fdf6ee 100%);
+      radial-gradient(ellipse at top left, #2a1200 0%, transparent 55%),
+      linear-gradient(180deg, #0f0f14 0%, #1a1208 100%);
   }
-  /* Mesh y grid muy sutiles sobre fondo claro */
   .login-mesh {
     background:
-      radial-gradient(at 20% 30%, rgba(255, 122, 28, 0.18) 0%, transparent 45%),
-      radial-gradient(at 80% 80%, rgba(247, 127, 0, 0.14) 0%, transparent 45%),
-      radial-gradient(at 50% 50%, rgba(193, 53, 132, 0.08) 0%, transparent 50%);
-    opacity: 0.9;
+      radial-gradient(at 15% 20%, rgba(255, 122, 28, 0.22) 0%, transparent 50%),
+      radial-gradient(at 85% 75%, rgba(180, 83, 9, 0.18) 0%, transparent 50%);
+    opacity: 1;
   }
   .login-grid {
     background-image:
-      linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
   }
-  .login-noise { display: none; }
-  /* Orbes en tonos claros (peach/cream) */
   .login-orb--1 {
-    width: 280px; height: 280px;
-    top: -8%; right: -12%;
-    background: radial-gradient(circle, rgba(255, 157, 69, 0.4) 0%, transparent 70%);
+    width: 300px; height: 300px;
+    top: -10%; right: -15%;
+    background: radial-gradient(circle, rgba(255,122,28,0.35) 0%, transparent 70%);
   }
   .login-orb--2 {
-    width: 340px; height: 340px;
-    bottom: -12%; left: -18%;
-    background: radial-gradient(circle, rgba(255, 122, 28, 0.32) 0%, transparent 70%);
+    width: 350px; height: 350px;
+    bottom: -15%; left: -20%;
+    background: radial-gradient(circle, rgba(180,83,9,0.25) 0%, transparent 70%);
   }
-  .login-orb--3 {
-    width: 200px; height: 200px;
-    top: 45%; right: 50%;
-    background: radial-gradient(circle, rgba(193, 53, 132, 0.22) 0%, transparent 70%);
-  }
+  .login-orb--3 { display: none; }
+  .login-noise { display: none; }
 
-  /* El split deja de ser split */
+  /* ── Layout ── */
   .login-split {
     display: flex;
     flex-direction: column;
@@ -774,162 +766,123 @@ textarea { resize: vertical; min-height: 80px; }
   }
   .login-brand-panel { display: none; }
 
-  /* Form panel ocupa toda la pantalla, contenido centrado */
+  /* ── Form panel: card oscura centrada ── */
   .login-form-panel {
     background: transparent;
+    border-left: none;
     flex: 1;
+    display: flex;
     align-items: center;
     justify-content: center;
-    padding: 32px 24px;
+    padding: 24px 20px;
+    overflow-y: auto;
+  }
+  /* Form panel: fullscreen, sin scroll */
+  .login-form-panel {
+    background: transparent;
+    border-left: none;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 28px;
     overflow: hidden;
   }
-
-  /* Sin card: todo el contenido flota directamente sobre el fondo claro */
   .login-form-content {
     width: 100%;
     max-width: 360px;
     background: transparent;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
     border: none;
     border-radius: 0;
     padding: 0;
     box-shadow: none;
-    text-align: center;
   }
 
-  /* Brand integrado al tope, centrado */
+  /* Ocultar "Equipo Salario" pill */
+  .login-mobile-brand .login-brand-top { display: none; }
+
+  /* Brand: logo + nombre grande centrado */
   .login-mobile-brand {
     display: block;
-    margin-bottom: 28px;
-    padding-bottom: 0;
-    border-bottom: none;
+    margin-bottom: 32px;
     text-align: center;
-  }
-  .login-mobile-brand .login-brand-top {
-    margin-bottom: 18px;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.7);
-    border-color: rgba(0, 0, 0, 0.08);
-  }
-  .login-mobile-brand .login-brand-pill {
-    color: var(--text2);
+    border-bottom: none;
+    padding-bottom: 0;
   }
   .login-mobile-brand-name {
     display: flex;
     flex-direction: column;
-    line-height: 0.92;
-    letter-spacing: -1.6px;
+    line-height: 0.9;
+    letter-spacing: -2px;
     align-items: center;
+    gap: 0;
   }
   .login-mobile-brand-name__main {
-    font-size: 44px;
+    font-size: 56px;
     font-weight: 800;
-    background: linear-gradient(135deg, #FFB570 0%, #FF7A1C 50%, #FF5500 100%);
+    background: linear-gradient(135deg, #FFD09B 0%, #FF7A1C 55%, #E65C00 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    color: #FF7A1C;
-    text-shadow: 0 0 40px rgba(255, 122, 28, 0.18);
   }
   .login-mobile-brand-name__sub {
-    font-size: 44px;
-    font-weight: 300;
-    color: var(--text);
-    opacity: 0.85;
+    font-size: 56px;
+    font-weight: 200;
+    color: rgba(255,255,255,0.35);
   }
 
-  /* Headings centrados con colores oscuros sobre fondo claro */
-  .login-form-header {
-    margin-bottom: 22px;
-    text-align: center;
-  }
-  .login-form-eyebrow {
-    color: #FF7A1C;
-    font-size: 10px;
-    margin-bottom: 6px;
-  }
-  .login-form-title {
-    color: var(--text);
-    font-size: 22px;
-    margin-bottom: 4px;
-  }
-  .login-form-subtitle {
-    color: var(--text2);
-    font-size: 13px;
-  }
+  /* Logo imagen encima del nombre */
+  .login-mobile-brand img { display: none; }
 
-  /* Inputs con fondo blanco semitransparente y border claro */
-  .login-field {
-    margin-bottom: 12px;
-    text-align: left;
-  }
-  .login-field label {
-    color: var(--text2);
-    font-size: 11px;
-  }
+  /* Textos del form */
+  .login-form-header { margin-bottom: 20px; text-align: center; }
+  .login-form-eyebrow { color: #FF9A45; font-size: 10px; margin-bottom: 6px; }
+  .login-form-title { color: #ffffff; font-size: 20px; margin-bottom: 3px; }
+  .login-form-subtitle { color: rgba(255,255,255,0.4); font-size: 12px; }
+
+  /* ── Inputs oscuros compactos ── */
+  .login-field { margin-bottom: 10px; text-align: left; }
+  .login-field label { color: rgba(255,255,255,0.5); font-size: 11px; margin-bottom: 4px; }
   .login-form input {
-    background: rgba(255, 255, 255, 0.85);
-    border-color: rgba(0, 0, 0, 0.1);
-    color: var(--text);
-    padding: 12px 14px;
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.12);
+    color: #ffffff;
+    padding: 11px 14px;
+    font-size: 15px;
   }
-  .login-form input::placeholder {
-    color: var(--text3);
-  }
+  .login-form input::placeholder { color: rgba(255,255,255,0.25); }
   .login-form input:focus {
-    background: white;
+    background: rgba(255,255,255,0.12);
     border-color: #FF7A1C;
-    box-shadow: 0 0 0 3px rgba(255, 122, 28, 0.14);
+    box-shadow: 0 0 0 3px rgba(255,122,28,0.2);
   }
 
-  /* Botones */
-  .login-btn {
-    background: rgba(255, 255, 255, 0.9);
-    border-color: rgba(0, 0, 0, 0.1);
-    color: var(--text);
-    padding: 12px 16px;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-  .login-btn:hover {
-    background: white;
-    border-color: rgba(0, 0, 0, 0.18);
-    color: var(--text);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-  }
+  /* ── Botón Google oscuro ── */
+  .login-btn { padding: 11px 16px; }
   .login-btn--google {
-    background: white;
-    color: var(--text);
+    background: rgba(255,255,255,0.09);
+    border-color: rgba(255,255,255,0.14);
+    color: #ffffff;
   }
-  .login-btn--google:hover {
-    background: #fafafa;
-    color: var(--text);
+  .login-btn--google:hover { background: rgba(255,255,255,0.14); }
+
+  /* ── Botón Entrar naranja ── */
+  .login-btn--primary {
+    background: linear-gradient(135deg, #FF8C00, #E65C00);
+    border: none;
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(230,92,0,0.45);
+    font-size: 15px;
+    padding: 13px;
   }
 
-  .login-divider {
-    color: var(--text3);
-    margin: 16px 0 14px;
-    font-size: 9px;
-  }
+  /* ── Divisor ── */
+  .login-divider { color: rgba(255,255,255,0.2); margin: 12px 0; font-size: 9px; }
   .login-divider::before,
-  .login-divider::after {
-    background: linear-gradient(to right, transparent, rgba(0,0,0,0.1), transparent);
-  }
+  .login-divider::after { background: linear-gradient(to right, transparent, rgba(255,255,255,0.12), transparent); }
 
-  .login-error {
-    background: rgba(220, 38, 38, 0.06);
-    color: #c0392b;
-    border-color: rgba(220, 38, 38, 0.18);
-  }
-
-  .login-foot {
-    color: var(--text3);
-    margin-top: 18px;
-    text-align: center;
-    font-size: 11px;
-  }
+  .login-error { background: rgba(220,38,38,0.15); color: #ff7070; border-color: rgba(220,38,38,0.3); }
+  .login-foot { color: rgba(255,255,255,0.25); margin-top: 14px; text-align: center; font-size: 11px; }
 }
 
 /* Smartphones chicos (iPhone SE etc) — todavia mas compacto */
@@ -4582,6 +4535,97 @@ input[type=date]:focus {
 
   /* ── Panel equipo ── */
   .asesor-row { flex-wrap: wrap; gap: 6px; }
+
+  /* ── Plantillas de implementación en mobile ── */
+
+  /* Botón cerrar → solo X */
+  #plantillas-cerrar-btn { font-size: 0 !important; padding: 5px 9px !important; }
+  #plantillas-cerrar-btn::after { content: '✕'; font-size: 14px; }
+
+  /* Tabs: grilla 2x2 para que todos se lean completos */
+  #plantillas-tabs {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    padding: 8px !important;
+    gap: 6px !important;
+    border-bottom: 1px solid var(--border);
+  }
+  .plantilla-tab {
+    font-size: 12px !important;
+    padding: 10px 8px !important;
+    text-align: center;
+    border-radius: 8px !important;
+    border: 1px solid var(--border) !important;
+    white-space: nowrap;
+  }
+  .plantilla-tab.active {
+    background: var(--accent) !important;
+    color: white !important;
+    border-color: var(--accent) !important;
+  }
+
+  /* Fase header: título arriba full width, acciones debajo */
+  .plantilla-fase-header--mobile {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+    padding: 10px 10px 8px !important;
+  }
+  .plantilla-fase-header__title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+    width: 100%;
+  }
+  .plantilla-fase-header__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+  .plantilla-fase-header__actions .btn-sm {
+    flex: 1;
+    text-align: center;
+    font-size: 12px;
+    padding: 10px 8px;
+  }
+
+  /* Ocultar drag handle */
+  .plantilla-row__drag { display: none !important; }
+
+  /* Fila de tarea: sin columna drag */
+  .plantilla-row {
+    grid-template-columns: 28px 1fr 34px 34px 34px !important;
+    gap: 6px !important;
+    padding: 8px 8px !important;
+  }
+  .plantilla-row__nombre {
+    font-size: 13px !important;
+    padding: 7px 10px !important;
+  }
+  .plantilla-row__btn {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 16px !important;
+  }
+
+  /* ── Implementación: métricas avanzadas ── */
+  #impl-metricas-avanzadas-body .metrics-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  #impl-metricas-avanzadas-body .metrics-grid .metric-card:last-child {
+    grid-column: 1 / -1;
+  }
+  /* Rápidas/Demoradas: lado a lado, centradas */
+  #impl-metricas-avanzadas-body .grid-2 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  #impl-metricas-avanzadas-body .grid-2 > div {
+    text-align: center;
+  }
+  #impl-metricas-avanzadas-body .impl-metrica-rank {
+    justify-content: center;
+  }
 
   /* ── Implementación: filtros en mobile ── */
   .impl-filters { flex-direction: column; gap: 8px; }
