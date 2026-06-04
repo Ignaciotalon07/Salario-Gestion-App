@@ -202,7 +202,7 @@ function renderClienteCard(c) {
       <div class="cli-card__header">
         <div class="cli-card__identity">
           <div class="av av-lg av-${c.tipo}">${escapeHtml(c.iniciales)}</div>
-          <div>
+          <div style="min-width:0;flex:1">
             <div class="cli-card__name">${escapeHtml(c.nombre)}
               <span class="tipo-tag tipo-${c.tipo}" style="font-size:9px;vertical-align:middle">${tipoLabel}</span>
             </div>
