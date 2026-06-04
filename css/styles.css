@@ -481,6 +481,7 @@ textarea { resize: vertical; min-height: 80px; }
   /* El overlay centra la card como si fuera un modal */
   .login-overlay {
     height: 100vh;
+    height: -webkit-fill-available;
     height: 100svh;
     overflow: hidden;
     align-items: stretch;
@@ -495,6 +496,7 @@ textarea { resize: vertical; min-height: 80px; }
   .login-card {
     width: 100%;
     height: 100vh;
+    height: -webkit-fill-available;
     height: 100svh;
     min-height: 0;
     border-right: none;
@@ -830,6 +832,8 @@ textarea { resize: vertical; min-height: 80px; }
 
 html {
   overflow-y: scroll;
+  /* Necesario para que -webkit-fill-available funcione en Safari iOS */
+  height: -webkit-fill-available;
 }
 
 
