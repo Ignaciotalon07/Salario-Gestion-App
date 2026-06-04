@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Salario — Gestión de Clientes</title>
+    <title>Salario Gestión</title>
     <link rel="icon" type="image/png" href="assets/img/isologotipo.png" />
 
     <!-- Tipografía -->
@@ -44,273 +44,394 @@
      Se muestra mientras el usuario no esta autenticado.
 ════════════════════════════════════ -->
     <div id="login-overlay" class="login-overlay" style="display: none">
-      <!-- Fondo atmosferico (mesh, grid, orbes, ruido). Siempre presente.
-           En desktop es visible solo en el panel izquierdo (el form-panel
-           blanco lo cubre). En mobile cubre toda la pantalla. -->
+      <!-- Fondo atmosférico full screen -->
       <div class="login-bg">
         <div class="login-mesh"></div>
         <div class="login-grid"></div>
         <div class="login-orb login-orb--1"></div>
         <div class="login-orb login-orb--2"></div>
         <div class="login-orb login-orb--3"></div>
-        <div class="login-noise"></div>
       </div>
 
-      <div class="login-split">
-        <!-- ─── Panel de branding (visible solo en desktop) ─── -->
-        <div class="login-brand-panel">
-          <div class="login-brand-content">
-            <div class="login-brand-top">
-              <div class="login-brand-dot"></div>
-              <span class="login-brand-pill">Equipo Salario</span>
-            </div>
-
-            <div class="login-brand-name">
-              <span class="login-brand-name__main">Salario</span>
-              <span class="login-brand-name__sub">Gestión</span>
-            </div>
-            <div class="login-brand-tagline">
-              Gestión inteligente de clientes para equipos que se mueven en
-              tiempo real.
-            </div>
-
-            <div class="login-features">
-              <div class="login-feature">
-                <div class="login-feature-icon">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                  </svg>
-                </div>
-                <div>
-                  <div class="login-feature-title">
-                    Tiempo real con tu equipo
-                  </div>
-                  <div class="login-feature-sub">
-                    Pendientes, consultas y soluciones se sincronizan al
-                    instante.
-                  </div>
-                </div>
-              </div>
-              <div class="login-feature">
-                <div class="login-feature-icon">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <rect x="3" y="11" width="18" height="11" rx="2" />
-                    <path d="M7 11V7a5 5 0 0110 0v4" />
-                  </svg>
-                </div>
-                <div>
-                  <div class="login-feature-title">Acceso restringido</div>
-                  <div class="login-feature-sub">
-                    Solo miembros autorizados pueden acceder a los datos del
-                    equipo.
-                  </div>
-                </div>
-              </div>
-              <div class="login-feature">
-                <div class="login-feature-icon">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M3 3v18h18" />
-                    <path d="M7 14l4-4 4 4 5-5" />
-                  </svg>
-                </div>
-                <div>
-                  <div class="login-feature-title">Métricas que importan</div>
-                  <div class="login-feature-sub">
-                    Dashboard claro de pendientes, consultas y rendimiento del
-                    equipo.
-                  </div>
+      <!-- Panel visual derecho (solo desktop) -->
+      <div class="login-visual-panel">
+        <div class="login-visual-glow"></div>
+        <div class="login-visual-content">
+          <div class="login-visual-tag">Equipo Salario · v1.0</div>
+          <div class="login-visual-title">
+            <span class="login-visual-title__main">Salario</span>
+            <span class="login-visual-title__sub">Gestión</span>
+          </div>
+          <div class="login-visual-desc">
+            Gestión inteligente de clientes para equipos que se mueven en tiempo
+            real.
+          </div>
+          <div class="login-visual-features">
+            <div class="login-visual-feature">
+              <div class="login-visual-feature__icon">⚡</div>
+              <div>
+                <div class="login-visual-feature__title">
+                  Tiempo real con tu equipo
                 </div>
               </div>
             </div>
-
-            <div class="login-brand-foot">
-              <div class="login-brand-version">v1.0 · build interno</div>
+            <div class="login-visual-feature">
+              <div class="login-visual-feature__icon">🔒</div>
+              <div>
+                <div class="login-visual-feature__title">
+                  Acceso restringido
+                </div>
+              </div>
+            </div>
+            <div class="login-visual-feature">
+              <div class="login-visual-feature__icon">📊</div>
+              <div>
+                <div class="login-visual-feature__title">
+                  Métricas que cambian tu día a día
+                </div>
+              </div>
             </div>
           </div>
         </div>
+        <!-- Decoración: círculos flotantes -->
+        <div class="login-visual-circle login-visual-circle--1"></div>
+        <div class="login-visual-circle login-visual-circle--2"></div>
+        <div class="login-visual-circle login-visual-circle--3"></div>
+      </div>
 
-        <!-- ─── Panel del formulario (visible siempre) ─── -->
-        <div class="login-form-panel">
-          <div class="login-form-content">
-            <!-- Brand integrado dentro de la card (visible solo en mobile) -->
-            <div class="login-mobile-brand">
-              <div class="login-brand-top">
-                <div class="login-brand-dot"></div>
-                <span class="login-brand-pill">Equipo Salario</span>
-              </div>
-              <div class="login-mobile-brand-name">
-                <span class="login-mobile-brand-name__main">Salario</span>
-                <span class="login-mobile-brand-name__sub">Gestión</span>
-              </div>
+      <!-- Card del formulario — flota sobre el fondo -->
+      <div class="login-card">
+        <!-- Logo centrado -->
+        <div class="login-card__logo">
+          <img
+            src="assets/img/isologotipo.png"
+            alt="Salario"
+            style="width: 48px; height: 48px; object-fit: contain"
+          />
+        </div>
+
+        <!-- Mobile: nombre grande centrado -->
+        <div class="login-mobile-brand">
+          <div class="login-mobile-brand-name">
+            <span class="login-mobile-brand-name__main">Salario</span>
+            <span class="login-mobile-brand-name__sub">Gestión</span>
+          </div>
+        </div>
+
+        <!-- Heading -->
+        <div class="login-card__header">
+          <div
+            class="login-form-eyebrow"
+            style="
+              display: block;
+              font-size: 11px;
+              font-weight: 600;
+              letter-spacing: 1px;
+              text-transform: uppercase;
+              color: #ff9a45;
+              margin-bottom: 8px;
+            "
+          >
+            Iniciar sesión
+          </div>
+          <div class="login-form-title">Bienvenido de vuelta</div>
+          <div class="login-form-subtitle">
+            Accedé con tu cuenta autorizada del equipo.
+          </div>
+        </div>
+
+        <!-- Form -->
+        <div class="login-card__body">
+          <form
+            class="login-form"
+            onsubmit="
+              event.preventDefault();
+              signInWithEmail();
+            "
+          >
+            <div class="login-field">
+              <input
+                type="email"
+                id="login-email"
+                placeholder="Email"
+                autocomplete="username"
+                required
+              />
             </div>
-
-            <div class="login-form-header">
-              <div style="text-align:center;margin-bottom:28px">
-                <img src="assets/img/isologotipo.png" alt="Logo" style="width:52px;height:52px;object-fit:contain" />
-              </div>
-              <div class="login-form-eyebrow">Iniciar sesión</div>
-              <div class="login-form-title">Bienvenido de vuelta</div>
-              <div class="login-form-subtitle">
-                Accedé con tu cuenta autorizada del equipo.
-              </div>
+            <div class="login-field">
+              <input
+                type="password"
+                id="login-password"
+                placeholder="Contraseña"
+                autocomplete="current-password"
+                required
+              />
             </div>
-
-            <button
-              class="login-btn login-btn--google"
-              onclick="signInWithGoogle()"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 18 18"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.26c-.806.54-1.836.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
-                  fill="#EA4335"
-                />
-              </svg>
-              Continuar con Google
+            <div
+              id="login-error"
+              class="login-error"
+              style="display: none"
+            ></div>
+            <button type="submit" class="login-btn login-btn--primary">
+              Entrar →
             </button>
+          </form>
 
-            <div class="login-divider"><span>o continuá con</span></div>
+          <div class="login-divider"><span>o continuá con</span></div>
 
-            <form
-              class="login-form"
-              onsubmit="
-                event.preventDefault();
-                signInWithEmail();
-              "
+          <button
+            class="login-btn login-btn--google"
+            onclick="signInWithGoogle()"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 18 18"
+              xmlns="http://www.w3.org/2000/svg"
             >
-              <div class="login-field">
-                <label for="login-email">Email</label>
-                <input
-                  type="email"
-                  id="login-email"
-                  placeholder="email@salario.local"
-                  autocomplete="username"
-                  required
-                />
-              </div>
-              <div class="login-field">
-                <label for="login-password">Contraseña</label>
-                <input
-                  type="password"
-                  id="login-password"
-                  placeholder="••••••••"
-                  autocomplete="current-password"
-                  required
-                />
-              </div>
-              <div
-                id="login-error"
-                class="login-error"
-                style="display: none"
-              ></div>
-              <button type="submit" class="login-btn login-btn--primary">
-                <span>Entrar</span>
-                <svg
-                  width="14"
-                  height="14"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.4"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M5 12h14M13 5l7 7-7 7" />
-                </svg>
-              </button>
-            </form>
-
-            <p class="login-foot">
-              Acceso restringido al equipo de Salario. Si no tenés credenciales,
-              pedíselas al admin.
-            </p>
-          </div>
+              <path
+                d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
+                fill="#4285F4"
+              />
+              <path
+                d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.26c-.806.54-1.836.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+                fill="#34A853"
+              />
+              <path
+                d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
+                fill="#FBBC05"
+              />
+              <path
+                d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
+                fill="#EA4335"
+              />
+            </svg>
+            Continuar con Google
+          </button>
         </div>
+
+        <p class="login-foot">
+          Acceso restringido · Pedí credenciales al admin
+        </p>
       </div>
     </div>
 
-    <!-- Bottom nav — solo visible en mobile -->
-    <nav id="mobile-nav">
-      <button class="mobile-nav-item active" onclick="mobileGoTo('dashboard',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <!-- Bottom nav — solo visible en mobile (CSS lo muestra en ≤600px) -->
+    <nav id="mobile-nav" style="display: none">
+      <button
+        class="mobile-nav-item active"
+        onclick="mobileGoTo('dashboard', this)"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
         Panel
       </button>
-      <button class="mobile-nav-item" onclick="mobileGoTo('clientes',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <button class="mobile-nav-item" onclick="mobileGoTo('clientes', this)">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+        </svg>
         Clientes
       </button>
-      <button class="mobile-nav-item" onclick="abrirModalConsulta()" style="color:var(--accent)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+      <button
+        class="mobile-nav-item"
+        onclick="abrirModalConsulta()"
+        style="color: var(--accent)"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 8v8M8 12h8" />
+        </svg>
         Consulta
       </button>
-      <button class="mobile-nav-item" onclick="mobileGoTo('pendientes',this)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      <button class="mobile-nav-item" onclick="mobileGoTo('pendientes', this)">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M9 11l3 3L22 4" />
+          <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+        </svg>
         Pendientes
-        <span class="mobile-nav-badge" id="mobile-pend-badge" style="display:none">0</span>
+        <span
+          class="mobile-nav-badge"
+          id="mobile-pend-badge"
+          style="display: none"
+          >0</span
+        >
       </button>
       <button class="mobile-nav-item" onclick="toggleMobileMore()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="5" cy="12" r="1.5" />
+          <circle cx="12" cy="12" r="1.5" />
+          <circle cx="19" cy="12" r="1.5" />
+        </svg>
         Más
       </button>
     </nav>
 
     <!-- Menú "Más" mobile -->
-    <div id="mobile-more-menu" style="display:none;position:fixed;bottom:70px;right:12px;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,0.3);z-index:9000;min-width:200px;overflow:hidden">
-      <button class="mobile-more-item" onclick="mobileGoTo('implementacion',null);toggleMobileMore()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/></svg>
+    <div
+      id="mobile-more-menu"
+      style="
+        display: none;
+        position: fixed;
+        bottom: 70px;
+        right: 12px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        z-index: 9000;
+        min-width: 200px;
+        overflow: hidden;
+      "
+    >
+      <button
+        class="mobile-more-item"
+        onclick="
+          mobileGoTo('implementacion', null);
+          toggleMobileMore();
+        "
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M3 3v18h18" />
+          <path d="M7 14l4-4 4 4 5-5" />
+        </svg>
         Implementación
       </button>
-      <button class="mobile-more-item" onclick="mobileGoTo('alertas',null);toggleMobileMore()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      <button
+        class="mobile-more-item"
+        onclick="
+          mobileGoTo('alertas', null);
+          toggleMobileMore();
+        "
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 01-3.46 0" />
+        </svg>
         Alertas
       </button>
-      <button class="mobile-more-item" onclick="mobileGoTo('biblioteca',null);toggleMobileMore()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+      <button
+        class="mobile-more-item"
+        onclick="
+          mobileGoTo('biblioteca', null);
+          toggleMobileMore();
+        "
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" />
+          <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
+        </svg>
         Base de soluciones
       </button>
-      <button class="mobile-more-item" onclick="mobileGoTo('configuracion',null);toggleMobileMore()">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <button
+        class="mobile-more-item"
+        onclick="
+          mobileGoTo('configuracion', null);
+          toggleMobileMore();
+        "
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"
+          />
+        </svg>
         Configuración
       </button>
-      <button class="mobile-more-item" onclick="signOut()" style="color:var(--red)">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      <button
+        class="mobile-more-item"
+        onclick="signOut()"
+        style="color: var(--red)"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+          <polyline points="16 17 21 12 16 7" />
+          <line x1="21" y1="12" x2="9" y2="12" />
+        </svg>
         Cerrar sesión
       </button>
     </div>
@@ -322,8 +443,12 @@
   ════════════════════════════════════ -->
         <nav class="sidebar">
           <div class="sidebar-logo">
-            <div style="display:flex;align-items:center;gap:8px">
-              <img src="assets/img/isologotipo.png" alt="Logo" style="width:28px;height:28px;object-fit:contain" />
+            <div style="display: flex; align-items: center; gap: 8px">
+              <img
+                src="assets/img/isologotipo.png"
+                alt="Logo"
+                style="width: 28px; height: 28px; object-fit: contain"
+              />
               <div class="brand">Salario</div>
             </div>
             <div class="sub">Gestión de clientes</div>
@@ -425,16 +550,30 @@
           </div>
 
           <!-- Sección Administración: solo visible para Daniel Ferro -->
-          <div class="sidebar-section" id="nav-administracion" style="display:none">
+          <div
+            class="sidebar-section"
+            id="nav-administracion"
+            style="display: none"
+          >
             <div class="sidebar-section-label">Administración</div>
             <button class="nav-item" onclick="goTo(this, 'administracion')">
-              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <svg
+                class="icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
                 <rect x="1" y="3" width="14" height="10" rx="1.5"></rect>
                 <path d="M1 6h14"></path>
                 <path d="M5 9h2M9 9h2"></path>
               </svg>
               <span>Facturación</span>
-              <span class="nav-badge warn" id="admin-nav-badge" style="display:none"></span>
+              <span
+                class="nav-badge warn"
+                id="admin-nav-badge"
+                style="display: none"
+              ></span>
             </button>
           </div>
 
@@ -484,7 +623,9 @@
             <div class="page-header">
               <div>
                 <div class="page-title">Panel general</div>
-                <div class="page-sub" id="panel-page-sub">Mayo 2026 — datos en tiempo real</div>
+                <div class="page-sub" id="panel-page-sub">
+                  Junio 2026 — datos en tiempo real
+                </div>
               </div>
               <button class="btn-primary" onclick="abrirModalConsulta()">
                 + Registrar consulta
@@ -494,23 +635,47 @@
             <div class="metrics-grid">
               <div class="metric-card">
                 <div class="metric-label">Clientes activos</div>
-                <div class="metric-value" style="color: var(--accent)" id="metric-clientes-activos">0</div>
-                <div class="metric-sub" id="metric-clientes-impl">0 en implementación</div>
+                <div
+                  class="metric-value"
+                  style="color: var(--accent)"
+                  id="metric-clientes-activos"
+                >
+                  0
+                </div>
+                <div class="metric-sub" id="metric-clientes-impl">
+                  0 en implementación
+                </div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">Consultas este mes</div>
                 <div class="metric-value" id="metric-consultas-mes">0</div>
-                <div class="metric-sub" id="metric-consultas-sub">Sin consultas este mes</div>
+                <div class="metric-sub" id="metric-consultas-sub">
+                  Sin consultas este mes
+                </div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">% consultas repetidas</div>
-                <div class="metric-value" style="color: var(--red)" id="metric-rep-pct">0%</div>
+                <div
+                  class="metric-value"
+                  style="color: var(--red)"
+                  id="metric-rep-pct"
+                >
+                  0%
+                </div>
                 <div class="metric-sub">Meta: &lt; 20%</div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">Consultas este año</div>
-                <div class="metric-value" style="color: var(--blue)" id="metric-consultas-anio">0</div>
-                <div class="metric-sub" id="metric-consultas-anio-sub">Acumulado 2026</div>
+                <div
+                  class="metric-value"
+                  style="color: var(--blue)"
+                  id="metric-consultas-anio"
+                >
+                  0
+                </div>
+                <div class="metric-sub" id="metric-consultas-anio-sub">
+                  Acumulado 2026
+                </div>
               </div>
             </div>
 
@@ -572,7 +737,8 @@
                 </div>
                 <div class="bar-wrap">
                   <div class="bar-label">
-                    <span>Baja autonomía</span><span id="bar-aut-baja-count">0 clientes</span>
+                    <span>Baja autonomía</span
+                    ><span id="bar-aut-baja-count">0 clientes</span>
                   </div>
                   <div class="bar-track">
                     <div
@@ -584,7 +750,8 @@
                 </div>
                 <div class="bar-wrap">
                   <div class="bar-label">
-                    <span>Media autonomía</span><span id="bar-aut-media-count">0 clientes</span>
+                    <span>Media autonomía</span
+                    ><span id="bar-aut-media-count">0 clientes</span>
                   </div>
                   <div class="bar-track">
                     <div
@@ -596,7 +763,8 @@
                 </div>
                 <div class="bar-wrap">
                   <div class="bar-label">
-                    <span>Alta autonomía</span><span id="bar-aut-alta-count">0 clientes</span>
+                    <span>Alta autonomía</span
+                    ><span id="bar-aut-alta-count">0 clientes</span>
                   </div>
                   <div class="bar-track">
                     <div
@@ -729,7 +897,14 @@
                   </thead>
                   <tbody id="score-riesgo-tbody">
                     <tr>
-                      <td colspan="7" style="text-align:center;color:var(--text3);padding:20px">
+                      <td
+                        colspan="7"
+                        style="
+                          text-align: center;
+                          color: var(--text3);
+                          padding: 20px;
+                        "
+                      >
                         Cargando clientes...
                       </td>
                     </tr>
@@ -746,7 +921,9 @@
             <div class="page-header">
               <div>
                 <div class="page-title">Clientes</div>
-                <div class="page-sub" id="clientes-page-sub">0 clientes activos</div>
+                <div class="page-sub" id="clientes-page-sub">
+                  0 clientes activos
+                </div>
               </div>
               <div class="btn-row">
                 <button class="btn-primary" onclick="showClienteForm()">
@@ -770,17 +947,29 @@
               <div class="form-row">
                 <div class="form-group">
                   <label class="fl">Nombre comercial</label>
-                  <input type="text" id="cf-nombre" placeholder="Ej: Estudio Maineri" />
+                  <input
+                    type="text"
+                    id="cf-nombre"
+                    placeholder="Ej: Estudio Maineri"
+                  />
                 </div>
                 <div class="form-group">
                   <label class="fl">Razón social</label>
-                  <input type="text" id="cf-razon" placeholder="Ej: Consultores Asociados SRL" />
+                  <input
+                    type="text"
+                    id="cf-razon"
+                    placeholder="Ej: Consultores Asociados SRL"
+                  />
                 </div>
               </div>
               <div class="form-row">
                 <div class="form-group">
                   <label class="fl">CUIT</label>
-                  <input type="text" id="cf-cuit" placeholder="Ej: 30712275827" />
+                  <input
+                    type="text"
+                    id="cf-cuit"
+                    placeholder="Ej: 30712275827"
+                  />
                 </div>
                 <div class="form-group">
                   <label class="fl">Tipo</label>
@@ -802,13 +991,21 @@
                 </div>
                 <div class="form-group">
                   <label class="fl">Link de Whaticket (opcional)</label>
-                  <input type="text" id="cf-whaticket" placeholder="https://app.whaticket.com/tickets/..." />
+                  <input
+                    type="text"
+                    id="cf-whaticket"
+                    placeholder="https://app.whaticket.com/tickets/..."
+                  />
                 </div>
               </div>
               <div class="form-row">
-                <div class="form-group" style="flex:1">
+                <div class="form-group" style="flex: 1">
                   <label class="fl">Nota inicial (opcional)</label>
-                  <input type="text" id="cf-nota" placeholder="Contexto del cliente" />
+                  <input
+                    type="text"
+                    id="cf-nota"
+                    placeholder="Contexto del cliente"
+                  />
                 </div>
               </div>
               <div class="btn-row">
@@ -934,7 +1131,13 @@
               </div>
               <div class="metric-card">
                 <div class="metric-label">Cerrados este mes</div>
-                <div class="metric-value" style="color: var(--green)" id="pend-cerrados-mes">0</div>
+                <div
+                  class="metric-value"
+                  style="color: var(--green)"
+                  id="pend-cerrados-mes"
+                >
+                  0
+                </div>
               </div>
             </div>
 
@@ -958,7 +1161,9 @@
                     <option value="soporte">Soporte</option>
                     <option value="implementacion">Implementación</option>
                     <option value="bug">Programación</option>
-                    <option value="comercial">Comercial (Administración)</option>
+                    <option value="comercial">
+                      Comercial (Administración)
+                    </option>
                   </select>
                 </div>
                 <div class="form-group" id="pf-cliente-group">
@@ -980,17 +1185,92 @@
                   </select>
                 </div>
                 <!-- Multi-asesor: solo para pendientes internos -->
-                <div class="form-group" id="pf-asesores-multi-group" style="display:none">
+                <div
+                  class="form-group"
+                  id="pf-asesores-multi-group"
+                  style="display: none"
+                >
                   <label class="fl">Para quién es</label>
-                  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
-                    <button type="button" class="pf-asesor-chip" data-asesor="Ignacio Talon" onclick="toggleAsesorChip(this)">Ignacio</button>
-                    <button type="button" class="pf-asesor-chip" data-asesor="Matias Ferro" onclick="toggleAsesorChip(this)">Matias</button>
-                    <button type="button" class="pf-asesor-chip" data-asesor="Daniel Colomer" onclick="toggleAsesorChip(this)">Daniel</button>
-                    <button type="button" class="pf-asesor-chip" data-asesor="Daniel Ferro" onclick="toggleAsesorChip(this)">Daniel Ferro</button>
-                    <button type="button" class="pf-asesor-chip" data-asesor="Renzo Moretti" onclick="toggleAsesorChip(this)">Renzo</button>
-                    <button type="button" class="pf-asesor-chip" data-asesor="Alfredo Cesar" onclick="toggleAsesorChip(this)">Alfredo</button>
-                    <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:6px 14px;color:var(--text);user-select:none" id="pf-todos-label">
-                      <input type="checkbox" id="pf-todos-check" onchange="toggleTodosAsesores()" style="width:14px;height:14px;cursor:pointer;accent-color:var(--text)" />
+                  <div
+                    style="
+                      display: flex;
+                      flex-wrap: wrap;
+                      gap: 6px;
+                      margin-top: 6px;
+                    "
+                  >
+                    <button
+                      type="button"
+                      class="pf-asesor-chip"
+                      data-asesor="Ignacio Talon"
+                      onclick="toggleAsesorChip(this)"
+                    >
+                      Ignacio
+                    </button>
+                    <button
+                      type="button"
+                      class="pf-asesor-chip"
+                      data-asesor="Matias Ferro"
+                      onclick="toggleAsesorChip(this)"
+                    >
+                      Matias
+                    </button>
+                    <button
+                      type="button"
+                      class="pf-asesor-chip"
+                      data-asesor="Daniel Colomer"
+                      onclick="toggleAsesorChip(this)"
+                    >
+                      Daniel
+                    </button>
+                    <button
+                      type="button"
+                      class="pf-asesor-chip"
+                      data-asesor="Daniel Ferro"
+                      onclick="toggleAsesorChip(this)"
+                    >
+                      Daniel Ferro
+                    </button>
+                    <button
+                      type="button"
+                      class="pf-asesor-chip"
+                      data-asesor="Renzo Moretti"
+                      onclick="toggleAsesorChip(this)"
+                    >
+                      Renzo
+                    </button>
+                    <button
+                      type="button"
+                      class="pf-asesor-chip"
+                      data-asesor="Alfredo Cesar"
+                      onclick="toggleAsesorChip(this)"
+                    >
+                      Alfredo
+                    </button>
+                    <label
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        font-size: 12px;
+                        cursor: pointer;
+                        padding: 6px 14px;
+                        color: var(--text);
+                        user-select: none;
+                      "
+                      id="pf-todos-label"
+                    >
+                      <input
+                        type="checkbox"
+                        id="pf-todos-check"
+                        onchange="toggleTodosAsesores()"
+                        style="
+                          width: 14px;
+                          height: 14px;
+                          cursor: pointer;
+                          accent-color: var(--text);
+                        "
+                      />
                       Todos
                     </label>
                   </div>
@@ -1007,41 +1287,64 @@
                     <option>Fuera del sistema</option>
                     <option value="otro">Otro — nueva categoría</option>
                   </select>
-                  <input type="text" id="pf-cat-custom" placeholder="Escribí la nueva categoría"
-                    style="display:none;margin-top:6px" />
+                  <input
+                    type="text"
+                    id="pf-cat-custom"
+                    placeholder="Escribí la nueva categoría"
+                    style="display: none; margin-top: 6px"
+                  />
                 </div>
                 <div class="form-group">
                   <label class="fl">Prioridad</label>
                   <select id="pf-prio">
                     <option value="alta">Alta — resolver hoy</option>
-                    <option value="media" selected>Media — resolver esta semana</option>
+                    <option value="media" selected>
+                      Media — resolver esta semana
+                    </option>
                     <option value="baja">Baja — cuando se pueda</option>
                   </select>
                 </div>
               </div>
               <!-- Tipo de pendiente interno: solo visible cuando es interno -->
-              <div class="form-row" id="pf-tipo-interno-row" style="display:none">
+              <div
+                class="form-row"
+                id="pf-tipo-interno-row"
+                style="display: none"
+              >
                 <div class="form-group">
                   <label class="fl">Tipo</label>
-                  <select id="pf-tipo-interno" onchange="togglePfTipoInternoCustom()">
+                  <select
+                    id="pf-tipo-interno"
+                    onchange="togglePfTipoInternoCustom()"
+                  >
                     <option value="reunion">📅 Reunión</option>
                     <option value="actualizacion">📢 Actualización</option>
                     <option value="revision">🔍 Revisión</option>
                     <option value="otro">✏️ Otro</option>
                   </select>
-                  <input type="text" id="pf-tipo-interno-custom" placeholder="Describí el tipo"
-                    style="display:none;margin-top:6px" />
+                  <input
+                    type="text"
+                    id="pf-tipo-interno-custom"
+                    placeholder="Describí el tipo"
+                    style="display: none; margin-top: 6px"
+                  />
                 </div>
               </div>
               <div class="form-group">
-                <label class="fl" id="pf-desc-label">¿Qué quedó pendiente? Describilo en detalle</label>
+                <label class="fl" id="pf-desc-label"
+                  >¿Qué quedó pendiente? Describilo en detalle</label
+                >
                 <textarea
                   id="pf-desc"
                   style="min-height: 80px"
                   placeholder="Ej: El cliente no pudo generar el F931. Se revisó la configuración pero el botón sigue sin aparecer. Hay que volver a conectarse y revisar los permisos de usuario..."
                   oninput="actualizarSugerenciasKB()"
                 ></textarea>
-                <div id="kb-suggestions" class="kb-suggestions" style="display:none"></div>
+                <div
+                  id="kb-suggestions"
+                  class="kb-suggestions"
+                  style="display: none"
+                ></div>
               </div>
               <div class="form-row" id="pf-intento-row">
                 <div class="form-group">
@@ -1061,16 +1364,47 @@
                   ></textarea>
                 </div>
               </div>
-              <div style="display:flex;align-items:center;gap:10px;padding:10px 0 2px;border-top:1px solid var(--border);margin-top:4px">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:13px;color:var(--text2)">
-                  <input type="checkbox" id="pf-interno" onchange="toggleInternoForm()" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)" />
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 10px;
+                  padding: 10px 0 2px;
+                  border-top: 1px solid var(--border);
+                  margin-top: 4px;
+                "
+              >
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    cursor: pointer;
+                    user-select: none;
+                    font-size: 13px;
+                    color: var(--text2);
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    id="pf-interno"
+                    onchange="toggleInternoForm()"
+                    style="
+                      width: 16px;
+                      height: 16px;
+                      cursor: pointer;
+                      accent-color: var(--accent);
+                    "
+                  />
                   <span>
-                    <strong style="color:var(--text)">Pendiente interno</strong>
+                    <strong style="color: var(--text)"
+                      >Pendiente interno</strong
+                    >
                     — no contabiliza métricas de clientes
                   </span>
                 </label>
               </div>
-              <div style="display: flex; gap: 10px; margin-top:12px">
+              <div style="display: flex; gap: 10px; margin-top: 12px">
                 <button class="btn-primary" onclick="guardarPendiente()">
                   Guardar pendiente
                 </button>
@@ -1161,7 +1495,7 @@
               <button
                 class="filter-chip pend-cat pend-cat--sm"
                 onclick="setCatFilter('__interno__', this)"
-                style="border-color:var(--amber);color:var(--amber-text)"
+                style="border-color: var(--amber); color: var(--amber-text)"
               >
                 🔒 Internos
               </button>
@@ -1202,21 +1536,72 @@
             </div>
 
             <!-- Panel de plantillas (oculto por default) -->
-            <div id="plantillas-panel" style="display:none">
-              <div class="card" style="padding:0;overflow:hidden">
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px 14px;border-bottom:1px solid var(--border)">
-                  <div class="card-title" style="margin:0">Plantillas de implementación</div>
-                  <button class="btn-sm" id="plantillas-cerrar-btn" onclick="togglePlantillasPanel()">✕ Cerrar</button>
+            <div id="plantillas-panel" style="display: none">
+              <div class="card" style="padding: 0; overflow: hidden">
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 16px 20px 14px;
+                    border-bottom: 1px solid var(--border);
+                  "
+                >
+                  <div class="card-title" style="margin: 0">
+                    Plantillas de implementación
+                  </div>
+                  <button
+                    class="btn-sm"
+                    id="plantillas-cerrar-btn"
+                    onclick="togglePlantillasPanel()"
+                  >
+                    ✕ Cerrar
+                  </button>
                 </div>
                 <!-- Tabs por tipo -->
-                <div id="plantillas-tabs" style="display:flex;gap:0;border-bottom:1px solid var(--border);padding:0 20px">
-                  <button class="plantilla-tab active" data-tipo="empresa"       onclick="cambiarTabPlantilla('empresa',this)">🏢 Empresa</button>
-                  <button class="plantilla-tab"         data-tipo="estudio"      onclick="cambiarTabPlantilla('estudio',this)">📊 Est. contable</button>
-                  <button class="plantilla-tab"         data-tipo="colegio"      onclick="cambiarTabPlantilla('colegio',this)">🏫 Colegio</button>
-                  <button class="plantilla-tab"         data-tipo="municipalidad" onclick="cambiarTabPlantilla('municipalidad',this)">🏛 Municipalidad</button>
+                <div
+                  id="plantillas-tabs"
+                  style="
+                    display: flex;
+                    gap: 0;
+                    border-bottom: 1px solid var(--border);
+                    padding: 0 20px;
+                  "
+                >
+                  <button
+                    class="plantilla-tab active"
+                    data-tipo="empresa"
+                    onclick="cambiarTabPlantilla('empresa', this)"
+                  >
+                    🏢 Empresa
+                  </button>
+                  <button
+                    class="plantilla-tab"
+                    data-tipo="estudio"
+                    onclick="cambiarTabPlantilla('estudio', this)"
+                  >
+                    📊 Est. contable
+                  </button>
+                  <button
+                    class="plantilla-tab"
+                    data-tipo="colegio"
+                    onclick="cambiarTabPlantilla('colegio', this)"
+                  >
+                    🏫 Colegio
+                  </button>
+                  <button
+                    class="plantilla-tab"
+                    data-tipo="municipalidad"
+                    onclick="cambiarTabPlantilla('municipalidad', this)"
+                  >
+                    🏛 Municipalidad
+                  </button>
                 </div>
-                <div style="padding:16px 20px">
-                  <div id="plantilla-list" style="display:flex;flex-direction:column;gap:4px"></div>
+                <div style="padding: 16px 20px">
+                  <div
+                    id="plantilla-list"
+                    style="display: flex; flex-direction: column; gap: 4px"
+                  ></div>
                 </div>
               </div>
             </div>
@@ -1441,7 +1826,9 @@
               <div class="metric-card">
                 <div class="metric-label">Clientes atendidos</div>
                 <div class="metric-value" id="eq-clientes-atendidos">—</div>
-                <div class="metric-sub" id="eq-clientes-atendidos-sub">este mes</div>
+                <div class="metric-sub" id="eq-clientes-atendidos-sub">
+                  este mes
+                </div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">Hs totales equipo</div>
@@ -1450,7 +1837,13 @@
               </div>
               <div class="metric-card">
                 <div class="metric-label">Más cargado</div>
-                <div class="metric-value" id="eq-mas-cargado" style="font-size: 18px">—</div>
+                <div
+                  class="metric-value"
+                  id="eq-mas-cargado"
+                  style="font-size: 18px"
+                >
+                  —
+                </div>
                 <div class="metric-sub" id="eq-mas-cargado-sub">—</div>
               </div>
             </div>
@@ -1459,7 +1852,16 @@
               <div class="card">
                 <div class="card-title">Carga por asesor (este mes)</div>
                 <div id="eq-asesores-list">
-                  <div style="text-align:center;color:var(--text3);padding:32px 0;font-size:13px">Cargando...</div>
+                  <div
+                    style="
+                      text-align: center;
+                      color: var(--text3);
+                      padding: 32px 0;
+                      font-size: 13px;
+                    "
+                  >
+                    Cargando...
+                  </div>
                 </div>
               </div>
               <div class="card">
@@ -1708,25 +2110,59 @@ Paso 2: ..."
             <!-- Las alertas se renderizan dinámicamente por js/alertas.js -->
             <div id="alertas-container">
               <div class="alert alert-blue">
-                <div style="flex:1">Calculando alertas a partir de los datos del equipo...</div>
+                <div style="flex: 1">
+                  Calculando alertas a partir de los datos del equipo...
+                </div>
               </div>
             </div>
 
-            <div class="grid-2" style="margin-top:20px">
-              <div class="card" style="padding:0;overflow:hidden">
-                <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border)">
-                  <div class="card-title" style="margin:0">🔁 Top 5 soluciones más usadas</div>
+            <div class="grid-2" style="margin-top: 20px">
+              <div class="card" style="padding: 0; overflow: hidden">
+                <div
+                  style="
+                    padding: 16px 20px 12px;
+                    border-bottom: 1px solid var(--border);
+                  "
+                >
+                  <div class="card-title" style="margin: 0">
+                    🔁 Top 5 soluciones más usadas
+                  </div>
                 </div>
                 <div id="alertas-top-soluciones">
-                  <div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">Cargando...</div>
+                  <div
+                    style="
+                      text-align: center;
+                      color: var(--text3);
+                      padding: 24px;
+                      font-size: 13px;
+                    "
+                  >
+                    Cargando...
+                  </div>
                 </div>
               </div>
-              <div class="card" style="padding:0;overflow:hidden">
-                <div style="padding:16px 20px 12px;border-bottom:1px solid var(--border)">
-                  <div class="card-title" style="margin:0">⚠️ Soluciones para revisar</div>
+              <div class="card" style="padding: 0; overflow: hidden">
+                <div
+                  style="
+                    padding: 16px 20px 12px;
+                    border-bottom: 1px solid var(--border);
+                  "
+                >
+                  <div class="card-title" style="margin: 0">
+                    ⚠️ Soluciones para revisar
+                  </div>
                 </div>
                 <div id="alertas-revisar-soluciones">
-                  <div style="text-align:center;color:var(--text3);padding:24px;font-size:13px">Cargando...</div>
+                  <div
+                    style="
+                      text-align: center;
+                      color: var(--text3);
+                      padding: 24px;
+                      font-size: 13px;
+                    "
+                  >
+                    Cargando...
+                  </div>
                 </div>
               </div>
             </div>
@@ -1739,63 +2175,130 @@ Paso 2: ..."
             <div class="page-header">
               <div>
                 <div class="page-title">Facturación</div>
-                <div class="page-sub" id="admin-page-sub">Estado de cuenta de todos los clientes</div>
+                <div class="page-sub" id="admin-page-sub">
+                  Estado de cuenta de todos los clientes
+                </div>
               </div>
               <div class="admin-mes-selector">
-                <select id="admin-sel-mes" onchange="actualizarFiltroAdminMes()" style="margin-bottom:0;width:130px">
+                <select
+                  id="admin-sel-mes"
+                  onchange="actualizarFiltroAdminMes()"
+                  style="margin-bottom: 0; width: 130px"
+                >
                   <!-- Opciones generadas por JS en initAdministracion() -->
                 </select>
-                <select id="admin-sel-anio" onchange="actualizarFiltroAdminMes()" style="margin-bottom:0;width:90px">
+                <select
+                  id="admin-sel-anio"
+                  onchange="actualizarFiltroAdminMes()"
+                  style="margin-bottom: 0; width: 90px"
+                >
                   <!-- Opciones generadas por JS en initAdministracion() -->
                 </select>
               </div>
             </div>
 
             <!-- Métricas rápidas -->
-            <div class="metrics-grid" style="grid-template-columns:repeat(4,1fr)">
+            <div
+              class="metrics-grid"
+              style="grid-template-columns: repeat(4, 1fr)"
+            >
               <div class="metric-card">
                 <div class="metric-label">Total clientes</div>
-                <div class="metric-value" id="admin-m-total" style="color:var(--accent)">—</div>
+                <div
+                  class="metric-value"
+                  id="admin-m-total"
+                  style="color: var(--accent)"
+                >
+                  —
+                </div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">Al día</div>
-                <div class="metric-value" id="admin-m-aldia" style="color:var(--green)">—</div>
+                <div
+                  class="metric-value"
+                  id="admin-m-aldia"
+                  style="color: var(--green)"
+                >
+                  —
+                </div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">Adeudan</div>
-                <div class="metric-value" id="admin-m-deben" style="color:var(--red)">—</div>
+                <div
+                  class="metric-value"
+                  id="admin-m-deben"
+                  style="color: var(--red)"
+                >
+                  —
+                </div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">Facturado este mes</div>
-                <div class="metric-value" id="admin-m-monto" style="color:var(--blue);font-size:20px">—</div>
+                <div
+                  class="metric-value"
+                  id="admin-m-monto"
+                  style="color: var(--blue); font-size: 20px"
+                >
+                  —
+                </div>
               </div>
             </div>
 
             <!-- Filtros -->
             <div class="filter-row">
-              <input type="text" placeholder="Buscar cliente..." style="width:220px;margin-bottom:0"
-                oninput="filtrarAdminTexto(this.value)" />
-              <button class="filter-chip active" onclick="filtrarAdminEstado('',this)">Todos</button>
-              <button class="filter-chip" onclick="filtrarAdminEstado('aldia',this)">✅ Al día</button>
-              <button class="filter-chip" onclick="filtrarAdminEstado('debe',this)">🔴 Adeudan</button>
+              <input
+                type="text"
+                placeholder="Buscar cliente..."
+                style="width: 220px; margin-bottom: 0"
+                oninput="filtrarAdminTexto(this.value)"
+              />
+              <button
+                class="filter-chip active"
+                onclick="filtrarAdminEstado('', this)"
+              >
+                Todos
+              </button>
+              <button
+                class="filter-chip"
+                onclick="filtrarAdminEstado('aldia', this)"
+              >
+                ✅ Al día
+              </button>
+              <button
+                class="filter-chip"
+                onclick="filtrarAdminEstado('debe', this)"
+              >
+                🔴 Adeudan
+              </button>
             </div>
 
             <!-- Tabla de clientes -->
-            <div class="card" style="padding:0;overflow:hidden">
+            <div class="card" style="padding: 0; overflow: hidden">
               <table class="tbl" id="admin-tabla">
                 <thead>
                   <tr>
-                    <th style="width:24%;padding-left:20px">Cliente</th>
-                    <th style="width:10%">Último mes</th>
-                    <th style="width:11%">Fecha factura</th>
-                    <th style="width:12%">Próx. facturación</th>
-                    <th style="width:10%">Monto</th>
-                    <th style="width:11%">Estado</th>
-                    <th style="width:22%;padding-right:16px"></th>
+                    <th style="width: 24%; padding-left: 20px">Cliente</th>
+                    <th style="width: 10%">Último mes</th>
+                    <th style="width: 11%">Fecha factura</th>
+                    <th style="width: 12%">Próx. facturación</th>
+                    <th style="width: 10%">Monto</th>
+                    <th style="width: 11%">Estado</th>
+                    <th style="width: 22%; padding-right: 16px"></th>
                   </tr>
                 </thead>
                 <tbody id="admin-tbody">
-                  <tr><td colspan="7" style="text-align:center;color:var(--text3);padding:32px">Cargando...</td></tr>
+                  <tr>
+                    <td
+                      colspan="7"
+                      style="
+                        text-align: center;
+                        color: var(--text3);
+                        padding: 32px;
+                      "
+                    >
+                      Cargando...
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -1831,7 +2334,6 @@ Paso 2: ..."
                 </div>
                 <div class="config-menu-item__chevron">›</div>
               </button>
-
             </div>
 
             <!-- Sub-sección: Apariencia -->
@@ -1929,152 +2431,289 @@ Paso 2: ..."
     <script src="js/charts.js"></script>
     <script src="js/alertas.js"></script>
 
-  <!-- ════════════════════════════════════
+    <!-- ════════════════════════════════════
        MODAL — Registrar consulta
   ════════════════════════════════════ -->
-  <div id="modal-consulta" style="display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.55);backdrop-filter:blur(2px);overflow-y:auto;padding:32px 16px" onclick="if(event.target===this)cerrarModalConsulta()">
-    <div style="background:var(--surface);border-radius:14px;max-width:680px;margin:0 auto;padding:28px 28px 24px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
-
-      <!-- Header del modal -->
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px">
-        <div>
-          <div style="font-size:17px;font-weight:700;color:var(--text)">Registrar consulta</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:2px">Completá después de cada atención por WhatsApp</div>
-        </div>
-        <button id="modal-consulta-close" onclick="cerrarModalConsulta()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text3);padding:0;line-height:1;margin-left:16px">✕</button>
-      </div>
-
-      <div id="reg-ok" style="display:none" class="alert alert-green">
-        <strong>Consulta guardada.</strong> La solución fue agregada a la base de conocimiento del equipo.
-      </div>
-
-      <div class="info-box">
-        Si el cliente repite la misma consulta, marcala como repetida. Eso alimenta el score de riesgo automáticamente.
-      </div>
-
-      <div class="form-row">
-        <div class="form-group" style="flex:1">
-          <label class="fl">Cliente</label>
-          <div style="position:relative">
-            <input type="text" id="r-cliente-search" placeholder="Escribí para buscar cliente..."
-              autocomplete="off" oninput="filtrarClienteSearch()" onfocus="filtrarClienteSearch()"
-              onblur="cerrarClienteSearch()" style="width:100%;box-sizing:border-box" />
-            <div id="r-cliente-dropdown"
-              style="display:none;position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:240px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.35);margin-top:2px;min-width:300px"></div>
+    <div
+      id="modal-consulta"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(2px);
+        overflow-y: auto;
+        padding: 32px 16px;
+      "
+      onclick="if (event.target === this) cerrarModalConsulta();"
+    >
+      <div
+        style="
+          background: var(--surface);
+          border-radius: 14px;
+          max-width: 680px;
+          margin: 0 auto;
+          padding: 28px 28px 24px;
+          position: relative;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        "
+      >
+        <!-- Header del modal -->
+        <div
+          style="
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 20px;
+          "
+        >
+          <div>
+            <div style="font-size: 17px; font-weight: 700; color: var(--text)">
+              Registrar consulta
+            </div>
+            <div style="font-size: 12px; color: var(--text3); margin-top: 2px">
+              Completá después de cada atención por WhatsApp
+            </div>
           </div>
-          <select id="r-cliente" style="display:none"><option value="">Cargando clientes...</option></select>
+          <button
+            id="modal-consulta-close"
+            onclick="cerrarModalConsulta()"
+            style="
+              background: none;
+              border: none;
+              cursor: pointer;
+              font-size: 20px;
+              color: var(--text3);
+              padding: 0;
+              line-height: 1;
+              margin-left: 16px;
+            "
+          >
+            ✕
+          </button>
         </div>
-        <div class="form-group" style="flex:1">
-          <label class="fl">Tipo de consulta</label>
-          <select id="r-tipo-consulta" onchange="onTipoConsultaChange()">
-            <option value="soporte">Soporte</option>
-          </select>
-        </div>
-      </div>
 
-      <div class="form-row" id="r-row-cat">
+        <div id="reg-ok" style="display: none" class="alert alert-green">
+          <strong>Consulta guardada.</strong> La solución fue agregada a la base
+          de conocimiento del equipo.
+        </div>
+
+        <div class="info-box">
+          Si el cliente repite la misma consulta, marcala como repetida. Eso
+          alimenta el score de riesgo automáticamente.
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" style="flex: 1">
+            <label class="fl">Cliente</label>
+            <div style="position: relative">
+              <input
+                type="text"
+                id="r-cliente-search"
+                placeholder="Escribí para buscar cliente..."
+                autocomplete="off"
+                oninput="filtrarClienteSearch()"
+                onfocus="filtrarClienteSearch()"
+                onblur="cerrarClienteSearch()"
+                style="width: 100%; box-sizing: border-box"
+              />
+              <div
+                id="r-cliente-dropdown"
+                style="
+                  display: none;
+                  position: fixed;
+                  background: var(--surface);
+                  border: 1px solid var(--border);
+                  border-radius: 8px;
+                  max-height: 240px;
+                  overflow-y: auto;
+                  z-index: 9999;
+                  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+                  margin-top: 2px;
+                  min-width: 300px;
+                "
+              ></div>
+            </div>
+            <select id="r-cliente" style="display: none">
+              <option value="">Cargando clientes...</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 1">
+            <label class="fl">Tipo de consulta</label>
+            <select id="r-tipo-consulta" onchange="onTipoConsultaChange()">
+              <option value="soporte">Soporte</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row" id="r-row-cat">
+          <div class="form-group">
+            <label class="fl">Categoría</label>
+            <select id="r-cat" onchange="updateRegSubtemas()">
+              <option value="">Seleccioná...</option>
+              <option value="liquidacion">Liquidación de sueldos</option>
+              <option value="errores">Errores del sistema</option>
+              <option value="configuracion">Configuración</option>
+              <option value="actualizaciones">Actualizaciones</option>
+              <option value="fuera">Fuera del sistema</option>
+              <option value="otro">Otro — nueva categoría</option>
+            </select>
+            <input
+              type="text"
+              id="r-cat-custom"
+              placeholder="Escribí la nueva categoría"
+              style="display: none; margin-top: 6px"
+            />
+          </div>
+          <div class="form-group">
+            <label class="fl">Subtema</label>
+            <select id="r-sub" onchange="toggleRSubCustom()">
+              <option>Primero elegí categoría</option>
+            </select>
+            <input
+              type="text"
+              id="r-sub-custom"
+              placeholder="Escribí el nuevo subtema"
+              style="display: none; margin-top: 6px"
+            />
+          </div>
+        </div>
+
+        <div class="form-row" id="r-row-prog-sub" style="display: none">
+          <div class="form-group" style="flex: 1">
+            <label class="fl">Subtema / Módulo</label>
+            <input
+              type="text"
+              id="r-sub-prog"
+              list="r-sub-prog-list"
+              placeholder="Ej: Liquidación final, AFIP F931, Importación..."
+              autocomplete="off"
+            />
+            <datalist id="r-sub-prog-list"></datalist>
+          </div>
+        </div>
+
+        <div class="form-row" id="r-row-rep">
+          <div class="form-group">
+            <label class="fl">¿Es consulta repetida?</label>
+            <select id="r-rep">
+              <option value="no">No, es nueva</option>
+              <option value="si">Sí, ya lo consultó antes</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="fl">Tiempo de resolución (hs)</label>
+            <input
+              id="r-tiempo"
+              type="number"
+              placeholder="Ej: 1.5"
+              step="0.5"
+              min="0"
+            />
+          </div>
+        </div>
+
+        <div class="form-row" id="r-row-tiempo-solo" style="display: none">
+          <div class="form-group" style="max-width: 200px">
+            <label class="fl">Tiempo de programación (hs)</label>
+            <input
+              id="r-tiempo-prog"
+              type="number"
+              placeholder="Ej: 2.5"
+              step="0.5"
+              min="0"
+            />
+          </div>
+        </div>
+
+        <div class="form-row" id="r-row-material">
+          <div class="form-group">
+            <label class="fl">Material enviado</label>
+            <select id="r-material">
+              <option value="ninguno">Ninguno</option>
+              <option value="video">Video</option>
+              <option value="pdf">PDF / imagen</option>
+              <option value="varios">Varios materiales</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="fl">¿Se conectó remotamente?</label>
+            <select id="r-remota">
+              <option value="no">No, solo por chat</option>
+              <option value="si">Sí, conexión remota</option>
+              <option value="llamada">Llamada de voz</option>
+            </select>
+          </div>
+        </div>
+
         <div class="form-group">
-          <label class="fl">Categoría</label>
-          <select id="r-cat" onchange="updateRegSubtemas()">
-            <option value="">Seleccioná...</option>
-            <option value="liquidacion">Liquidación de sueldos</option>
-            <option value="errores">Errores del sistema</option>
-            <option value="configuracion">Configuración</option>
-            <option value="actualizaciones">Actualizaciones</option>
-            <option value="fuera">Fuera del sistema</option>
-            <option value="otro">Otro — nueva categoría</option>
-          </select>
-          <input type="text" id="r-cat-custom" placeholder="Escribí la nueva categoría" style="display:none;margin-top:6px" />
+          <label class="fl" id="r-desc-label">Descripción del problema</label>
+          <textarea
+            id="r-desc"
+            placeholder="Ej: El cliente no sabía liquidar las horas extras en feriado..."
+          ></textarea>
         </div>
-        <div class="form-group">
-          <label class="fl">Subtema</label>
-          <select id="r-sub" onchange="toggleRSubCustom()">
-            <option>Primero elegí categoría</option>
-          </select>
-          <input type="text" id="r-sub-custom" placeholder="Escribí el nuevo subtema" style="display:none;margin-top:6px" />
-        </div>
-      </div>
 
-      <div class="form-row" id="r-row-prog-sub" style="display:none">
-        <div class="form-group" style="flex:1">
-          <label class="fl">Subtema / Módulo</label>
-          <input type="text" id="r-sub-prog" list="r-sub-prog-list"
-            placeholder="Ej: Liquidación final, AFIP F931, Importación..." autocomplete="off" />
-          <datalist id="r-sub-prog-list"></datalist>
+        <div
+          class="form-group"
+          id="r-group-prog-realizada"
+          style="display: none"
+        >
+          <label class="fl">¿Qué se programó?</label>
+          <textarea
+            id="r-prog-realizada"
+            placeholder="Describí qué fue lo que se desarrolló / modificó para el cliente..."
+          ></textarea>
         </div>
-      </div>
 
-      <div class="form-row" id="r-row-rep">
-        <div class="form-group">
-          <label class="fl">¿Es consulta repetida?</label>
-          <select id="r-rep">
-            <option value="no">No, es nueva</option>
-            <option value="si">Sí, ya lo consultó antes</option>
-          </select>
+        <div id="r-group-soluciones">
+          <div class="form-group">
+            <label class="fl"
+              >¿Aplicaste una solución de la base? (opcional)</label
+            >
+            <div
+              id="r-sol-elegida"
+              class="sol-elegida"
+              style="display: none"
+            ></div>
+            <button
+              type="button"
+              class="btn-sm"
+              onclick="elegirSolucionConsulta()"
+            >
+              🔗 Elegir solución de la base
+            </button>
+            <div style="font-size: 11px; color: var(--text3); margin-top: 6px">
+              Si elegís una de la base, al guardar le suma 1 al contador de
+              usos.
+            </div>
+          </div>
+          <div class="form-group" id="r-sol-group">
+            <label class="fl">Solución aplicada (paso a paso)</label>
+            <textarea
+              id="r-sol"
+              placeholder="Paso 1: Se fue a Configuración > Parámetros > Feriados&#10;Paso 2: Se verificó que el porcentaje estuviera en 100%..."
+            ></textarea>
+            <div style="font-size: 11px; color: var(--text3); margin-top: 6px">
+              <strong>Obligatorio.</strong> Al guardar, los pasos se agregan
+              como nueva solución a la base.
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="fl">Tiempo de resolución (hs)</label>
-          <input id="r-tiempo" type="number" placeholder="Ej: 1.5" step="0.5" min="0" />
-        </div>
-      </div>
 
-      <div class="form-row" id="r-row-tiempo-solo" style="display:none">
-        <div class="form-group" style="max-width:200px">
-          <label class="fl">Tiempo de programación (hs)</label>
-          <input id="r-tiempo-prog" type="number" placeholder="Ej: 2.5" step="0.5" min="0" />
+        <div
+          id="modal-consulta-btns"
+          style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px"
+        >
+          <button class="btn-primary" onclick="guardarConsulta()">
+            Guardar consulta
+          </button>
+          <button class="btn-secondary" onclick="guardarConsultaYOtra()">
+            Guardar y registrar otra
+          </button>
         </div>
-      </div>
-
-      <div class="form-row" id="r-row-material">
-        <div class="form-group">
-          <label class="fl">Material enviado</label>
-          <select id="r-material">
-            <option value="ninguno">Ninguno</option>
-            <option value="video">Video</option>
-            <option value="pdf">PDF / imagen</option>
-            <option value="varios">Varios materiales</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="fl">¿Se conectó remotamente?</label>
-          <select id="r-remota">
-            <option value="no">No, solo por chat</option>
-            <option value="si">Sí, conexión remota</option>
-            <option value="llamada">Llamada de voz</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="fl" id="r-desc-label">Descripción del problema</label>
-        <textarea id="r-desc" placeholder="Ej: El cliente no sabía liquidar las horas extras en feriado..."></textarea>
-      </div>
-
-      <div class="form-group" id="r-group-prog-realizada" style="display:none">
-        <label class="fl">¿Qué se programó?</label>
-        <textarea id="r-prog-realizada" placeholder="Describí qué fue lo que se desarrolló / modificó para el cliente..."></textarea>
-      </div>
-
-      <div id="r-group-soluciones">
-        <div class="form-group">
-          <label class="fl">¿Aplicaste una solución de la base? (opcional)</label>
-          <div id="r-sol-elegida" class="sol-elegida" style="display:none"></div>
-          <button type="button" class="btn-sm" onclick="elegirSolucionConsulta()">🔗 Elegir solución de la base</button>
-          <div style="font-size:11px;color:var(--text3);margin-top:6px">Si elegís una de la base, al guardar le suma 1 al contador de usos.</div>
-        </div>
-        <div class="form-group" id="r-sol-group">
-          <label class="fl">Solución aplicada (paso a paso)</label>
-          <textarea id="r-sol" placeholder="Paso 1: Se fue a Configuración > Parámetros > Feriados&#10;Paso 2: Se verificó que el porcentaje estuviera en 100%..."></textarea>
-          <div style="font-size:11px;color:var(--text3);margin-top:6px"><strong>Obligatorio.</strong> Al guardar, los pasos se agregan como nueva solución a la base.</div>
-        </div>
-      </div>
-
-      <div id="modal-consulta-btns" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
-        <button class="btn-primary" onclick="guardarConsulta()">Guardar consulta</button>
-        <button class="btn-secondary" onclick="guardarConsultaYOtra()">Guardar y registrar otra</button>
       </div>
     </div>
-  </div>
-
   </body>
 </html>
