@@ -1620,12 +1620,6 @@ function filtrarPfClienteSearch() {
   const select   = document.getElementById('pf-cliente');
   if (!input || !dropdown || !select) return;
 
-  // Posicionar dropdown justo debajo del input
-  const rect = input.getBoundingClientRect();
-  dropdown.style.top   = (rect.bottom + 2) + 'px';
-  dropdown.style.left  = rect.left + 'px';
-  dropdown.style.width = rect.width + 'px';
-
   const q = input.value.trim().toLowerCase();
 
   const opciones = Array.from(select.options)
