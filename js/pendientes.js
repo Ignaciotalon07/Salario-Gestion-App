@@ -554,6 +554,13 @@ async function guardarPendiente() {
     document.getElementById('pf-desc').value = '';
     document.getElementById('pf-intento').value = '';
     document.getElementById('pf-prox').value = '';
+    // Limpiar buscador de cliente
+    const pfSearch = document.getElementById('pf-cliente-search');
+    if (pfSearch) pfSearch.value = '';
+    const pfDrop = document.getElementById('pf-cliente-dropdown');
+    if (pfDrop) pfDrop.style.display = 'none';
+    const pfSel = document.getElementById('pf-cliente');
+    if (pfSel) pfSel.value = '';
     const chk = document.getElementById('pf-interno');
     if (chk) { chk.checked = false; toggleInternoForm(); }
     document.querySelectorAll('.pf-asesor-chip').forEach(c => c.classList.remove('selected'));
@@ -1240,7 +1247,7 @@ function updatePendCount() {
   if (typeof syncMobilePendBadge === 'function') syncMobilePendBadge();
 
   const el = document.getElementById('pend-count');
-  if (el) el.textContent = viewMode === 'mis' ? myCount : total;
+  if (el) el.textContent = total;  // siempre el total (mis + equipo)
 
   const misCount    = document.getElementById('pend-mis-count');
   const equipoCount = document.getElementById('pend-equipo-count');
@@ -1604,3 +1611,59 @@ function filtrarOpcionesTipoPendiente() {
 }
 
 window.addEventListener('app-ready', initPendientes);
+
+// ────────── Buscador de clientes en form de nuevo pendiente ──────────
+
+function filtrarPfClienteSearch() {
+  const input    = document.getElementById('pf-cliente-search');
+  const dropdown = document.getElementById('pf-cliente-dropdown');
+  const select   = document.getElementById('pf-cliente');
+  if (!input || !dropdown || !select) return;
+
+  // Posicionar dropdown justo debajo del input
+  const rect = input.getBoundingClientRect();
+  dropdown.style.top   = (rect.bottom + 2) + 'px';
+  dropdown.style.left  = rect.left + 'px';
+  dropdown.style.width = rect.width + 'px';
+
+  const q = input.value.trim().toLowerCase();
+
+  const opciones = Array.from(select.options)
+    .map(o => o.text)
+    .filter(t => t && t !== 'Cargando clientes...');
+
+  const filtradas = q
+    ? opciones.filter(n => n.toLowerCase().includes(q))
+    : opciones;
+
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#1e1e2e';
+  dropdown.style.background = bg;
+
+  if (filtradas.length === 0) {
+    dropdown.innerHTML = `<div style="padding:10px 14px;color:var(--text3);font-size:13px">Sin resultados</div>`;
+  } else {
+    dropdown.innerHTML = filtradas.map(n => `
+      <div
+        class="cliente-search-opt"
+        onmousedown="elegirPfClienteSearch('${n.replace(/'/g, "\\'")}')"
+        style="padding:9px 14px;cursor:pointer;font-size:13px;border-radius:6px"
+      >${n}</div>`).join('');
+  }
+  dropdown.style.display = 'block';
+}
+
+function elegirPfClienteSearch(nombre) {
+  const input    = document.getElementById('pf-cliente-search');
+  const select   = document.getElementById('pf-cliente');
+  const dropdown = document.getElementById('pf-cliente-dropdown');
+  if (input)    input.value  = nombre;
+  if (select)   select.value = nombre;
+  if (dropdown) dropdown.style.display = 'none';
+}
+
+function cerrarPfClienteSearch() {
+  setTimeout(() => {
+    const dropdown = document.getElementById('pf-cliente-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+  }, 150);
+}

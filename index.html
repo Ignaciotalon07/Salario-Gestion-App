@@ -1169,7 +1169,35 @@
                 </div>
                 <div class="form-group" id="pf-cliente-group">
                   <label class="fl">Cliente</label>
-                  <select id="pf-cliente">
+                  <div style="position: relative">
+                    <input
+                      type="text"
+                      id="pf-cliente-search"
+                      placeholder="Escribí para buscar cliente..."
+                      autocomplete="off"
+                      oninput="filtrarPfClienteSearch()"
+                      onfocus="filtrarPfClienteSearch()"
+                      onblur="cerrarPfClienteSearch()"
+                      style="width: 100%; box-sizing: border-box"
+                    />
+                    <div
+                      id="pf-cliente-dropdown"
+                      style="
+                        display: none;
+                        position: fixed;
+                        background: var(--surface);
+                        border: 1px solid var(--border);
+                        border-radius: 8px;
+                        max-height: 240px;
+                        overflow-y: auto;
+                        z-index: 9999;
+                        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+                        margin-top: 2px;
+                        min-width: 300px;
+                      "
+                    ></div>
+                  </div>
+                  <select id="pf-cliente" style="display: none">
                     <option value="">Cargando clientes...</option>
                   </select>
                 </div>
