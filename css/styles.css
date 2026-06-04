@@ -513,8 +513,9 @@ textarea { resize: vertical; min-height: 80px; }
   .login-card__header { text-align: center; margin-bottom: 22px; }
   .login-form-title { font-size: 22px; }
 
-  /* Brand mobile (Salario / Gestión grande) */
-  .login-mobile-brand { display: block; text-align: center; margin-bottom: 28px; }
+  /* Brand mobile (logo + Salario / Gestión grande, todo centrado) */
+  .login-mobile-brand { display:flex; flex-direction:column; align-items:center; margin-bottom: 28px; gap: 14px; }
+  .login-mobile-brand-logo { width: 72px; height: 72px; object-fit: contain; }
   .login-mobile-brand-name { display:flex; flex-direction:column; line-height:0.92; letter-spacing:-2px; align-items:center; }
   .login-mobile-brand-name__main { font-size:52px; font-weight:800; background:linear-gradient(135deg,#FFD09B 0%,#FF7A1C 55%,#E65C00 100%); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
   .login-mobile-brand-name__sub  { font-size:52px; font-weight:200; color:rgba(255,255,255,0.35); }
