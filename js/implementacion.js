@@ -258,11 +258,13 @@ function toggleEditModeCliente(clienteId, event) {
   renderImplementacion();
 }
 
-function confirmarEdicionCliente(clienteId, event) {
+async function confirmarEdicionCliente(clienteId, event) {
   if (event) event.stopPropagation();
   window._implEditMode[clienteId] = false;
+  toast('Recalculando fechas...');
+  await recalcularGanttCliente(clienteId);
   renderImplementacion();
-  toast('Plantilla del cliente actualizada ✓');
+  toast('Plantilla actualizada y fechas recalculadas ✓');
 }
 
 function setVistaCliente(clienteId, vista) {
@@ -280,17 +282,15 @@ function setEscalaCliente(clienteId, escala) {
 function isTareaVencida(t) {
   if (!t.fecha_estimada) return false;
   if (t.estado === 'completada') return false;
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  const fecha = new Date(t.fecha_estimada);
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const fecha = _parseDate(t.fecha_estimada);
   return fecha < hoy;
 }
 
 function diasDesdeVencimiento(t) {
   if (!isTareaVencida(t)) return 0;
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
-  const fecha = new Date(t.fecha_estimada);
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const fecha = _parseDate(t.fecha_estimada);
   return Math.floor((hoy - fecha) / (24 * 60 * 60 * 1000));
 }
 
@@ -343,8 +343,16 @@ function diasEntre(a, b) {
 //
 // Persiste los cambios en DB y actualiza el cache local.
 
+// Parsea 'YYYY-MM-DD' como fecha LOCAL (evita el offset UTC que desplaza 1 día en Argentina)
+function _parseDate(str) {
+  if (!str) return null;
+  const s = str.substring(0, 10);
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 function _toISODate(d) {
-  const dt = (d instanceof Date) ? d : new Date(d);
+  const dt = (d instanceof Date) ? d : _parseDate(d);
   const yyyy = dt.getFullYear();
   const mm = String(dt.getMonth() + 1).padStart(2, '0');
   const dd = String(dt.getDate()).padStart(2, '0');
@@ -352,8 +360,7 @@ function _toISODate(d) {
 }
 
 function _addDays(d, dias) {
-  const r = new Date(d);
-  r.setHours(0, 0, 0, 0);
+  const r = (d instanceof Date) ? new Date(d) : _parseDate(d);
   r.setDate(r.getDate() + dias);
   return r;
 }
@@ -370,56 +377,41 @@ async function recalcularGanttCliente(clienteId) {
 
   // Fecha base del proyecto: si el cliente no la tiene, usamos hoy
   const inicioProyectoStr = cliente.fecha_inicio_implementacion || _toISODate(new Date());
-  const inicioProyecto = new Date(inicioProyectoStr);
-  inicioProyecto.setHours(0, 0, 0, 0);
+  const inicioProyecto = _parseDate(inicioProyectoStr);
 
-  // Index por id para resolver predecesoras
-  const byId = {};
-  tareasCli.forEach(t => { byId[t.id] = t; });
-
-  const updates = []; // [{id, fecha_inicio_calc, fecha_estimada}]
+  // Scheduling serial simple: tarea N+1 arranca el día después que termina la N.
+  // La fecha de fin calculada = inicio_proyecto + suma_de_duraciones.
+  // Las tareas ya completadas usan su fecha_completada real (si es válida)
+  // para que el resto de la cadena arranque desde ahí.
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  let cursor = _parseDate(_toISODate(inicioProyecto)); // posición actual en el timeline
 
   for (const t of tareasCli) {
-    let fechaInicio;
-    if (!t.predecesoras_ids || t.predecesoras_ids.length === 0) {
-      fechaInicio = new Date(inicioProyecto);
-    } else {
-      // Buscar el FIN mas tardio de las predecesoras
-      let maxFin = new Date(inicioProyecto);
-      maxFin.setDate(maxFin.getDate() - 1); // sentinel
-      for (const predId of t.predecesoras_ids) {
-        const pred = byId[predId];
-        if (!pred) continue;
-        const finStr = pred.fecha_completada || pred.fecha_estimada;
-        if (!finStr) continue;
-        const fin = new Date(finStr);
-        fin.setHours(0, 0, 0, 0);
-        if (fin > maxFin) maxFin = fin;
-      }
-      // Arranca el día siguiente
-      fechaInicio = _addDays(maxFin, 1);
-      // Si quedo antes del proyecto, usar el inicio del proyecto
-      if (fechaInicio < inicioProyecto) fechaInicio = new Date(inicioProyecto);
-    }
-
     const duracion = Math.max(1, t.duracion_dias || 1);
-    const fechaFin = _addDays(fechaInicio, duracion - 1);
 
-    const inicioISO = _toISODate(fechaInicio);
-    const finISO    = _toISODate(fechaFin);
-
-    // Solo encolamos updates si cambio realmente
-    const prevInicio = t.fecha_inicio_calc ? t.fecha_inicio_calc.substring(0, 10) : null;
-    const prevFin    = t.fecha_estimada    ? t.fecha_estimada.substring(0, 10)    : null;
-    if (prevInicio !== inicioISO || prevFin !== finISO) {
-      updates.push({ id: t.id, fecha_inicio_calc: inicioISO, fecha_estimada: finISO });
+    if (t.estado === 'completada' && t.fecha_completada) {
+      const fc = _parseDate(t.fecha_completada);
+      if (fc <= hoy) {
+        // Tarea realmente completada: anclar en su fecha real
+        t.fecha_inicio_calc = _toISODate(cursor);
+        t.fecha_estimada    = _toISODate(fc);
+        cursor = _addDays(fc, 1); // la siguiente empieza el día después
+        continue;
+      }
     }
 
-    // Actualizar cache local en el momento para que la siguiente iteración
-    // use los valores recien calculados
-    t.fecha_inicio_calc = inicioISO;
-    t.fecha_estimada    = finISO;
+    // Tarea pendiente/en progreso: arrancar donde dejó el cursor
+    const fechaFin = _addDays(cursor, duracion - 1);
+    t.fecha_inicio_calc = _toISODate(cursor);
+    t.fecha_estimada    = _toISODate(fechaFin);
+    cursor = _addDays(fechaFin, 1);
   }
+
+  const updates = tareasCli.map(t => ({
+    id: t.id,
+    fecha_inicio_calc: t.fecha_inicio_calc,
+    fecha_estimada:    t.fecha_estimada
+  }));
 
   // Persistir (uno por uno, sin transacción pero asume baja contención)
   for (const u of updates) {
@@ -698,9 +690,13 @@ async function initImplementacion() {
       }
     }
 
+    // Recalcular Gantt de todos los clientes ANTES del primer render
+    // para que las fechas mostradas siempre sean correctas.
+    const clienteIds = [...new Set(implTareas.map(t => t.cliente_id))];
+    await Promise.all(clienteIds.map(id => recalcularGanttCliente(id)));
+
     renderImplementacion();
     suscribirImplementacion();
-    // Recalcular alertas con las tareas recién cargadas
     if (typeof refreshAlertas === 'function') refreshAlertas();
   } catch (e) {
     console.error('Error cargando implementacion', e);
@@ -1166,6 +1162,16 @@ function renderListaFases(c, tareasCliente, tareasVisibles) {
   const hayFiltro = implFiltroAsesor || implFiltroEstado || implFiltroResp;
   const enEdicionCliente = !!(window._implEditMode && window._implEditMode[c.id]);
 
+  // Mapa de id → número secuencial global (1, 2, 3... a través de todas las fases)
+  const numGlobal = {};
+  let seq = 1;
+  IMPL_FASES.forEach(f => {
+    tareasCliente
+      .filter(t => (t.fase || 'relevamiento') === f.key)
+      .sort((a, b) => a.orden - b.orden)
+      .forEach(t => { numGlobal[t.id] = seq++; });
+  });
+
   return `<div class="impl-fases-acordeon">
     ${fases.map((f, i) => {
       const key       = `${c.id}_${i}`;
@@ -1208,7 +1214,7 @@ function renderListaFases(c, tareasCliente, tareasVisibles) {
           ${isExpanded ? `
             <div class="impl-fase-tareas">
               ${tareasRender.length > 0
-                ? tareasRender.map((t, ti) => renderImplTarea(t, ti, tareasDeFase)).join('')
+                ? tareasRender.map((t, ti) => renderImplTarea(t, ti, tareasDeFase, numGlobal)).join('')
                 : '<div style="text-align:center;color:var(--text3);font-size:12px;padding:16px">Sin tareas. Usá "+ Agregar tarea" para añadir una.</div>'}
             </div>` : ''}
         </div>`;
@@ -1235,7 +1241,7 @@ function renderClienteViewToggle(c) {
     </div>`;
 }
 
-function renderImplTarea(t, idxEnFase, tareasDeFase) {
+function renderImplTarea(t, idxEnFase, tareasDeFase, numGlobal) {
   const respLabel = ({ cliente: 'Cliente', equipo: 'Equipo', ambos: 'Ambos' })[t.responsable_tipo] || t.responsable_tipo;
   const respBadge = ({ cliente: 'b-amber', equipo: 'b-blue', ambos: 'b-purple' })[t.responsable_tipo] || 'b-gray';
 
@@ -1315,7 +1321,7 @@ function renderImplTarea(t, idxEnFase, tareasDeFase) {
   return `
     <div class="${rowClasses}" data-tarea-id="${t.id}" onclick="handleImplTareaClick('${t.id}', event)">
       <button class="impl-tarea__check impl-tarea__check--${t.estado}" onclick="event.stopPropagation(); toggleTareaCompleta('${t.id}')" title="${lockTooltip}" ${disabledAttr}>${cfg.icon}</button>
-      <div class="impl-tarea__num">${String(t.orden).padStart(2, '0')}</div>
+      <div class="impl-tarea__num">${String(numGlobal ? (numGlobal[t.id] ?? t.orden) : t.orden).padStart(2, '0')}</div>
       ${enEdicion
         ? `<input
              class="impl-tarea__title-input"
@@ -2271,20 +2277,20 @@ async function agregarTareaCliente(clienteId, faseKey) {
   if (!nombre || !nombre.trim()) return;
 
   const tareasDelCliente = implTareas.filter(t => t.cliente_id === clienteId);
+  const tareasEnFase     = tareasDelCliente.filter(t => (t.fase || 'relevamiento') === faseKey);
 
-  // Insertar DESPUÉS de la última tarea de esta fase (no al final global)
-  const tareasEnFase = tareasDelCliente.filter(t => (t.fase || 'relevamiento') === faseKey);
+  // Insertar al final de la fase: orden = max(ordenes de esta fase) + 1
   const ordenInsercion = tareasEnFase.length > 0
     ? Math.max(...tareasEnFase.map(t => t.orden)) + 1
     : (tareasDelCliente.length > 0 ? Math.max(...tareasDelCliente.map(t => t.orden)) + 1 : 1);
 
-  // Renumerar todas las tareas del cliente con orden >= ordenInsercion para hacer espacio
+  // Hacer espacio: desplazar +1 todas las tareas con orden >= ordenInsercion
+  // (las de fases posteriores que pueden tener el mismo número)
   const tareasADesplazar = tareasDelCliente
     .filter(t => t.orden >= ordenInsercion)
-    .sort((a, b) => b.orden - a.orden); // de mayor a menor para evitar conflictos de unique
+    .sort((a, b) => b.orden - a.orden); // de mayor a menor para evitar conflicto de unique
 
   try {
-    // Desplazar en orden descendente para no chocar con el unique constraint (orden, cliente_id)
     for (const t of tareasADesplazar) {
       await dbUpdate('implementacion_tareas', t.id, { orden: t.orden + 1 });
       t.orden = t.orden + 1;
@@ -2300,6 +2306,7 @@ async function agregarTareaCliente(clienteId, faseKey) {
       estado:           'pendiente'
     });
     implTareas.push(dbRowToImplTarea(inserted));
+    await recalcularGanttCliente(clienteId);
     renderImplementacion();
     toast('Tarea agregada');
   } catch (e) {
@@ -2308,13 +2315,38 @@ async function agregarTareaCliente(clienteId, faseKey) {
   }
 }
 
+// Renumera `orden` de todas las tareas del cliente como 1,2,3...
+// respetando el orden de fases y el orden actual dentro de cada fase.
+// Esto corrige gaps y garantiza que el Gantt calcule fechas correctamente.
+async function normalizarOrdenTareas(clienteId) {
+  let seq = 1;
+  const actualizaciones = [];
+  IMPL_FASES.forEach(f => {
+    implTareas
+      .filter(t => t.cliente_id === clienteId && (t.fase || 'relevamiento') === f.key)
+      .sort((a, b) => a.orden - b.orden)
+      .forEach(t => {
+        if (t.orden !== seq) actualizaciones.push({ id: t.id, nuevoOrden: seq });
+        t.orden = seq;
+        seq++;
+      });
+  });
+  for (const u of actualizaciones) {
+    try { await dbUpdate('implementacion_tareas', u.id, { orden: u.nuevoOrden }); }
+    catch (e) { console.warn('No se pudo normalizar orden de tarea', u.id, e); }
+  }
+}
+
 async function eliminarTareaCliente(tareaId) {
   const t = implTareas.find(x => x.id === tareaId);
   if (!t) return;
+  const clienteId = t.cliente_id;
   if (!confirm(`¿Eliminar la tarea "${t.tarea}"?\n\nEsta acción no se puede deshacer.`)) return;
   try {
     await dbDelete('implementacion_tareas', tareaId);
     implTareas = implTareas.filter(x => x.id !== tareaId);
+    await normalizarOrdenTareas(clienteId);
+    await recalcularGanttCliente(clienteId);
     renderImplementacion();
     toast('Tarea eliminada');
   } catch (e) {
@@ -2327,21 +2359,36 @@ async function moverTareaCliente(tareaId, delta) {
   const t = implTareas.find(x => x.id === tareaId);
   if (!t) return;
 
-  // Ordenar las tareas de la misma fase del mismo cliente
-  const enFase = implTareas
-    .filter(x => x.cliente_id === t.cliente_id && (x.fase || 'relevamiento') === (t.fase || 'relevamiento'))
-    .sort((a, b) => a.orden - b.orden);
+  // Lista global de tareas del cliente ordenadas (por fase y orden dentro de fase)
+  const todas = [];
+  IMPL_FASES.forEach(f => {
+    implTareas
+      .filter(x => x.cliente_id === t.cliente_id && (x.fase || 'relevamiento') === f.key)
+      .sort((a, b) => a.orden - b.orden)
+      .forEach(x => todas.push(x));
+  });
 
-  const idx = enFase.findIndex(x => x.id === tareaId);
+  const idx = todas.findIndex(x => x.id === tareaId);
   const targetIdx = idx + delta;
-  if (targetIdx < 0 || targetIdx >= enFase.length) return;
+  if (targetIdx < 0 || targetIdx >= todas.length) return;
 
-  const otro = enFase[targetIdx];
-  const tempOrden = 9999 + Math.floor(Math.random() * 1000);
+  const otro = todas[targetIdx];
+  const tempOrden = 99999 + Math.floor(Math.random() * 1000);
   try {
+    // Swap ordenes
     await dbUpdate('implementacion_tareas', t.id,    { orden: tempOrden });
     await dbUpdate('implementacion_tareas', otro.id, { orden: t.orden });
     await dbUpdate('implementacion_tareas', t.id,    { orden: otro.orden });
+
+    // Si cruzan límite de fase, también intercambiar la fase
+    if (t.fase !== otro.fase) {
+      await dbUpdate('implementacion_tareas', t.id,    { fase: otro.fase });
+      await dbUpdate('implementacion_tareas', otro.id, { fase: t.fase });
+      const tFase = t.fase;
+      t.fase    = otro.fase;
+      otro.fase = tFase;
+    }
+
     const tOrden = t.orden;
     t.orden    = otro.orden;
     otro.orden = tOrden;
@@ -2983,6 +3030,24 @@ function eventoLabelImpl(tipo) {
 }
 
 window.addEventListener('app-ready', initImplementacion);
+
+// Recalcula fechas de todos los clientes — útil cuando se agregaron tareas
+// rápido y el Gantt quedó con fechas desactualizadas en la DB.
+async function recalcularTodasLasFechas() {
+  const btn = document.querySelector('[onclick="recalcularTodasLasFechas()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Recalculando...'; }
+  try {
+    const clienteIds = [...new Set(implTareas.map(t => t.cliente_id))];
+    await Promise.all(clienteIds.map(id => recalcularGanttCliente(id)));
+    renderImplementacion();
+    toast('Fechas recalculadas ✓');
+  } catch (e) {
+    console.error('Error recalculando fechas', e);
+    toast('Error al recalcular fechas');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Recalcular fechas'; }
+  }
+}
 
 // ─────────────────────────────────────────────────────────
 //  MODAL DE TAREA MOBILE
