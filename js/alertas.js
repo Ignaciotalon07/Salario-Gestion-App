@@ -286,18 +286,66 @@ function refreshAlertas() {
       });
     }
 
-    // ── E. IMPLEMENTACIÓN COMPLETADA AL 100% (positiva) ──
-    const clientesImpl = allClientes.filter(c => c.area === 'impl');
+    // ── E. HITOS DE PROGRESO Y COMPLETADO ──
+    // Incluye clientes en 'impl' y también los de 'soporte' que aún tienen tareas de impl
+    const idsConTareasImpl = new Set(allImplTareas.map(t => t.cliente_id));
+    const clientesImpl = allClientes.filter(c =>
+      c.area === 'impl' || (c.area === 'soporte' && idsConTareasImpl.has(c.id))
+    );
     clientesImpl.forEach(c => {
       const tareasCli = allImplTareas.filter(t => t.cliente_id === c.id);
       if (tareasCli.length === 0) return;
+      const total = tareasCli.length;
+      const completas = tareasCli.filter(t => t.estado === 'completada').length;
+      const pct = Math.round((completas / total) * 100);
+
       if (tareasCli.every(t => t.estado === 'completada')) {
+        // 100% — implementación completa
         alertas.push({
           tipo:    'green',
-          titulo:  c.nombre + ' — implementación completa',
-          texto:   `Las ${tareasCli.length} etapas están completadas. ¡Listo para pasar a soporte!`,
+          titulo:  c.nombre + ' — implementación completa 🎉',
+          texto:   `Las ${total} etapas están completadas. ¡Listo para pasar a soporte!`,
           accion:  null,
           onClick: null
+        });
+      } else if ((completas / total) >= 0.30) {
+        // 30% — hito de avance
+        alertas.push({
+          tipo:    'green',
+          titulo:  c.nombre + ' — superó el 30% de implementación 🚀',
+          texto:   `${completas} de ${total} tareas completadas (${pct}%). ¡Buen ritmo, el equipo está avanzando!`,
+          accion:  'Ver implementación',
+          onClick: `goTo(document.querySelector('.nav-item[onclick*=implementacion]'), 'implementacion')`
+        });
+      }
+
+      // ── Hito de fase: alerta cuando el cliente está en una fase nueva ──
+      // La "fase activa" es la primera fase con tareas incompletas.
+      const IMPL_FASES_KEYS = ['relevamiento', 'configuracion', 'analisis', 'pruebas', 'golive'];
+      const IMPL_FASES_NOMBRES = ['Relevamiento', 'Configuración', 'Análisis', 'Pruebas', 'Go-live'];
+      const faseActivaIdx = IMPL_FASES_KEYS.findIndex(fk => {
+        const tf = tareasCli.filter(t => (t.fase || 'relevamiento') === fk);
+        return tf.length > 0 && tf.some(t => t.estado !== 'completada');
+      });
+
+      if (faseActivaIdx > 0) {
+        // Solo mostrar alerta si el cliente avanzó más allá de la fase 1
+        const faseNombre = IMPL_FASES_NOMBRES[faseActivaIdx];
+        const numFase    = faseActivaIdx + 1;
+        const esGoLive   = faseActivaIdx === 4;
+        const tareasFase = tareasCli.filter(t => (t.fase || 'relevamiento') === IMPL_FASES_KEYS[faseActivaIdx]);
+        const pendFase   = tareasFase.filter(t => t.estado !== 'completada').length;
+
+        alertas.push({
+          tipo:    esGoLive ? 'green' : 'blue',
+          titulo:  esGoLive
+            ? `${c.nombre} — ¡Entró en Go-live! 🎯`
+            : `${c.nombre} — Fase ${numFase}: ${faseNombre}`,
+          texto:   esGoLive
+            ? `¡Las 4 fases anteriores están completas! Quedan ${pendFase} tarea${pendFase !== 1 ? 's' : ''} para terminar la implementación.`
+            : `Avanzó a la Fase ${numFase} (${faseNombre}). Quedan ${pendFase} tarea${pendFase !== 1 ? 's' : ''} en esta fase.`,
+          accion:  'Ver implementación',
+          onClick: `goTo(document.querySelector('.nav-item[onclick*=implementacion]'), 'implementacion')`
         });
       }
     });

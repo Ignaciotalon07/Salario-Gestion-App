@@ -15,6 +15,30 @@ let chartTendInstance     = null;
 let chartClientesInstance = null;
 let chartEquipoInstance   = null;
 
+// Estado del toggle de vista de equipo
+let _eqViewMode = 'mes'; // 'mes' | 'dia'
+let _eqRange    = 7;     // 7 | 30
+
+function setEqView(mode) {
+  _eqViewMode = mode;
+  const btnMes = document.getElementById('eq-tog-mes');
+  const btnDia = document.getElementById('eq-tog-dia');
+  const rangeEl = document.getElementById('eq-range-selector');
+  if (btnMes) { btnMes.style.background = mode === 'mes' ? 'var(--accent)' : 'transparent'; btnMes.style.color = mode === 'mes' ? 'white' : 'var(--text2)'; btnMes.style.fontWeight = mode === 'mes' ? '500' : '400'; }
+  if (btnDia) { btnDia.style.background = mode === 'dia' ? 'var(--accent)' : 'transparent'; btnDia.style.color = mode === 'dia' ? 'white' : 'var(--text2)'; btnDia.style.fontWeight = mode === 'dia' ? '500' : '400'; }
+  if (rangeEl) rangeEl.style.display = mode === 'dia' ? 'inline-flex' : 'none';
+  if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
+}
+
+function setEqRange(dias) {
+  _eqRange = dias;
+  const btn7  = document.getElementById('eq-r7');
+  const btn30 = document.getElementById('eq-r30');
+  if (btn7)  { btn7.style.background  = dias === 7  ? 'var(--accent)' : 'transparent'; btn7.style.color  = dias === 7  ? 'white' : 'var(--text2)'; btn7.style.fontWeight  = dias === 7  ? '500' : '400'; }
+  if (btn30) { btn30.style.background = dias === 30 ? 'var(--accent)' : 'transparent'; btn30.style.color = dias === 30 ? 'white' : 'var(--text2)'; btn30.style.fontWeight = dias === 30 ? '500' : '400'; }
+  if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
+}
+
 // ────────── Helpers de fechas ──────────
 // Leen del array global `consultas` (cargado por consultas.js desde Supabase).
 
@@ -492,8 +516,14 @@ function refreshEquipoMetrics(mesActual) {
     }
   }
 
-  // ── Lista de asesores ──
+  // ── Vista por día o por mes ──
   const cont = document.getElementById('eq-asesores-list');
+  if (_eqViewMode === 'dia') {
+    renderEquipoPorDia(porAsesor);
+    return;
+  }
+
+  // ── Lista de asesores (vista mes) ──
   if (cont) {
     if (sorted.length === 0) {
       cont.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px 0;font-size:13px">Sin datos disponibles.</div>';
@@ -555,6 +585,90 @@ function refreshEquipoMetrics(mesActual) {
     chartEquipoInstance.data.datasets[0].backgroundColor = sorted.map((_, i) => COLORES_ASESORES[i % COLORES_ASESORES.length]);
     chartEquipoInstance.update();
   }
+}
+
+// ── Vista por día: barras diarias de horas por asesor ──
+function renderEquipoPorDia(porAsesorMes) {
+  const cont = document.getElementById('eq-asesores-list');
+  if (!cont) return;
+
+  const allConsultas = (typeof consultas !== 'undefined') ? consultas : [];
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+
+  // Generar array de fechas del rango (más reciente al final)
+  const dias = [];
+  for (let i = _eqRange - 1; i >= 0; i--) {
+    const d = new Date(hoy);
+    d.setDate(d.getDate() - i);
+    dias.push(d);
+  }
+  const toKey = d => d.toISOString().substring(0, 10);
+
+  // Filtrar consultas del rango
+  const desde = new Date(hoy); desde.setDate(hoy.getDate() - (_eqRange - 1));
+  const enRango = allConsultas.filter(c => {
+    const t = new Date(c.timestamp);
+    return t >= desde;
+  });
+
+  // Agrupar hs por asesor y día
+  const ASESORES = Object.keys(porAsesorMes);
+  const COLORES_ASESORES = ['#c0392b', '#2d6a2d', '#b45309', '#1a5fa5', '#2d2d8e', '#5f5e5a'];
+  const datosPorAsesor = {};
+  ASESORES.forEach(a => {
+    datosPorAsesor[a] = {};
+    dias.forEach(d => { datosPorAsesor[a][toKey(d)] = 0; });
+  });
+  enRango.forEach(c => {
+    if (!c.asesor || !datosPorAsesor[c.asesor]) return;
+    const k = new Date(c.timestamp).toISOString().substring(0, 10);
+    if (datosPorAsesor[c.asesor][k] !== undefined) {
+      datosPorAsesor[c.asesor][k] += parseFloat(c.tiempo) || 0;
+    }
+  });
+
+  // Máximo de horas en un día (para escalar barras)
+  let maxHs = 0;
+  ASESORES.forEach(a => { Object.values(datosPorAsesor[a]).forEach(v => { if (v > maxHs) maxHs = v; }); });
+  if (maxHs === 0) maxHs = 1;
+
+  // Labels de días según rango
+  const fmtDia = d => _eqRange <= 7
+    ? ['D','L','M','X','J','V','S'][d.getDay()]
+    : (d.getDate() === 1 ? d.toLocaleDateString('es-AR', { month: 'short' }) : String(d.getDate()));
+
+  // Render
+  const labelRow = `<div style="display:flex;margin-left:130px;gap:2px;margin-bottom:2px">
+    ${dias.map(d => `<div style="flex:1;font-size:9px;color:var(--text3);text-align:center;overflow:hidden">${fmtDia(d)}</div>`).join('')}
+  </div>`;
+
+  const rows = ASESORES.map((nombre, i) => {
+    const color = COLORES_ASESORES[i % COLORES_ASESORES.length];
+    const iniciales = nombre.substring(0, 2).toUpperCase();
+    const totalHs = Object.values(datosPorAsesor[nombre]).reduce((s, v) => s + v, 0);
+
+    const barras = dias.map(d => {
+      const hs = datosPorAsesor[nombre][toKey(d)];
+      const pct = Math.round((hs / maxHs) * 100);
+      const esFinDeSemana = [0, 6].includes(d.getDay());
+      const bg = hs === 0 ? (esFinDeSemana ? 'transparent' : 'var(--border)') : color;
+      const title = hs > 0 ? `${hs.toFixed(1)}h` : '';
+      return `<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:32px" title="${d.toLocaleDateString('es-AR')}${title ? ': ' + title : ''}">
+        <div style="background:${bg};height:${Math.max(pct, hs > 0 ? 8 : 0)}%;border-radius:2px 2px 0 0;min-height:${hs > 0 ? '3px' : '0'}"></div>
+      </div>`;
+    }).join('');
+
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border)">
+      <div class="av" style="background:${color}22;color:${color};font-size:11px;font-weight:700;flex-shrink:0;width:28px;height:28px">${escapeHtmlPanel(iniciales)}</div>
+      <div style="width:94px;flex-shrink:0">
+        <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtmlPanel(nombre.split(' ')[0])}</div>
+        <div style="font-size:10px;color:var(--text3)">${totalHs > 0 ? totalHs.toFixed(1) + 'h en rango' : 'sin datos'}</div>
+      </div>
+      <div style="flex:1;display:flex;gap:2px;align-items:flex-end">${barras}</div>
+    </div>`;
+  }).join('');
+
+  cont.innerHTML = labelRow + rows;
 }
 
 // Escape HTML básico para usar en el panel

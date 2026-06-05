@@ -1705,15 +1705,7 @@
                   <button class="filter-chip"        data-impl-filter="asesor" data-value="mis" onclick="setImplFiltroAsesor(this, 'mis')">Mis tareas</button>
                 </div>
               </div>
-              <button
-                class="btn-sm"
-                style="white-space: nowrap; flex-shrink: 0"
-                onclick="recalcularTodasLasFechas()"
-                title="Recalcular fechas de todas las tareas en cadena desde el inicio del proyecto"
-              >
-                🔄 Recalcular fechas
-              </button>
-              <button
+<button
                 class="btn-sm"
                 style="white-space: nowrap; flex-shrink: 0"
                 onclick="abrirModalReasignarMasivo()"
@@ -1882,7 +1874,31 @@
 
             <div class="grid-2">
               <div class="card">
-                <div class="card-title">Carga por asesor (este mes)</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+                  <span class="card-title" style="margin:0;flex:1">Carga por asesor</span>
+                  <!-- Toggle mes / por día -->
+                  <div style="display:inline-flex;border:1px solid var(--border2);border-radius:8px;overflow:hidden">
+                    <button id="eq-tog-mes" onclick="setEqView('mes')"
+                      style="padding:4px 12px;font-size:12px;font-family:inherit;border:none;cursor:pointer;background:var(--accent);color:white;font-weight:500">
+                      Este mes
+                    </button>
+                    <button id="eq-tog-dia" onclick="setEqView('dia')"
+                      style="padding:4px 12px;font-size:12px;font-family:inherit;border:none;cursor:pointer;background:transparent;color:var(--text2)">
+                      Por día
+                    </button>
+                  </div>
+                  <!-- Selector de rango (solo visible en modo día) -->
+                  <div id="eq-range-selector" style="display:none;border:1px solid var(--border2);border-radius:8px;overflow:hidden;display:none">
+                    <button id="eq-r7" onclick="setEqRange(7)"
+                      style="padding:4px 10px;font-size:12px;font-family:inherit;border:none;cursor:pointer;background:var(--accent);color:white;font-weight:500">
+                      7 días
+                    </button>
+                    <button id="eq-r30" onclick="setEqRange(30)"
+                      style="padding:4px 10px;font-size:12px;font-family:inherit;border:none;cursor:pointer;background:transparent;color:var(--text2)">
+                      30 días
+                    </button>
+                  </div>
+                </div>
                 <div id="eq-asesores-list">
                   <div
                     style="

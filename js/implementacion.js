@@ -1624,10 +1624,59 @@ async function cambiarEstadoTarea(tareaId, nuevoEstado) {
       }
       await recalcularGanttCliente(t.cliente_id);
 
-      // ── Graduación: si todas las tareas del cliente están completadas → mover a Soporte ──
+      // ── Hito del 30%: festejo en pantalla (una sola vez por cliente) ──
       if (nuevoEstado === 'completada') {
         const tareasCliente = implTareas.filter(x => x.cliente_id === t.cliente_id);
-        const todasListas   = tareasCliente.length > 0 && tareasCliente.every(x => x.estado === 'completada');
+        const total    = tareasCliente.length;
+        const completas = tareasCliente.filter(x => x.estado === 'completada').length;
+        const pctAntes = total > 0 ? Math.round(((completas - 1) / total) * 100) : 0;
+        const pctAhora = total > 0 ? Math.round((completas / total) * 100) : 0;
+        const clave30  = `impl_30pct_${t.cliente_id}`;
+
+        if (((completas - 1) / total) < 0.30 && (completas / total) >= 0.30 && !localStorage.getItem(clave30)) {
+          localStorage.setItem(clave30, '1');
+          const cli = (typeof clientes !== 'undefined' ? clientes : []).find(c => c.id === t.cliente_id);
+          const nombreCli = cli ? cli.nombre : 'El cliente';
+          mostrarFestejo30(nombreCli);
+          if (typeof refreshAlertas === 'function') refreshAlertas();
+        }
+
+        // ── Popup al entrar a una fase nueva ──
+        const FASES_KEYS    = ['relevamiento', 'configuracion', 'analisis', 'pruebas', 'golive'];
+        const FASES_NOMBRES = ['Relevamiento', 'Configuración', 'Análisis', 'Pruebas', 'Go-live'];
+        const FASES_ICONOS  = ['🔍', '⚙️', '📊', '✅', '🚀'];
+
+        // Determinar la fase activa ANTES y DESPUÉS de completar esta tarea
+        const tareasTodas = implTareas.filter(x => x.cliente_id === t.cliente_id);
+
+        // "Antes" = con esta tarea aún sin completar (restar 1 completada de su fase)
+        const faseActivaAntes = FASES_KEYS.findIndex(fk => {
+          const tf = tareasTodas.filter(x => (x.fase || 'relevamiento') === fk);
+          if (tf.length === 0) return false;
+          const incompletas = fk === (t.fase || 'relevamiento')
+            ? tf.filter(x => x.estado !== 'completada').length + 1  // esta tarea contaba como incompleta antes
+            : tf.filter(x => x.estado !== 'completada').length;
+          return incompletas > 0;
+        });
+
+        // "Después" = con esta tarea ya completada (ya está en implTareas actualizado)
+        const faseActivaDespues = FASES_KEYS.findIndex(fk => {
+          const tf = tareasTodas.filter(x => (x.fase || 'relevamiento') === fk);
+          return tf.length > 0 && tf.some(x => x.estado !== 'completada');
+        });
+
+        if (faseActivaDespues > faseActivaAntes && faseActivaDespues > 0) {
+          const claveFase = `impl_fase_${t.cliente_id}_${faseActivaDespues}`;
+          if (!localStorage.getItem(claveFase)) {
+            localStorage.setItem(claveFase, '1');
+            const cli2 = (typeof clientes !== 'undefined' ? clientes : []).find(c => c.id === t.cliente_id);
+            mostrarFestejoFase(cli2 ? cli2.nombre : 'El cliente', faseActivaDespues, FASES_NOMBRES, FASES_ICONOS);
+            if (typeof refreshAlertas === 'function') refreshAlertas();
+          }
+        }
+
+        // ── Graduación: todas las tareas completadas → mover a Soporte ──
+        const todasListas = total > 0 && tareasCliente.every(x => x.estado === 'completada');
         if (todasListas) {
           await graduarClienteAsoporte(t.cliente_id);
         }
@@ -3070,6 +3119,159 @@ function eventoLabelImpl(tipo) {
 }
 
 window.addEventListener('app-ready', initImplementacion);
+
+// ── Festejo del 30%: modal de celebración en pantalla ──
+function mostrarFestejo30(nombreCliente) {
+  // Evitar duplicados
+  if (document.getElementById('festejo-30-overlay')) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'festejo-30-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:99999;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);
+    animation:festejo-fadein 0.3s ease;
+  `;
+
+  const FRASES = [
+    '¡El equipo está imparable! 💪',
+    '¡Buen ritmo, sigan así! 🚀',
+    '¡Un tercio del camino recorrido! ⚡',
+    '¡La constancia da frutos! 🌟',
+    '¡Gran trabajo de todo el equipo! 🎯',
+  ];
+  const frase = FRASES[Math.floor(Math.random() * FRASES.length)];
+
+  overlay.innerHTML = `
+    <div style="
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:20px;padding:40px 48px;max-width:420px;width:90%;
+      text-align:center;box-shadow:0 24px 64px rgba(0,0,0,0.5);
+      animation:festejo-popup 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    ">
+      <div style="font-size:56px;margin-bottom:12px">🎉</div>
+      <div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:8px">
+        ¡30% alcanzado!
+      </div>
+      <div style="font-size:15px;color:var(--accent);font-weight:600;margin-bottom:16px">
+        ${_esc(nombreCliente)}
+      </div>
+      <div style="font-size:14px;color:var(--text2);margin-bottom:28px;line-height:1.5">
+        ${frase}<br>
+        <span style="color:var(--text3);font-size:12px">Un tercio de la implementación completado.</span>
+      </div>
+      <button onclick="document.getElementById('festejo-30-overlay').remove()" style="
+        background:linear-gradient(135deg,#FF8C00,#E65C00);
+        color:white;border:none;border-radius:10px;
+        padding:12px 32px;font-size:15px;font-weight:700;
+        cursor:pointer;font-family:inherit;
+        box-shadow:0 4px 16px rgba(230,92,0,0.4);
+      ">¡Vamos por más! 🚀</button>
+    </div>
+  `;
+
+  // Estilos de animación (solo se agregan una vez)
+  if (!document.getElementById('festejo-styles')) {
+    const style = document.createElement('style');
+    style.id = 'festejo-styles';
+    style.textContent = `
+      @keyframes festejo-fadein { from{opacity:0} to{opacity:1} }
+      @keyframes festejo-popup  { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
+    `;
+    document.head.appendChild(style);
+  }
+
+  // Cerrar al hacer click fuera
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  document.body.appendChild(overlay);
+
+  // Auto-cerrar a los 8 segundos
+  setTimeout(() => overlay.remove(), 8000);
+}
+
+function _esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Popup al entrar a una nueva fase
+function mostrarFestejoFase(nombreCliente, faseIdx, nombres, iconos) {
+  if (document.getElementById('festejo-fase-overlay')) return;
+
+  const esGoLive  = faseIdx === 4;
+  const faseNombre = nombres[faseIdx];
+  const faseIcono  = iconos[faseIdx];
+  const numFase    = faseIdx + 1;
+
+  const FRASES_FASE = [
+    '',
+    '¡La base está lista! Ahora viene la configuración.',
+    '¡Configuración completada! A analizar los datos.',
+    '¡Análisis listo! Hora de poner a prueba el sistema.',
+    '¡Todo probado y validado! Es el momento del Go-live.',
+  ];
+  const FRASES_GOLIVE = [
+    '¡El equipo lo logró! Solo falta el último paso. 🏁',
+    '¡A un paso de terminar! Foco total en el Go-live. 💪',
+    '¡La recta final! El cliente está listo para volar solo. 🦅',
+  ];
+
+  const frase = esGoLive
+    ? FRASES_GOLIVE[Math.floor(Math.random() * FRASES_GOLIVE.length)]
+    : FRASES_FASE[faseIdx] || '¡Buen trabajo de equipo!';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'festejo-fase-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:99999;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);
+    animation:festejo-fadein 0.3s ease;
+  `;
+
+  const colorAccent = esGoLive ? '#22c55e' : 'var(--accent)';
+  const colorGrad   = esGoLive
+    ? 'linear-gradient(135deg,#16a34a,#15803d)'
+    : 'linear-gradient(135deg,#FF8C00,#E65C00)';
+
+  overlay.innerHTML = `
+    <div style="
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:20px;padding:40px 48px;max-width:440px;width:90%;
+      text-align:center;box-shadow:0 24px 64px rgba(0,0,0,0.5);
+      animation:festejo-popup 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    ">
+      <div style="font-size:52px;margin-bottom:10px">${faseIcono}</div>
+      <div style="font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;
+           color:${colorAccent};margin-bottom:6px">
+        ${esGoLive ? '¡Fase final!' : 'Nueva fase'}
+      </div>
+      <div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:6px">
+        Fase ${numFase}: ${_esc(faseNombre)}
+      </div>
+      <div style="font-size:14px;color:var(--accent);font-weight:600;margin-bottom:14px">
+        ${_esc(nombreCliente)}
+      </div>
+      <div style="font-size:14px;color:var(--text2);margin-bottom:28px;line-height:1.5">
+        ${frase}
+      </div>
+      <button onclick="document.getElementById('festejo-fase-overlay').remove()" style="
+        background:${colorGrad};
+        color:white;border:none;border-radius:10px;
+        padding:12px 32px;font-size:15px;font-weight:700;
+        cursor:pointer;font-family:inherit;
+        box-shadow:0 4px 16px rgba(0,0,0,0.3);
+      ">${esGoLive ? '¡Vamos por el cierre! 🏁' : '¡A la siguiente fase! 💪'}</button>
+    </div>
+  `;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 9000);
+}
 
 // Recalcula fechas de todos los clientes — útil cuando se agregaron tareas
 // rápido y el Gantt quedó con fechas desactualizadas en la DB.
