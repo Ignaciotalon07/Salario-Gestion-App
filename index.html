@@ -624,9 +624,7 @@
             <div class="page-header">
               <div>
                 <div class="page-title">Panel general</div>
-                <div class="page-sub" id="panel-page-sub">
-                  Junio 2026 — datos en tiempo real
-                </div>
+                <div class="page-sub" id="panel-page-sub"></div>
               </div>
               <button class="btn-primary" onclick="abrirModalConsulta()">
                 + Registrar consulta
@@ -1687,21 +1685,29 @@
             <!-- Panel "¿Qué hago hoy?" — generado por renderPanelHoy() en implementacion.js -->
             <div id="impl-panel-hoy"></div>
 
-            <div class="filter-row">
+            <div class="filter-row" style="flex-wrap: wrap; gap: 8px;">
               <input
                 type="text"
                 id="impl-buscador"
                 placeholder="Buscar cliente en implementación..."
-                style="flex: 1; max-width: 360px; margin-bottom: 0"
+                style="width: 260px; max-width: 320px; margin-bottom: 0; flex-shrink: 1"
                 oninput="filterImplementacion(this.value)"
               />
               <span
                 id="impl-buscador-count"
-                style="font-size: 12px; color: var(--text3); margin-left: 8px"
+                style="font-size: 12px; color: var(--text3)"
               ></span>
+              <!-- Filtro Asesor inline con el buscador -->
+              <div class="impl-asesor-inline">
+                <span class="impl-filter-group__label" style="width:auto;margin-right:8px">Asesor</span>
+                <div class="impl-filter-segmented">
+                  <button class="filter-chip active" data-impl-filter="asesor" data-value=""    onclick="setImplFiltroAsesor(this, '')">Todos</button>
+                  <button class="filter-chip"        data-impl-filter="asesor" data-value="mis" onclick="setImplFiltroAsesor(this, 'mis')">Mis tareas</button>
+                </div>
+              </div>
               <button
                 class="btn-sm"
-                style="margin-left: auto"
+                style="white-space: nowrap; flex-shrink: 0"
                 onclick="abrirModalReasignarMasivo()"
                 title="Reasignar todas las tareas de una persona a otra de una vez"
               >
@@ -1710,72 +1716,29 @@
             </div>
 
             <div class="impl-filters">
-              <div class="impl-filter-group">
-                <span class="impl-filter-group__label">Asesor</span>
-                <div class="impl-filter-segmented">
-                  <button
-                    class="filter-chip active"
-                    data-impl-filter="asesor"
-                    data-value=""
-                    onclick="setImplFiltroAsesor(this, '')"
-                  >
-                    Todos
-                  </button>
-                  <button
-                    class="filter-chip"
-                    data-impl-filter="asesor"
-                    data-value="mis"
-                    onclick="setImplFiltroAsesor(this, 'mis')"
-                  >
-                    Mis tareas
-                  </button>
-                </div>
-              </div>
 
               <div class="impl-filter-group">
                 <span class="impl-filter-group__label">Estado</span>
-                <div class="impl-filter-segmented">
-                  <button
-                    class="filter-chip active"
-                    data-impl-filter="estado"
-                    data-value=""
-                    onclick="setImplFiltroEstado(this, '')"
-                  >
-                    Todos
-                  </button>
-                  <button
-                    class="filter-chip"
-                    data-impl-filter="estado"
-                    data-value="pendiente"
-                    onclick="setImplFiltroEstado(this, 'pendiente')"
-                  >
-                    Pendientes
-                  </button>
-                  <button
-                    class="filter-chip"
-                    data-impl-filter="estado"
-                    data-value="en_progreso"
-                    onclick="setImplFiltroEstado(this, 'en_progreso')"
-                  >
-                    En progreso
-                  </button>
-                  <button
-                    class="filter-chip"
-                    data-impl-filter="estado"
-                    data-value="vencida"
-                    onclick="setImplFiltroEstado(this, 'vencida')"
-                  >
-                    ⏰ Vencidas
-                  </button>
-                  <button
-                    class="filter-chip"
-                    data-impl-filter="estado"
-                    data-value="completada"
-                    onclick="setImplFiltroEstado(this, 'completada')"
-                  >
-                    Completadas
-                  </button>
+                <!-- Chips: visibles en desktop -->
+                <div class="impl-filter-segmented impl-estado-chips">
+                  <button class="filter-chip active" data-impl-filter="estado" data-value=""           onclick="setImplFiltroEstado(this, '')">Todos</button>
+                  <button class="filter-chip"         data-impl-filter="estado" data-value="pendiente"  onclick="setImplFiltroEstado(this, 'pendiente')">Pendientes</button>
+                  <button class="filter-chip"         data-impl-filter="estado" data-value="en_progreso" onclick="setImplFiltroEstado(this, 'en_progreso')">En progreso</button>
+                  <button class="filter-chip"         data-impl-filter="estado" data-value="vencida"    onclick="setImplFiltroEstado(this, 'vencida')">⏰ Vencidas</button>
+                  <button class="filter-chip"         data-impl-filter="estado" data-value="completada" onclick="setImplFiltroEstado(this, 'completada')">Completadas</button>
                 </div>
+                <!-- Select: visible solo en mobile -->
+                <select
+                  id="impl-filtro-estado-sel"
+                  class="impl-estado-select"
+                  onchange="setImplFiltroEstadoMobile(this.value)"
+                >
+                  <option value="">Todos</option>
+                  <option value="pendiente">Pendientes</option>
+                  <option value="en_progreso">En progreso</option>
+                  <option value="vencida">⏰ Vencidas</option>
+                  <option value="completada">Completadas</option>
+                </select>
               </div>
 
               <div class="impl-filter-group">
@@ -1806,6 +1769,36 @@
                     Equipo
                   </button>
                 </div>
+              </div>
+            </div>
+
+            <!-- Filtros mobile: selects nativos tipo settings (oculto en desktop) -->
+            <div class="impl-filters-mobile">
+              <div class="ifm-row">
+                <span class="ifm-label">Asesor</span>
+                <select class="ifm-select" onchange="setImplFiltroAsesorMobile(this.value)">
+                  <option value="">Todos</option>
+                  <option value="mis">Mis tareas</option>
+                </select>
+              </div>
+              <div class="ifm-row">
+                <span class="ifm-label">Estado</span>
+                <select class="ifm-select" onchange="setImplFiltroEstadoMobile(this.value)">
+                  <option value="">Todos</option>
+                  <option value="pendiente">Pendientes</option>
+                  <option value="en_progreso">En progreso</option>
+                  <option value="vencida">⏰ Vencidas</option>
+                  <option value="completada">Completadas</option>
+                </select>
+              </div>
+              <div class="ifm-row">
+                <span class="ifm-label">Esperando a</span>
+                <select class="ifm-select" onchange="setImplFiltroRespMobile(this.value)">
+                  <option value="">Todos</option>
+                  <option value="cliente">Cliente</option>
+                  <option value="equipo">Equipo</option>
+                  <option value="ambos">Ambos</option>
+                </select>
               </div>
             </div>
 
@@ -2746,5 +2739,65 @@ Paso 2: ..."
         </div>
       </div>
     </div>
+  <!-- ════════════════════════════════════
+       MODAL — Detalle de tarea (solo mobile)
+  ════════════════════════════════════ -->
+  <div id="modal-tarea-mobile" class="mtm-overlay" onclick="cerrarModalTareaMobile()">
+    <div class="mtm-sheet" onclick="event.stopPropagation()">
+
+      <!-- Handle visual -->
+      <div class="mtm-handle"></div>
+
+      <!-- Header -->
+      <div class="mtm-header">
+        <span class="mtm-num"></span>
+        <span class="mtm-title"></span>
+        <button class="mtm-close" onclick="cerrarModalTareaMobile()">✕</button>
+      </div>
+
+      <!-- Info de la tarea -->
+      <div class="mtm-info">
+        <div class="mtm-row">
+          <span class="mtm-label">Asesor</span>
+          <span class="mtm-asesor-val mtm-value">—</span>
+        </div>
+        <div class="mtm-row">
+          <span class="mtm-label">Fechas</span>
+          <span class="mtm-fechas-val mtm-value">—</span>
+        </div>
+        <div class="mtm-row">
+          <span class="mtm-label">Duración</span>
+          <span class="mtm-duracion-val mtm-value">—</span>
+        </div>
+        <div class="mtm-row">
+          <span class="mtm-label">Predecesoras</span>
+          <span class="mtm-pred-val mtm-value">—</span>
+        </div>
+      </div>
+
+      <!-- Selector de estado -->
+      <div class="mtm-estado-section">
+        <label class="mtm-label">Estado</label>
+        <select id="mtm-estado-sel" class="mtm-estado-sel">
+          <option value="pendiente">Pendiente</option>
+          <option value="en_progreso">En progreso</option>
+          <option value="completada">Completada ✓</option>
+          <option value="demorada">Demorada</option>
+        </select>
+      </div>
+
+      <!-- Mensaje sin permiso -->
+      <div class="mtm-lock-msg" style="display:none">
+        🔒 Solo el asesor asignado puede cambiar el estado.
+      </div>
+
+      <!-- Confirmar -->
+      <button class="mtm-confirm-btn" onclick="confirmarEstadoTareaMobile()">
+        Confirmar
+      </button>
+
+    </div>
+  </div>
+
   </body>
 </html>

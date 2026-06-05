@@ -214,14 +214,36 @@ function setImplFiltroAsesor(btn, val) {
   _activarChip(btn, 'asesor');
   renderImplementacion();
 }
+function setImplFiltroAsesorMobile(val) {
+  implFiltroAsesor = val;
+  document.querySelectorAll('[data-impl-filter="asesor"]').forEach(b => b.classList.toggle('active', b.dataset.value === val));
+  renderImplementacion();
+}
 function setImplFiltroEstado(btn, val) {
   implFiltroEstado = val;
   _activarChip(btn, 'estado');
+  // Sincronizar el select mobile
+  const sel = document.getElementById('impl-filtro-estado-sel');
+  if (sel) sel.value = val;
+  renderImplementacion();
+}
+// Versión para el select mobile (no recibe btn)
+function setImplFiltroEstadoMobile(val) {
+  implFiltroEstado = val;
+  // Sincronizar chips de desktop
+  document.querySelectorAll('[data-impl-filter="estado"]').forEach(b => {
+    b.classList.toggle('active', b.dataset.value === val);
+  });
   renderImplementacion();
 }
 function setImplFiltroResp(btn, val) {
   implFiltroResp = val;
   _activarChip(btn, 'resp');
+  renderImplementacion();
+}
+function setImplFiltroRespMobile(val) {
+  implFiltroResp = val;
+  document.querySelectorAll('[data-impl-filter="resp"]').forEach(b => b.classList.toggle('active', b.dataset.value === val));
   renderImplementacion();
 }
 function _activarChip(btn, grupo) {
@@ -1080,13 +1102,17 @@ function renderClienteImplCard(c) {
 
       <div class="impl-cliente-body">
         ${renderClienteViewToggle(c)}
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          ${window._implEditMode[c.id]
-            ? `<button class="btn-primary btn-primary--sm" onclick="confirmarEdicionCliente('${c.id}', event)">✓ Confirmar</button>
-               <span style="font-size:12px;color:var(--accent)">✏️ Modo edición — configurá asesores, duraciones y predecesoras</span>`
-            : `<button class="btn-sm" style="font-size:11px" onclick="toggleEditModeCliente('${c.id}', event)">✏️ Editar plantilla</button>`
-          }
-        </div>
+        ${window._implEditMode[c.id]
+          ? `<div class="impl-edit-banner">
+               <button class="btn-primary btn-primary--sm" onclick="confirmarEdicionCliente('${c.id}', event)">✓ Confirmar</button>
+               <span style="font-size:12px;color:var(--accent)">✏️ Modo edición activo</span>
+             </div>`
+          : getVistaCliente(c.id) !== 'gantt'
+            ? `<div style="margin-bottom:10px">
+                 <button class="btn-sm" style="font-size:11px" onclick="toggleEditModeCliente('${c.id}', event)">✏️ Editar plantilla</button>
+               </div>`
+            : ''
+        }
         ${getVistaCliente(c.id) === 'gantt'
           ? renderGanttCliente(tareasVisibles, c, getEscalaCliente(c.id))
           : renderListaFases(c, tareasCliente, tareasVisibles)}
@@ -1201,7 +1227,7 @@ function renderClienteViewToggle(c) {
         <button class="filter-chip ${vista === 'gantt' ? 'active' : ''}" onclick="setVistaCliente('${c.id}','gantt')">📊 Gantt</button>
       </div>
       ${vista === 'gantt' ? `
-        <div class="impl-filter-segmented impl-filter-segmented--sm">
+        <div class="impl-filter-segmented impl-filter-segmented--escala">
           <button class="filter-chip ${escala === 'dia'    ? 'active' : ''}" onclick="setEscalaCliente('${c.id}','dia')">Día</button>
           <button class="filter-chip ${escala === 'semana' ? 'active' : ''}" onclick="setEscalaCliente('${c.id}','semana')">Semana</button>
           <button class="filter-chip ${escala === 'mes'    ? 'active' : ''}" onclick="setEscalaCliente('${c.id}','mes')">Mes</button>
@@ -1287,51 +1313,63 @@ function renderImplTarea(t, idxEnFase, tareasDeFase) {
     : `Solo ${t.asesor} puede modificar esta tarea`;
 
   return `
-    <div class="${rowClasses}" data-tarea-id="${t.id}" onclick="toggleImplTareaExpanded('${t.id}', event)">
+    <div class="${rowClasses}" data-tarea-id="${t.id}" onclick="handleImplTareaClick('${t.id}', event)">
       <button class="impl-tarea__check impl-tarea__check--${t.estado}" onclick="event.stopPropagation(); toggleTareaCompleta('${t.id}')" title="${lockTooltip}" ${disabledAttr}>${cfg.icon}</button>
       <div class="impl-tarea__num">${String(t.orden).padStart(2, '0')}</div>
-      <div class="impl-tarea__title">${escapeHtmlImpl(t.tarea)}${isVencida ? ` <span class="impl-tarea__vencida-badge" title="La fecha estimada ya pasó">⏰ Vencida hace ${diasVencido} día${diasVencido !== 1 ? 's' : ''}</span>` : ''}${notasCount > 0 ? `<span class="impl-tarea__chevron">▸</span>` : ''}${!puedoEditar ? ` <span class="impl-tarea__lock" title="Solo ${escapeHtmlImpl(t.asesor)} puede modificar">🔒</span>` : ''}</div>
       ${enEdicion
-        ? `<select class="impl-tarea__resp-sel" onclick="event.stopPropagation();"
-               onchange="cambiarResponsableTipoTarea('${t.id}', this.value, event)" title="Responsable">
-             <option value="cliente" ${t.responsable_tipo === 'cliente' ? 'selected' : ''}>Cliente</option>
-             <option value="equipo"  ${t.responsable_tipo === 'equipo'  ? 'selected' : ''}>Equipo</option>
-             <option value="ambos"   ${t.responsable_tipo === 'ambos'   ? 'selected' : ''}>Ambos</option>
-           </select>`
-        : respBadgeConAsesor
+        ? `<input
+             class="impl-tarea__title-input"
+             value="${escapeHtmlImpl(t.tarea)}"
+             onclick="event.stopPropagation()"
+             onblur="renombrarTareaCliente('${t.id}', this.value)"
+             onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}"
+             title="Editá el nombre de la tarea"
+           />`
+        : `<div class="impl-tarea__title">${escapeHtmlImpl(t.tarea)}${isVencida ? ` <span class="impl-tarea__vencida-badge" title="La fecha estimada ya pasó">⏰ Vencida hace ${diasVencido} día${diasVencido !== 1 ? 's' : ''}</span>` : ''}${notasCount > 0 ? `<span class="impl-tarea__chevron">▸</span>` : ''}${!puedoEditar ? ` <span class="impl-tarea__lock" title="Solo ${escapeHtmlImpl(t.asesor)} puede modificar">🔒</span>` : ''}</div>`
       }
-      ${!enEdicion
-        ? `<select class="impl-tarea__estado-sel" onclick="event.stopPropagation();" onchange="cambiarEstadoTarea('${t.id}', this.value)" title="${puedoEditar ? 'Cambiar estado' : 'Solo ' + t.asesor + ' puede cambiar el estado'}" ${disabledAttr}>
-             <option value="pendiente"   ${t.estado === 'pendiente'   ? 'selected' : ''}>Pendiente</option>
-             <option value="en_progreso" ${t.estado === 'en_progreso' ? 'selected' : ''}>En progreso</option>
-             <option value="completada"  ${t.estado === 'completada'  ? 'selected' : ''}>Completada</option>
-             <option value="demorada"    ${t.estado === 'demorada'    ? 'selected' : ''}>Demorada</option>
-           </select>`
-        : ''
-      }
-      ${enEdicion
-        ? `<select class="impl-tarea__asesor-sel" onclick="event.stopPropagation();"
-               onchange="cambiarAsesorTarea('${t.id}', this.value)" title="Asignar asesor">
-             <option value="">Sin asignar</option>
-             ${IMPL_TEAM.map(a => `<option value="${a}" ${(t.asesor || t.asesor_plantilla) === a ? 'selected' : ''}>${a}</option>`).join('')}
-           </select>`
-        : `<span class="impl-tarea__asesor-label" title="Asesor asignado">
-             ${t.asesor || t.asesor_plantilla || '<span style="color:var(--text3)">Sin asignar</span>'}
-           </span>`
-      }
-      ${fechaCell}
-      ${predBtn}
-      ${enEdicion && tareasDeFase ? (() => {
-          const ordenados = [...tareasDeFase].sort((a, b) => a.orden - b.orden);
-          const idx = ordenados.findIndex(x => x.id === t.id);
-          const isFirst = idx === 0;
-          const isLast  = idx === ordenados.length - 1;
-          return `<div class="impl-tarea__edit-btns" onclick="event.stopPropagation()">
-            <button class="plantilla-row__btn" onclick="moverTareaCliente('${t.id}', -1)" title="Subir" ${isFirst ? 'disabled' : ''}>↑</button>
-            <button class="plantilla-row__btn" onclick="moverTareaCliente('${t.id}', 1)"  title="Bajar" ${isLast  ? 'disabled' : ''}>↓</button>
-            <button class="plantilla-row__btn plantilla-row__btn--delete" onclick="eliminarTareaCliente('${t.id}')" title="Eliminar">×</button>
-          </div>`;
-        })() : notasIndicator}
+      <div class="impl-tarea__controls">
+        ${enEdicion
+          ? `<select class="impl-tarea__resp-sel" onclick="event.stopPropagation();"
+                 onchange="cambiarResponsableTipoTarea('${t.id}', this.value, event)" title="Responsable">
+               <option value="cliente" ${t.responsable_tipo === 'cliente' ? 'selected' : ''}>Cliente</option>
+               <option value="equipo"  ${t.responsable_tipo === 'equipo'  ? 'selected' : ''}>Equipo</option>
+               <option value="ambos"   ${t.responsable_tipo === 'ambos'   ? 'selected' : ''}>Ambos</option>
+             </select>`
+          : respBadgeConAsesor
+        }
+        ${!enEdicion
+          ? `<select class="impl-tarea__estado-sel" onclick="event.stopPropagation();" onchange="cambiarEstadoTarea('${t.id}', this.value)" title="${puedoEditar ? 'Cambiar estado' : 'Solo ' + t.asesor + ' puede cambiar el estado'}" ${disabledAttr}>
+               <option value="pendiente"   ${t.estado === 'pendiente'   ? 'selected' : ''}>Pendiente</option>
+               <option value="en_progreso" ${t.estado === 'en_progreso' ? 'selected' : ''}>En progreso</option>
+               <option value="completada"  ${t.estado === 'completada'  ? 'selected' : ''}>Completada</option>
+               <option value="demorada"    ${t.estado === 'demorada'    ? 'selected' : ''}>Demorada</option>
+             </select>`
+          : ''
+        }
+        ${enEdicion
+          ? `<select class="impl-tarea__asesor-sel" onclick="event.stopPropagation();"
+                 onchange="cambiarAsesorTarea('${t.id}', this.value)" title="Asignar asesor">
+               <option value="">Sin asignar</option>
+               ${IMPL_TEAM.map(a => `<option value="${a}" ${(t.asesor || t.asesor_plantilla) === a ? 'selected' : ''}>${a}</option>`).join('')}
+             </select>`
+          : `<span class="impl-tarea__asesor-label" title="Asesor asignado">
+               ${t.asesor || t.asesor_plantilla || '<span style="color:var(--text3)">Sin asignar</span>'}
+             </span>`
+        }
+        ${fechaCell}
+        ${predBtn}
+        ${enEdicion && tareasDeFase ? (() => {
+            const ordenados = [...tareasDeFase].sort((a, b) => a.orden - b.orden);
+            const idx = ordenados.findIndex(x => x.id === t.id);
+            const isFirst = idx === 0;
+            const isLast  = idx === ordenados.length - 1;
+            return `<div class="impl-tarea__edit-btns" onclick="event.stopPropagation()">
+              <button class="plantilla-row__btn" onclick="moverTareaCliente('${t.id}', -1)" title="Subir" ${isFirst ? 'disabled' : ''}>↑</button>
+              <button class="plantilla-row__btn" onclick="moverTareaCliente('${t.id}', 1)"  title="Bajar" ${isLast  ? 'disabled' : ''}>↓</button>
+              <button class="plantilla-row__btn plantilla-row__btn--delete" onclick="eliminarTareaCliente('${t.id}')" title="Eliminar">×</button>
+            </div>`;
+          })() : notasIndicator}
+      </div>
     </div>
     ${enEdicion ? '' : renderImplNotasSection(t.id, notasTarea, isExpanded)}`;
 }
@@ -1461,6 +1499,21 @@ async function toggleTareaCompleta(tareaId) {
   }
   const nuevoEstado = t.estado === 'completada' ? 'pendiente' : 'completada';
   await cambiarEstadoTarea(tareaId, nuevoEstado);
+}
+
+async function renombrarTareaCliente(tareaId, nuevoNombre) {
+  const nombre = nuevoNombre.trim();
+  if (!nombre) return;
+  const t = implTareas.find(x => x.id === tareaId);
+  if (!t || t.tarea === nombre) return; // sin cambios
+  try {
+    await dbUpdate('implementacion_tareas', tareaId, { tarea: nombre });
+    t.tarea = nombre;
+    // No re-render completo para no perder el foco en otros inputs
+  } catch (e) {
+    console.error('Error renombrando tarea', e);
+    alert('No se pudo guardar el nombre: ' + e.message);
+  }
 }
 
 async function cambiarEstadoTarea(tareaId, nuevoEstado) {
@@ -2930,3 +2983,103 @@ function eventoLabelImpl(tipo) {
 }
 
 window.addEventListener('app-ready', initImplementacion);
+
+// ─────────────────────────────────────────────────────────
+//  MODAL DE TAREA MOBILE
+//  En mobile, en vez de expandir la fila, se abre un bottom
+//  sheet con toda la info y un selector de estado.
+// ─────────────────────────────────────────────────────────
+
+function handleImplTareaClick(tareaId, event) {
+  if (window.matchMedia('(max-width: 900px)').matches) {
+    // En mobile: abrir modal
+    event.stopPropagation();
+    abrirModalTareaMobile(tareaId);
+  } else {
+    // En desktop: comportamiento original (expandir notas)
+    toggleImplTareaExpanded(tareaId, event);
+  }
+}
+
+function abrirModalTareaMobile(tareaId) {
+  const t = implTareas.find(t => t.id === tareaId);
+  if (!t) return;
+
+  const modal = document.getElementById('modal-tarea-mobile');
+  if (!modal) return;
+
+  const estadoConfig = {
+    pendiente:   { label: 'Pendiente',   color: 'var(--text3)' },
+    en_progreso: { label: 'En progreso', color: 'var(--accent)' },
+    completada:  { label: 'Completada',  color: '#22c55e' },
+    demorada:    { label: 'Demorada',    color: 'var(--red)' }
+  };
+
+  const inicioStr = t.fecha_inicio_calc ? formatFechaImpl(t.fecha_inicio_calc) : '—';
+  const finStr    = t.fecha_estimada    ? formatFechaImpl(t.fecha_estimada)    : '—';
+  const numPred   = (t.predecesoras_ids || []).length;
+  const puedoEditar = puedeEditarTareaImpl(t);
+
+  // Rellenar contenido del modal
+  modal.querySelector('.mtm-num').textContent   = String(t.orden).padStart(2, '0');
+  modal.querySelector('.mtm-title').textContent = t.tarea;
+  modal.querySelector('.mtm-asesor-val').textContent  = t.asesor || t.asesor_plantilla || 'Sin asignar';
+  modal.querySelector('.mtm-fechas-val').textContent  = `${inicioStr} → ${finStr}`;
+  modal.querySelector('.mtm-duracion-val').textContent = `${t.duracion_dias || 1} día${t.duracion_dias !== 1 ? 's' : ''}`;
+  // Mostrar nombres de predecesoras, no solo el conteo
+  const predNombres = (t.predecesoras_ids || [])
+    .map(predId => {
+      const pred = implTareas.find(x => x.id === predId);
+      return pred ? `${String(pred.orden).padStart(2,'0')} ${pred.tarea}` : null;
+    })
+    .filter(Boolean);
+  const predEl = modal.querySelector('.mtm-pred-val');
+  if (predNombres.length === 0) {
+    predEl.textContent = 'Sin predecesoras';
+  } else {
+    predEl.innerHTML = predNombres.map(n => `<span class="mtm-pred-item">${n}</span>`).join('');
+  }
+
+  // Select de estado
+  const sel = modal.querySelector('#mtm-estado-sel');
+  sel.value = t.estado;
+  sel.disabled = !puedoEditar;
+
+  // Guardar id en el modal para confirmar
+  modal.dataset.tareaId = tareaId;
+
+  // Mensaje de permiso
+  const lockMsg = modal.querySelector('.mtm-lock-msg');
+  if (lockMsg) lockMsg.style.display = puedoEditar ? 'none' : 'block';
+
+  // Mostrar modal
+  modal.classList.add('mtm--open');
+  document.body.style.overflow = 'hidden';
+}
+
+function cerrarModalTareaMobile() {
+  const modal = document.getElementById('modal-tarea-mobile');
+  if (modal) modal.classList.remove('mtm--open');
+  document.body.style.overflow = '';
+}
+
+async function confirmarEstadoTareaMobile() {
+  const modal = document.getElementById('modal-tarea-mobile');
+  if (!modal) return;
+
+  const tareaId = modal.dataset.tareaId;
+  const nuevoEstado = modal.querySelector('#mtm-estado-sel').value;
+
+  const btn = modal.querySelector('.mtm-confirm-btn');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  try {
+    await cambiarEstadoTarea(tareaId, nuevoEstado);
+    cerrarModalTareaMobile();
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Confirmar';
+    alert('No se pudo guardar: ' + e.message);
+  }
+}

@@ -322,6 +322,15 @@ function refreshClientMetrics() {
   const elSub = document.getElementById('clientes-page-sub');
   if (elSub) elSub.textContent = total + ' cliente' + (total !== 1 ? 's' : '') + ' activo' + (total !== 1 ? 's' : '');
 
+  // ── Subtítulo del Panel general: mes y año actuales ──
+  const panelSub = document.getElementById('panel-page-sub');
+  if (panelSub) {
+    const ahora = new Date();
+    const mes = ahora.toLocaleString('es-AR', { month: 'long' });
+    const anio = ahora.getFullYear();
+    panelSub.textContent = mes.charAt(0).toUpperCase() + mes.slice(1) + ' ' + anio + ' — datos en tiempo real';
+  }
+
   // ── Anillos de autonomía ──
   const pBaja  = Math.round((baja  / totalAut) * 100);
   const pMedia = Math.round((media / totalAut) * 100);
