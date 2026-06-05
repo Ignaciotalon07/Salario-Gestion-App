@@ -579,36 +579,76 @@ function renderGanttCliente(tareasCli, cliente, escala) {
 }
 
 function renderGanttRow(t, idx, minDate, pxDay, totalWidth) {
-  // Calcular x y ancho de la barra
-  const inicio = t.fecha_inicio_calc ? startOfDay(new Date(t.fecha_inicio_calc)) : null;
-  const fin = t.fecha_estimada ? startOfDay(new Date(t.fecha_estimada)) : null;
+  const inicio = t.fecha_inicio_calc ? startOfDay(_parseDate(t.fecha_inicio_calc)) : null;
 
   let barHtml = '';
-  if (inicio && fin) {
+  if (inicio) {
     const x = diasEntre(minDate, inicio) * pxDay;
-    const w = Math.max(pxDay, (diasEntre(inicio, fin) + 1) * pxDay);
-    const isVencida = isTareaVencida(t);
-    let color = 'var(--text3)';
-    if (t.estado === 'completada') color = 'var(--green)';
-    else if (t.estado === 'en_progreso') color = 'var(--blue)';
-    else if (isVencida || t.estado === 'demorada') color = 'var(--red)';
+    const durPlaneada = Math.max(1, t.duracion_dias || 1);
+    const wPlan = Math.max(pxDay, durPlaneada * pxDay);
 
-    const tooltip = `${t.tarea}\nAsesor: ${t.asesor || 'sin asignar'}\nInicio: ${formatFechaImpl(inicio)}\nFin: ${formatFechaImpl(fin)}\nDuración: ${t.duracion_dias}d\nEstado: ${labelEstadoImpl(t.estado)}${t.fecha_completada ? '\nCompletada: ' + formatFechaImpl(t.fecha_completada) : ''}`;
+    const isVencida    = isTareaVencida(t);
+    const isCompletada = t.estado === 'completada' && t.fecha_completada;
+    const esCliente    = t.responsable_tipo === 'cliente';
+    const rayas        = (c) => `repeating-linear-gradient(135deg,${c} 0px,${c} 4px,${c}55 4px,${c}55 8px)`;
 
-    // Barras del cliente: rayas diagonales. Barras del equipo/ambos: lisas.
-    const esCliente = t.responsable_tipo === 'cliente';
-    const barStyle  = esCliente
-      ? `left:${x}px;width:${w}px;background:repeating-linear-gradient(135deg,${color} 0px,${color} 4px,${color}55 4px,${color}55 8px)`
-      : `left:${x}px;width:${w}px;background:${color}`;
-    const barClass  = esCliente ? 'gantt-bar gantt-bar--cliente' : 'gantt-bar gantt-bar--equipo';
+    if (isCompletada) {
+      // ── Tarea completada: siempre verde ──
+      // Si se demoró: barra verde (duración planeada) + extensión naranja (días extra)
+      // Si fue antes: barra verde corta dentro de outline gris
+      const fc       = startOfDay(_parseDate(t.fecha_completada));
+      const diasReal = Math.max(1, diasEntre(inicio, fc) + 1);
+      const wReal    = Math.max(pxDay, diasReal * pxDay);
+      const tardio   = diasReal > durPlaneada;
+      const diffLabel = tardio
+        ? `+${diasReal - durPlaneada}d de retraso`
+        : diasReal < durPlaneada
+          ? `-${durPlaneada - diasReal}d antes`
+          : 'justo en tiempo';
 
-    barHtml = `
-      <div class="${barClass}"
-           style="${barStyle}"
-           title="${escapeHtmlImpl(tooltip)}"
-           onclick="toggleImplTareaExpanded('${t.id}', null)">
-        <span class="gantt-bar-label">${String(t.orden).padStart(2, '0')}</span>
-      </div>`;
+      const tooltip = `${t.tarea}\nAsesor: ${t.asesor || 'sin asignar'}\nInicio: ${formatFechaImpl(inicio)}\nPlaneada: ${durPlaneada}d  |  Real: ${diasReal}d (${diffLabel})\nEstado: Completada`;
+
+      // Ancho total de la barra = max(planeada, real)
+      const wTotal = Math.max(wPlan, wReal);
+
+      barHtml = `
+        <div style="position:absolute;left:${x}px;top:50%;transform:translateY(-50%);height:70%;width:${wTotal}px;pointer-events:auto;"
+             title="${escapeHtmlImpl(tooltip)}"
+             onclick="toggleImplTareaExpanded('${t.id}', null)">
+          <!-- Outline: duración planeada (siempre visible como referencia) -->
+          <div style="position:absolute;left:0;top:0;width:${wPlan}px;height:100%;
+               border:2px dashed rgba(255,255,255,0.35);border-radius:4px;box-sizing:border-box;"></div>
+          <!-- Barra verde: duración planeada (o lo que alcanzó si fue antes) -->
+          <div style="position:absolute;left:0;top:0;width:${Math.min(wPlan, wReal)}px;height:100%;
+               border-radius:${tardio ? '4px 0 0 4px' : '4px'};
+               background:${esCliente ? rayas('var(--green)') : 'var(--green)'};opacity:0.9;
+               display:flex;align-items:center;padding-left:6px;overflow:hidden;white-space:nowrap;
+               font-size:10px;font-weight:700;color:white;">
+            ${String(t.orden).padStart(2, '0')}
+          </div>
+          <!-- Extensión naranja: días de retraso (solo si se pasó) -->
+          ${tardio ? `<div style="position:absolute;left:${wPlan}px;top:0;width:${wReal - wPlan}px;height:100%;
+               border-radius:0 4px 4px 0;
+               background:${esCliente ? rayas('var(--amber)') : 'var(--amber)'};opacity:0.85;"></div>` : ''}
+        </div>`;
+    } else {
+      // ── Tarea no completada: barra simple con color por estado ──
+      let color = 'var(--text3)';
+      if (t.estado === 'en_progreso') color = 'var(--blue)';
+      else if (isVencida || t.estado === 'demorada') color = 'var(--red)';
+
+      const fin     = t.fecha_estimada ? startOfDay(_parseDate(t.fecha_estimada)) : null;
+      const tooltip = `${t.tarea}\nAsesor: ${t.asesor || 'sin asignar'}\nInicio: ${formatFechaImpl(inicio)}${fin ? '\nFin estimado: ' + formatFechaImpl(fin) : ''}\nDuración: ${durPlaneada}d\nEstado: ${labelEstadoImpl(t.estado)}`;
+      const bg      = esCliente ? rayas(color) : color;
+
+      barHtml = `
+        <div class="gantt-bar ${esCliente ? 'gantt-bar--cliente' : 'gantt-bar--equipo'}"
+             style="left:${x}px;width:${wPlan}px;background:${bg}"
+             title="${escapeHtmlImpl(tooltip)}"
+             onclick="toggleImplTareaExpanded('${t.id}', null)">
+          <span class="gantt-bar-label">${String(t.orden).padStart(2, '0')}</span>
+        </div>`;
+    }
   }
 
   // Render del label izquierdo (orden + nombre de tarea, con tooltip de asesor)
