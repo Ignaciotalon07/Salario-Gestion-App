@@ -1775,15 +1775,13 @@ async function cambiarAsesorTarea(tareaId, asesor) {
   const clienteNombre = cliente ? cliente.nombre : 'Cliente';
 
   try {
-    // 1) Cerrar pendiente viejo si existe (sigue vinculado a otro asesor o se desasigna)
+    // 1) Eliminar pendiente viejo si existe — el cambio de asesor es una corrección,
+    //    no una resolución, así que no debe quedar rastro en el historial de pendientes.
     if (t.pendiente_id) {
       try {
-        await dbUpdate('pendientes', t.pendiente_id, {
-          resuelto: true,
-          resolved_at: new Date().toISOString()
-        });
+        await dbDelete('pendientes', t.pendiente_id);
       } catch (e) {
-        console.warn('No se pudo cerrar el pendiente viejo (puede que ya no exista)', e);
+        console.warn('No se pudo eliminar el pendiente viejo (puede que ya no exista)', e);
       }
     }
 
@@ -3162,15 +3160,12 @@ async function confirmarReasignacionMasiva() {
       const cliente = (typeof clientes !== 'undefined' ? clientes : []).find(c => c.id === t.cliente_id);
       const clienteNombre = cliente ? cliente.nombre : 'Cliente';
 
-      // 1) Cerrar pendiente viejo si existe
+      // 1) Eliminar pendiente viejo si existe (reasignación = corrección, no resolución)
       if (t.pendiente_id) {
         try {
-          await dbUpdate('pendientes', t.pendiente_id, {
-            resuelto: true,
-            resolved_at: new Date().toISOString()
-          });
+          await dbDelete('pendientes', t.pendiente_id);
         } catch (e) {
-          console.warn('No se pudo cerrar pendiente viejo de tarea', t.id, e);
+          console.warn('No se pudo eliminar pendiente viejo de tarea', t.id, e);
         }
       }
 
