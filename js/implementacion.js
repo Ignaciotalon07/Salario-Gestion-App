@@ -174,8 +174,8 @@ function calcularSemaforo(c, tareasCliente, progreso) {
 // Se usa para el progreso visual y el semáforo de salud.
 const IMPL_FASES = [
   { key: 'relevamiento',  nombre: 'Relevamiento', icono: '🔍' },
-  { key: 'configuracion', nombre: 'Configuración', icono: '⚙️' },
   { key: 'analisis',      nombre: 'Análisis',      icono: '📊' },
+  { key: 'configuracion', nombre: 'Configuración', icono: '⚙️' },
   { key: 'pruebas',       nombre: 'Pruebas',       icono: '✅' },
   { key: 'golive',        nombre: 'Go-live',       icono: '🚀' },
 ];
