@@ -8,6 +8,7 @@
 
 let implTareas = [];          // todas las tareas de todos los clientes impl
 let implTareaNotas   = {};    // { tarea_id: [nota, nota, ...] }
+let implFasesExtra   = {};    // { cliente_id: [{id, nombre, icono, orden}] } — fases custom por cliente
 let implActividadLog = {};    // { cliente_id: [evento, ...] } — cargado lazy
 let _actividadAbierta = {};   // { cliente_id: bool }
 let implFiltroNombre = '';    // buscador de cliente
@@ -180,16 +181,39 @@ const IMPL_FASES = [
   { key: 'golive',        nombre: 'Go-live',       icono: '🚀' },
 ];
 
+// Orden implícito de las fases base (1000 entre cada una — deja margen para insertar custom en el medio)
+const IMPL_FASES_ORDEN = { relevamiento: 1000, analisis: 2000, configuracion: 3000, pruebas: 4000, golive: 5000 };
+
+// Devuelve las fases de un cliente: las 5 base + cualquier fase custom, ordenadas por _orden.
+// Las fases custom llevan _isBase=false y _id para poder reordenarlas / eliminarlas.
+function getFasesParaCliente(clienteId) {
+  const baseFases = IMPL_FASES.map(f => ({
+    ...f,
+    _orden:  IMPL_FASES_ORDEN[f.key] || 5000,
+    _isBase: true,
+  }));
+  const extras = (implFasesExtra[clienteId] || []).map(f => ({
+    key:     f.id,
+    nombre:  f.nombre,
+    icono:   f.icono || '📋',
+    _orden:  f.orden,
+    _isBase: false,
+    _id:     f.id,
+  }));
+  return [...baseFases, ...extras].sort((a, b) => a._orden - b._orden);
+}
+
 // Devuelve el estado de cada fase para un cliente:
 // { completas, total, pct, estado: 'completa'|'activa'|'pendiente' }
-function calcularFases(tareasCliente) {
-  const faseActiva = IMPL_FASES.findIndex(f => {
+// Acepta un array de fases opcional; si no se pasa, usa IMPL_FASES.
+function calcularFases(tareasCliente, fases = IMPL_FASES) {
+  const faseActiva = fases.findIndex(f => {
     const tareasFase = tareasCliente.filter(t => (t.fase || 'relevamiento') === f.key);
     if (tareasFase.length === 0) return false;
     return tareasFase.some(t => t.estado !== 'completada');
   });
 
-  return IMPL_FASES.map((f, i) => {
+  return fases.map((f, i) => {
     const tareasFase = tareasCliente.filter(t => (t.fase || 'relevamiento') === f.key);
     const total    = tareasFase.length;
     const completas = tareasFase.filter(t => t.estado === 'completada').length;
@@ -712,6 +736,17 @@ async function initImplementacion() {
     const rows = await dbList('implementacion_tareas', { orderBy: 'orden', ascending: true });
     implTareas = rows.map(dbRowToImplTarea);
 
+    // Cargar fases custom de todos los clientes
+    const { data: fasesRows } = await sb()
+      .from('implementacion_fases_cliente')
+      .select('*')
+      .order('orden', { ascending: true });
+    implFasesExtra = {};
+    (fasesRows || []).forEach(f => {
+      if (!implFasesExtra[f.cliente_id]) implFasesExtra[f.cliente_id] = [];
+      implFasesExtra[f.cliente_id].push(f);
+    });
+
     // Cargar notas de todas las tareas en una sola query
     implTareaNotas = {};
     if (implTareas.length > 0) {
@@ -1199,14 +1234,15 @@ function toggleFaseExpanded(clienteId, faseIdx) {
 }
 
 function renderListaFases(c, tareasCliente, tareasVisibles) {
-  const fases = calcularFases(tareasCliente);
+  const fasesCliente = getFasesParaCliente(c.id);
+  const fases = calcularFases(tareasCliente, fasesCliente);
   const hayFiltro = implFiltroAsesor || implFiltroEstado || implFiltroResp;
   const enEdicionCliente = !!(window._implEditMode && window._implEditMode[c.id]);
 
   // Mapa de id → número secuencial global (1, 2, 3... a través de todas las fases)
   const numGlobal = {};
   let seq = 1;
-  IMPL_FASES.forEach(f => {
+  fasesCliente.forEach(f => {
     tareasCliente
       .filter(t => (t.fase || 'relevamiento') === f.key)
       .sort((a, b) => a.orden - b.orden)
@@ -1244,6 +1280,16 @@ function renderListaFases(c, tareasCliente, tareasVisibles) {
             </div>
             <div class="impl-fase-header__right">
               ${badge}
+              ${enEdicionCliente && !f._isBase ? `
+                <button class="plantilla-row__btn" style="margin-right:2px" title="Subir fase"
+                  onclick="event.stopPropagation();moverFaseCliente('${c.id}','${f.key}',-1,event)"
+                  ${i === 0 ? 'disabled' : ''}>↑</button>
+                <button class="plantilla-row__btn" style="margin-right:2px" title="Bajar fase"
+                  onclick="event.stopPropagation();moverFaseCliente('${c.id}','${f.key}',1,event)"
+                  ${i === fases.length - 1 ? 'disabled' : ''}>↓</button>
+                <button class="plantilla-row__btn plantilla-row__btn--delete" style="margin-right:6px" title="Eliminar fase"
+                  onclick="event.stopPropagation();eliminarFaseCliente('${c.id}','${f.key}',event)">×</button>
+              ` : ''}
               ${enEdicionCliente ? `<button class="btn-sm" style="font-size:11px;padding:2px 8px;margin-right:4px"
                 onclick="event.stopPropagation();agregarTareaCliente('${c.id}','${f.key}')">+ Agregar tarea</button>` : ''}
               <div class="impl-fase-minibar">
@@ -1260,6 +1306,11 @@ function renderListaFases(c, tareasCliente, tareasVisibles) {
             </div>` : ''}
         </div>`;
     }).join('')}
+    ${enEdicionCliente ? `
+      <div style="padding:10px 4px 4px">
+        <button class="btn-sm" style="font-size:11px;padding:4px 12px"
+          onclick="event.stopPropagation();crearFaseCliente('${c.id}', event)">+ Nueva fase</button>
+      </div>` : ''}
   </div>`;
 }
 
@@ -2113,7 +2164,32 @@ function suscribirImplementacion() {
     .on('postgres_changes',
         { event: '*', schema: 'public', table: 'implementacion_tarea_notas' },
         (payload) => handleImplNotaChange(payload))
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'implementacion_fases_cliente' },
+        (payload) => handleImplFaseClienteChange(payload))
     .subscribe();
+}
+
+function handleImplFaseClienteChange(payload) {
+  const { eventType, new: newRow, old: oldRow } = payload;
+  if (eventType === 'INSERT') {
+    const cid = newRow.cliente_id;
+    if (!implFasesExtra[cid]) implFasesExtra[cid] = [];
+    if (!implFasesExtra[cid].find(f => f.id === newRow.id)) {
+      implFasesExtra[cid].push(newRow);
+      renderImplementacion();
+    }
+  } else if (eventType === 'UPDATE') {
+    const cid = newRow.cliente_id;
+    if (!implFasesExtra[cid]) implFasesExtra[cid] = [];
+    const idx = implFasesExtra[cid].findIndex(f => f.id === newRow.id);
+    if (idx !== -1) { implFasesExtra[cid][idx] = newRow; renderImplementacion(); }
+  } else if (eventType === 'DELETE') {
+    for (const cid in implFasesExtra) {
+      implFasesExtra[cid] = implFasesExtra[cid].filter(f => f.id !== oldRow.id);
+    }
+    renderImplementacion();
+  }
 }
 
 function handleImplChange(payload) {
@@ -2360,10 +2436,124 @@ function onPlantillaRespChange(sel, etapaId) {
   if (sel.value !== 'equipo') editarEtapaCampo(etapaId, 'asesor', null);
 }
 
+// ────────── Fases custom por cliente ──────────
+
+async function crearFaseCliente(clienteId, event) {
+  if (event) event.stopPropagation();
+  const nombre = prompt('Nombre de la nueva fase:');
+  if (!nombre || !nombre.trim()) return;
+  const icono = (prompt('Ícono (emoji):', '📋') || '📋').trim() || '📋';
+
+  const extras   = implFasesExtra[clienteId] || [];
+  // Empezar después de golive (5000). Si ya hay extras, poner al final de ellos.
+  const maxOrden = extras.length > 0 ? Math.max(...extras.map(f => f.orden)) : 5000;
+  const nuevoOrden = Math.max(maxOrden, 5000) + 500;
+
+  try {
+    const inserted = await dbInsert('implementacion_fases_cliente', {
+      cliente_id: clienteId,
+      nombre:     nombre.trim(),
+      icono:      icono,
+      orden:      nuevoOrden,
+    });
+    if (!implFasesExtra[clienteId]) implFasesExtra[clienteId] = [];
+    implFasesExtra[clienteId].push(inserted);
+    renderImplementacion();
+    toast(`Fase "${nombre.trim()}" creada`);
+  } catch (err) {
+    console.error('Error creando fase', err);
+    alert('No se pudo crear la fase: ' + err.message);
+  }
+}
+
+async function moverFaseCliente(clienteId, faseId, dir, event) {
+  if (event) event.stopPropagation();
+  const fases = getFasesParaCliente(clienteId);
+  const idx   = fases.findIndex(f => f.key === faseId);
+  if (idx === -1) return;
+  const targetIdx = idx + dir;
+  if (targetIdx < 0 || targetIdx >= fases.length) return;
+
+  const thisExtra = (implFasesExtra[clienteId] || []).find(f => f.id === faseId);
+  if (!thisExtra) return;
+
+  const target = fases[targetIdx];
+
+  try {
+    if (!target._isBase) {
+      // Intercambio con otra fase custom → swap de ordenes (con temp para evitar conflicto)
+      const otherExtra = (implFasesExtra[clienteId] || []).find(f => f.id === target.key);
+      if (!otherExtra) return;
+      const aOrden = thisExtra.orden;
+      const bOrden = otherExtra.orden;
+      const tmp = 999999 + Math.floor(Math.random() * 1000);
+      await dbUpdate('implementacion_fases_cliente', thisExtra.id,  { orden: tmp });
+      await dbUpdate('implementacion_fases_cliente', otherExtra.id, { orden: aOrden });
+      await dbUpdate('implementacion_fases_cliente', thisExtra.id,  { orden: bOrden });
+      thisExtra.orden  = bOrden;
+      otherExtra.orden = aOrden;
+    } else {
+      // Cruzar una fase base: calcular orden entre las dos fases vecinas de la nueva posición
+      let newOrden;
+      if (dir === -1) {
+        // Subir: nuestra fase queda entre fases[targetIdx-1] y fases[targetIdx]
+        const prevOrden = targetIdx > 0 ? fases[targetIdx - 1]._orden : fases[targetIdx]._orden - 200;
+        newOrden = targetIdx === 0
+          ? fases[targetIdx]._orden - 100
+          : Math.floor((prevOrden + fases[targetIdx]._orden) / 2);
+      } else {
+        // Bajar: nuestra fase queda entre fases[targetIdx] y fases[targetIdx+1]
+        const nextOrden = targetIdx < fases.length - 1 ? fases[targetIdx + 1]._orden : fases[targetIdx]._orden + 200;
+        newOrden = targetIdx === fases.length - 1
+          ? fases[targetIdx]._orden + 100
+          : Math.floor((fases[targetIdx]._orden + nextOrden) / 2);
+      }
+      await dbUpdate('implementacion_fases_cliente', thisExtra.id, { orden: newOrden });
+      thisExtra.orden = newOrden;
+    }
+    renderImplementacion();
+    toast('Fase movida');
+  } catch (err) {
+    console.error('Error moviendo fase', err);
+    alert('No se pudo mover la fase: ' + err.message);
+  }
+}
+
+async function eliminarFaseCliente(clienteId, faseId, event) {
+  if (event) event.stopPropagation();
+
+  const extras  = implFasesExtra[clienteId] || [];
+  const fase    = extras.find(f => f.id === faseId);
+  if (!fase) return;
+
+  // Validación: no se puede eliminar si tiene tareas asignadas
+  const tareasEnFase = implTareas.filter(t => t.cliente_id === clienteId && t.fase === faseId);
+  if (tareasEnFase.length > 0) {
+    alert(
+      `No se puede eliminar la fase "${fase.nombre}" porque tiene ${tareasEnFase.length} tarea${tareasEnFase.length !== 1 ? 's' : ''} asignada${tareasEnFase.length !== 1 ? 's' : ''}.\n\nEliminálas o movélas a otra fase antes de eliminar esta.`
+    );
+    return;
+  }
+
+  if (!confirm(`¿Eliminar la fase "${fase.nombre}"?\n\nEsta acción no se puede deshacer.`)) return;
+
+  try {
+    await dbDelete('implementacion_fases_cliente', faseId);
+    implFasesExtra[clienteId] = extras.filter(f => f.id !== faseId);
+    renderImplementacion();
+    toast(`Fase "${fase.nombre}" eliminada`);
+  } catch (err) {
+    console.error('Error eliminando fase', err);
+    alert('No se pudo eliminar la fase: ' + err.message);
+  }
+}
+
 // ────────── Agregar / eliminar / reordenar tareas del cliente ──────────
 
 async function agregarTareaCliente(clienteId, faseKey) {
-  const nombre = prompt(`Nueva tarea en ${IMPL_FASES.find(f => f.key === faseKey)?.nombre || faseKey}:`);
+  const todasFases = getFasesParaCliente(clienteId);
+  const nombreFase = todasFases.find(f => f.key === faseKey)?.nombre || faseKey;
+  const nombre = prompt(`Nueva tarea en ${nombreFase}:`);
   if (!nombre || !nombre.trim()) return;
 
   const tareasDelCliente = implTareas.filter(t => t.cliente_id === clienteId);
