@@ -503,6 +503,14 @@
               <span>Pendientes</span>
               <span class="nav-badge warn" id="pend-nav-badge">3</span>
             </button>
+            <button class="nav-item" onclick="goTo(this, 'consultas-page')">
+              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M2 2h12v9H2z"></path>
+                <path d="M5 14h6M8 11v3"></path>
+                <path d="M5 5h6M5 7.5h4"></path>
+              </svg>
+              <span>Consultas</span>
+            </button>
           </div>
 
           <div class="sidebar-section">
@@ -910,6 +918,163 @@
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════
+         CONSULTAS (sección dedicada)
+    ════════════════════════════════════ -->
+          <div id="consultas-page" class="page">
+            <div class="page-header">
+              <div>
+                <div class="page-title">Consultas</div>
+                <div class="page-sub" id="cp-sub">Histórico y métricas de atención</div>
+              </div>
+              <button class="btn-primary" onclick="abrirModalConsulta()">+ Registrar consulta</button>
+            </div>
+
+            <!-- Métricas principales -->
+            <div class="metrics-grid" style="margin-bottom:20px">
+              <div class="metric-card">
+                <div class="metric-label">Hoy</div>
+                <div class="metric-value" id="cp-hoy">—</div>
+                <div class="metric-sub" id="cp-hoy-sub">consultas</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Este mes</div>
+                <div class="metric-value" id="cp-mes">—</div>
+                <div class="metric-sub" id="cp-mes-sub">—</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Top cliente del mes</div>
+                <div class="metric-value" id="cp-top-mes-nombre" style="font-size:16px;line-height:1.2">—</div>
+                <div class="metric-sub" id="cp-top-mes-sub">—</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Prom. diario (mes)</div>
+                <div class="metric-value" id="cp-prom">—</div>
+                <div class="metric-sub">consultas por día</div>
+              </div>
+            </div>
+
+            <!-- Rankings con toggle día/semana/mes/año + navegación por períodos anteriores -->
+            <div class="grid-2" style="margin-bottom:20px">
+              <!-- Top cliente -->
+              <div class="card">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+                  <span class="card-title" style="margin:0;flex:1">Cliente que más consulta</span>
+                  <div style="display:inline-flex;border:1px solid var(--border2);border-radius:8px;overflow:hidden">
+                    <button class="cp-range-btn" onclick="setCpRange('cp-top-cli','dia',this)">Día</button>
+                    <button class="cp-range-btn active" onclick="setCpRange('cp-top-cli','semana',this)">Semana</button>
+                    <button class="cp-range-btn" onclick="setCpRange('cp-top-cli','mes',this)">Mes</button>
+                    <button class="cp-range-btn" onclick="setCpRange('cp-top-cli','anio',this)">Año</button>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+                  <button id="cp-top-cli-nav-prev" class="cp-nav-btn" onclick="cpNavRanking('cp-top-cli',-1)">◀</button>
+                  <span id="cp-top-cli-period" class="cp-period-label">Últimos 7 días</span>
+                  <button id="cp-top-cli-nav-next" class="cp-nav-btn" onclick="cpNavRanking('cp-top-cli',1)" disabled>▶</button>
+                </div>
+                <div id="cp-top-cli">—</div>
+              </div>
+
+              <!-- Consulta más frecuente -->
+              <div class="card">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+                  <span class="card-title" style="margin:0;flex:1">Consulta más frecuente</span>
+                  <div style="display:inline-flex;border:1px solid var(--border2);border-radius:8px;overflow:hidden">
+                    <button class="cp-range-btn" onclick="setCpRange('cp-top-cat','dia',this)">Día</button>
+                    <button class="cp-range-btn active" onclick="setCpRange('cp-top-cat','semana',this)">Semana</button>
+                    <button class="cp-range-btn" onclick="setCpRange('cp-top-cat','mes',this)">Mes</button>
+                    <button class="cp-range-btn" onclick="setCpRange('cp-top-cat','anio',this)">Año</button>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+                  <button id="cp-top-cat-nav-prev" class="cp-nav-btn" onclick="cpNavRanking('cp-top-cat',-1)">◀</button>
+                  <span id="cp-top-cat-period" class="cp-period-label">Últimos 7 días</span>
+                  <button id="cp-top-cat-nav-next" class="cp-nav-btn" onclick="cpNavRanking('cp-top-cat',1)" disabled>▶</button>
+                </div>
+                <div id="cp-top-cat">—</div>
+              </div>
+            </div>
+
+            <!-- Segunda fila de rankings: tiempo por cliente + consulta más repetida -->
+            <div class="grid-2" style="margin-bottom:20px">
+              <!-- Cliente que más tiempo consume -->
+              <div class="card">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+                  <span class="card-title" style="margin:0;flex:1">Cliente que más tiempo consume</span>
+                  <div style="display:inline-flex;border:1px solid var(--border2);border-radius:8px;overflow:hidden">
+                    <button class="cp-range-btn" onclick="setCpRange('cp-top-tiempo','dia',this)">Día</button>
+                    <button class="cp-range-btn active" onclick="setCpRange('cp-top-tiempo','semana',this)">Semana</button>
+                    <button class="cp-range-btn" onclick="setCpRange('cp-top-tiempo','mes',this)">Mes</button>
+                    <button class="cp-range-btn" onclick="setCpRange('cp-top-tiempo','anio',this)">Año</button>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+                  <button id="cp-top-tiempo-nav-prev" class="cp-nav-btn" onclick="cpNavRanking('cp-top-tiempo',-1)">◀</button>
+                  <span id="cp-top-tiempo-period" class="cp-period-label">Últimos 7 días</span>
+                  <button id="cp-top-tiempo-nav-next" class="cp-nav-btn" onclick="cpNavRanking('cp-top-tiempo',1)" disabled>▶</button>
+                </div>
+                <div id="cp-top-tiempo">—</div>
+              </div>
+
+              <!-- Consulta más repetida (flag repetida = sí) -->
+              <div class="card">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+                  <span class="card-title" style="margin:0;flex:1">Consulta más repetida</span>
+                  <div style="display:inline-flex;border:1px solid var(--border2);border-radius:8px;overflow:hidden">
+                    <button class="cp-range-btn" onclick="setCpRange('cp-top-rep','dia',this)">Día</button>
+                    <button class="cp-range-btn active" onclick="setCpRange('cp-top-rep','semana',this)">Semana</button>
+                    <button class="cp-range-btn" onclick="setCpRange('cp-top-rep','mes',this)">Mes</button>
+                    <button class="cp-range-btn" onclick="setCpRange('cp-top-rep','anio',this)">Año</button>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px">
+                  <button id="cp-top-rep-nav-prev" class="cp-nav-btn" onclick="cpNavRanking('cp-top-rep',-1)">◀</button>
+                  <span id="cp-top-rep-period" class="cp-period-label">Últimos 7 días</span>
+                  <button id="cp-top-rep-nav-next" class="cp-nav-btn" onclick="cpNavRanking('cp-top-rep',1)" disabled>▶</button>
+                </div>
+                <div id="cp-top-rep">—</div>
+              </div>
+            </div>
+
+            <!-- Historial -->
+            <div class="card">
+              <!-- Fila 1: título + búsqueda + asesor -->
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+                <span class="card-title" style="margin:0">Historial de consultas</span>
+                <input type="text" id="cp-buscar" placeholder="Buscar cliente o categoría..."
+                  style="flex:1;min-width:160px;max-width:260px;margin:0"
+                  oninput="cpHistFiltroChange()">
+                <select id="cp-filtro-asesor" style="font-size:12px;padding:5px 8px" onchange="cpHistFiltroChange()">
+                  <option value="">Todos los asesores</option>
+                  <option>Ignacio Talon</option>
+                  <option>Matias Ferro</option>
+                  <option>Daniel Colomer</option>
+                  <option>Daniel Ferro</option>
+                  <option>Renzo Moretti</option>
+                  <option>Alfredo Cesar</option>
+                </select>
+                <span id="cp-hist-count" style="font-size:12px;color:var(--text3);margin-left:auto"></span>
+              </div>
+              <!-- Fila 2: filtro por período + navegación -->
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+                <div style="display:inline-flex;border:1px solid var(--border2);border-radius:8px;overflow:hidden">
+                  <button class="cp-hist-btn active" onclick="setCpHistPeriodo('todo',this)">Todo</button>
+                  <button class="cp-hist-btn" onclick="setCpHistPeriodo('dia',this)">Día</button>
+                  <button class="cp-hist-btn" onclick="setCpHistPeriodo('semana',this)">Semana</button>
+                  <button class="cp-hist-btn" onclick="setCpHistPeriodo('mes',this)">Mes</button>
+                  <button class="cp-hist-btn" onclick="setCpHistPeriodo('anio',this)">Año</button>
+                </div>
+                <!-- Flechas de nav — visibles cuando período ≠ Todo -->
+                <div id="cp-hist-nav-row" style="display:none;align-items:center;gap:6px">
+                  <button id="cp-hist-nav-prev" class="cp-nav-btn" onclick="cpHistNav(-1)">◀</button>
+                  <span id="cp-hist-period-label" class="cp-period-label"></span>
+                  <button id="cp-hist-nav-next" class="cp-nav-btn" onclick="cpHistNav(1)" disabled>▶</button>
+                </div>
+              </div>
+              <div id="cp-historial"></div>
             </div>
           </div>
 
@@ -2478,6 +2643,7 @@ Paso 2: ..."
     <script src="js/administracion.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/alertas.js"></script>
+    <script src="js/consultas-page.js"></script>
 
     <!-- ════════════════════════════════════
        MODAL — Registrar consulta

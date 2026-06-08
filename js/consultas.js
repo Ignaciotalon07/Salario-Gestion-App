@@ -148,6 +148,8 @@ async function initConsultas() {
     if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
     // Re-renderizar cards de clientes para que muestren las stats correctas
     if (typeof renderClientes === 'function') renderClientes();
+    // Refrescar la página de Consultas
+    if (typeof refreshConsultasPage === 'function') refreshConsultasPage();
     suscribirConsultas();
     // Filtrar opciones del select según el rol y ajustar el form
     initTipoConsulta();
@@ -174,6 +176,8 @@ function suscribirConsultas() {
             if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
             // Re-render cards de clientes para actualizar stats (consultas/mes, % repetidas)
             if (typeof renderClientes === 'function') renderClientes();
+            // Refrescar la página de Consultas
+            if (typeof refreshConsultasPage === 'function') refreshConsultasPage();
           }
         })
     .subscribe();

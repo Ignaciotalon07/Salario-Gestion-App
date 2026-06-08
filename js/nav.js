@@ -14,6 +14,10 @@ function goTo(btn, id) {
     initTipoConsulta();
     if (typeof onTipoConsultaChange === 'function') onTipoConsultaChange();
   }
+  // Refrescar la página de consultas al navegar a ella
+  if (id === 'consultas-page' && typeof refreshConsultasPage === 'function') {
+    refreshConsultasPage();
+  }
 }
 
 // goClienteDetail es re-definida por cliente-detalle.js para navegar a la vista de historial.

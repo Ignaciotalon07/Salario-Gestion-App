@@ -1119,11 +1119,11 @@ function renderClienteImplCard(c) {
         <div class="impl-cliente-stats">
           <label class="impl-cliente-stat" onclick="event.stopPropagation();">
             <span class="impl-cliente-stat-label">📅 Inicio</span>
-            <input type="date" value="${fechaInicioVal}" onchange="cambiarFechaInicioCliente('${c.id}', this.value, this)" class="impl-cliente-stat-input" title="Fecha de inicio del proyecto">
+            <input type="date" value="${fechaInicioVal}" onblur="if(this.value) cambiarFechaInicioCliente('${c.id}', this.value, this)" class="impl-cliente-stat-input" title="Fecha de inicio del proyecto">
           </label>
           <label class="impl-cliente-stat" onclick="event.stopPropagation();">
             <span class="impl-cliente-stat-label">🎯 Objetivo</span>
-            <input type="date" value="${fechaObjetivoVal}" onchange="cambiarFechaFinObjetivo('${c.id}', this.value, this)" class="impl-cliente-stat-input" title="Fecha objetivo de fin (deadline)">
+            <input type="date" value="${fechaObjetivoVal}" onblur="if(this.value) cambiarFechaFinObjetivo('${c.id}', this.value, this)" class="impl-cliente-stat-input" title="Fecha objetivo de fin (deadline)">
           </label>
           <div class="impl-cliente-stat impl-cliente-stat--readonly">
             <span class="impl-cliente-stat-label">⏱ Fin calculado</span>
