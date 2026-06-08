@@ -338,8 +338,8 @@ function diasEntre(a, b) {
 //   - Sin predecesoras → arranca en fecha_inicio_implementacion
 //   - Con predecesoras → arranca al día siguiente del FIN más tardío de sus predecesoras
 //                        (fin = fecha_completada si esta completada, sino fecha_estimada)
-//   - fecha_estimada (fin) = inicio + duracion_dias - 1 día
-//     (ej: 1 día arranca y termina el mismo día)
+//   - fecha_estimada (fin) = inicio + duracion_dias
+//     (ej: 5 días desde el 20/06 → fin 25/06)
 //
 // Persiste los cambios en DB y actualiza el cache local.
 
@@ -401,7 +401,8 @@ async function recalcularGanttCliente(clienteId) {
     }
 
     // Tarea pendiente/en progreso: arrancar donde dejó el cursor
-    const fechaFin = _addDays(cursor, duracion - 1);
+    // fecha_fin = inicio + duracion_dias (ej: 5 días desde el 20/06 → fin 25/06)
+    const fechaFin = _addDays(cursor, duracion);
     t.fecha_inicio_calc = _toISODate(cursor);
     t.fecha_estimada    = _toISODate(fechaFin);
     cursor = _addDays(fechaFin, 1);
