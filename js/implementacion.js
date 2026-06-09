@@ -393,9 +393,20 @@ async function recalcularGanttCliente(clienteId) {
   const cliente = (typeof clientes !== 'undefined' ? clientes : []).find(c => c.id === clienteId);
   if (!cliente) return;
 
+  // Ordenar por fase primero (respetando el orden de fases del cliente, incluidas las custom),
+  // luego por t.orden dentro de cada fase. Así mover una fase al principio reordena las fechas.
+  const fasesCliente = getFasesParaCliente(clienteId);
+  const faseOrden = {};
+  fasesCliente.forEach((f, i) => { faseOrden[f.key] = i; });
+
   const tareasCli = implTareas
     .filter(t => t.cliente_id === clienteId)
-    .sort((a, b) => a.orden - b.orden);
+    .sort((a, b) => {
+      const fA = faseOrden[a.fase || 'relevamiento'] ?? 999;
+      const fB = faseOrden[b.fase || 'relevamiento'] ?? 999;
+      if (fA !== fB) return fA - fB;
+      return a.orden - b.orden;
+    });
 
   if (tareasCli.length === 0) return;
 
