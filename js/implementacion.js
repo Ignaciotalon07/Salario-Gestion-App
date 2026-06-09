@@ -1488,6 +1488,17 @@ function renderImplTarea(t, idxEnFase, tareasDeFase, numGlobal) {
 //   - Sin asesor asignado → cualquiera puede tomarla
 //   - Con asesor → solo esa persona puede cambiar estado/fecha/reasignar
 // Agregar notas siempre esta permitido para todos.
+// Retorna true si la tarea está lista para ejecutarse:
+// no tiene predecesoras, o todas sus predecesoras están completadas.
+function esTareaDesbloqueada(tarea, tareasCliente) {
+  const preds = tarea.predecesoras_ids || [];
+  if (preds.length === 0) return true;
+  return preds.every(predId => {
+    const pred = tareasCliente.find(t => t.id === predId);
+    return pred && pred.estado === 'completada';
+  });
+}
+
 function puedeEditarTareaImpl(t) {
   const me = (typeof getCurrentUserName === 'function') ? getCurrentUserName() : null;
   if (!me) return false;
@@ -1743,6 +1754,9 @@ async function cambiarEstadoTarea(tareaId, nuevoEstado) {
         if (todasListas) {
           await graduarClienteAsoporte(t.cliente_id);
         }
+
+        // ── Desbloqueo en cascada: crear pendientes para tareas que se acaban de habilitar ──
+        await crearPendientesDesbloqueados(t.cliente_id, tareaId);
       }
     }
   } catch (e) {
@@ -1798,25 +1812,32 @@ async function cambiarAsesorTarea(tareaId, asesor) {
 
     let nuevoPendienteId = null;
 
-    // 2) Crear nuevo pendiente si hay asesor nuevo
+    // 2) Crear pendiente para el nuevo asesor SOLO si la tarea ya está desbloqueada
+    //    (todas sus predecesoras completas). Si está bloqueada, el pendiente se crea
+    //    automáticamente cuando se complete la última predecesora.
     if (nuevo) {
-      try {
-        const pendRow = await dbInsert('pendientes', {
-          cliente_nombre: clienteNombre,
-          asesor:         nuevo,
-          prioridad:      'media',
-          categoria:      'Implementación',
-          descripcion:    `Implementación de ${clienteNombre} — ${t.tarea}`,
-          intento:        null,
-          prox_paso:      null,
-          tipo_pendiente: 'implementacion',
-          resuelto:       false
-        });
-        nuevoPendienteId = pendRow.id;
-        toast(`Pendiente creado para ${nuevo}`);
-      } catch (e) {
-        console.error('No se pudo crear el pendiente automatico', e);
-        // Continuamos: el cambio de asesor se guarda igual aunque falle el pendiente
+      const tareasCliente = implTareas.filter(x => x.cliente_id === t.cliente_id);
+      const desbloqueada  = esTareaDesbloqueada(t, tareasCliente);
+      if (desbloqueada) {
+        try {
+          const pendRow = await dbInsert('pendientes', {
+            cliente_nombre: clienteNombre,
+            asesor:         nuevo,
+            prioridad:      'media',
+            categoria:      'Implementación',
+            descripcion:    `Implementación de ${clienteNombre} — ${t.tarea}`,
+            intento:        null,
+            prox_paso:      null,
+            tipo_pendiente: 'implementacion',
+            resuelto:       false
+          });
+          nuevoPendienteId = pendRow.id;
+          toast(`Pendiente creado para ${nuevo}`);
+        } catch (e) {
+          console.error('No se pudo crear el pendiente automatico', e);
+        }
+      } else {
+        toast(`Asesor asignado. El pendiente se creará cuando se desbloquee la tarea.`);
       }
     }
 
@@ -1838,6 +1859,43 @@ async function cambiarAsesorTarea(tareaId, asesor) {
   } catch (e) {
     console.error('Error cambiando asesor', e);
     alert('No se pudo asignar el asesor: ' + e.message);
+  }
+}
+
+// Al completar una tarea, busca qué otras tareas del cliente se acaban de desbloquear
+// (tenían esta tarea como predecesora y ahora todas sus predecesoras están completas)
+// y les crea el pendiente automáticamente si tienen asesor asignado.
+async function crearPendientesDesbloqueados(clienteId, tareaCompletadaId) {
+  const tareasCliente = implTareas.filter(t => t.cliente_id === clienteId);
+  const cliente       = (typeof clientes !== 'undefined' ? clientes : []).find(c => c.id === clienteId);
+  const clienteNombre = cliente ? cliente.nombre : 'Cliente';
+
+  const recienDesbloqueadas = tareasCliente.filter(t => {
+    const preds = t.predecesoras_ids || [];
+    if (!preds.includes(tareaCompletadaId)) return false; // no depende de la tarea completada
+    if (!t.asesor) return false;                          // sin asesor asignado
+    if (t.pendiente_id) return false;                     // ya tiene pendiente activo
+    if (t.estado === 'completada') return false;          // ya estaba completa
+    return esTareaDesbloqueada(t, tareasCliente);         // todas sus predecesoras completas
+  });
+
+  for (const t of recienDesbloqueadas) {
+    try {
+      const pendRow = await dbInsert('pendientes', {
+        cliente_nombre: clienteNombre,
+        asesor:         t.asesor,
+        prioridad:      'media',
+        categoria:      'Implementación',
+        descripcion:    `Implementación de ${clienteNombre} — ${t.tarea}`,
+        tipo_pendiente: 'implementacion',
+        resuelto:       false
+      });
+      await dbUpdate('implementacion_tareas', t.id, { pendiente_id: pendRow.id });
+      t.pendiente_id = pendRow.id;
+      toast(`🔓 Desbloqueada: pendiente creado para ${t.asesor} — "${t.tarea}"`);
+    } catch (err) {
+      console.warn('No se pudo crear pendiente para tarea desbloqueada', t.id, err);
+    }
   }
 }
 
