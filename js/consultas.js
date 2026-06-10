@@ -23,7 +23,7 @@ function dbRowToConsulta(row) {
     repetida:    row.repetida ? 'si' : 'no',  // la DB usa boolean, la UI usa 'si'/'no'
     descripcion: row.descripcion,
     solucionId:    row.solucion_id,
-    tiempo:        row.tiempo_resolucion || null,
+    tiempo:        row.tiempo_resolucion ?? null,
     material:      row.material || null,
     remota:        row.conexion_remota || false,
     tipoConsulta:  row.tipo_consulta || 'soporte',

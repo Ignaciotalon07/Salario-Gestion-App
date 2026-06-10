@@ -7,9 +7,10 @@ let pendientes = [];
 let notasByPendiente = {}; // { pendiente_id: [nota, nota, ...] }
 let eventosByPendiente = {}; // { pendiente_id: [evento, ...] }
 let historialAbierto = {};   // { pendiente_id: bool }
-let viewMode   = 'mis';     // 'mis' | 'equipo'
-let catFilter  = '';        // '' | 'liquidacion' | 'errores' | 'configuracion' | 'actualizaciones' | 'fuera'
-let searchText = '';
+let viewMode     = 'mis';   // 'mis' | 'equipo'
+let catFilter    = '';      // '' | 'liquidacion' | 'errores' | 'configuracion' | 'actualizaciones' | 'fuera'
+let searchText   = '';
+let vencidoFilter = false;  // true → mostrar solo los vencidos
 let groupByCliente = false;
 let pendientesCerradosMes = 0; // contador de pendientes cerrados este mes
 
@@ -186,6 +187,14 @@ function getVisiblePendientes() {
     );
   }
 
+  // Filtro solo vencidos (más de 5 días abiertos)
+  if (vencidoFilter) {
+    arr = arr.filter(p => {
+      const v = vencimientoInfo(p.createdAt);
+      return v && v.urgente;
+    });
+  }
+
   return arr;
 }
 
@@ -199,6 +208,12 @@ function setCatFilter(cat, btn) {
 
 function setSearchText(text) {
   searchText = (text || '').trim();
+  renderPendientes();
+}
+
+function toggleVencidoFilter(btn) {
+  vencidoFilter = !vencidoFilter;
+  btn.classList.toggle('active', vencidoFilter);
   renderPendientes();
 }
 
@@ -1249,10 +1264,15 @@ function updatePendCount() {
   const el = document.getElementById('pend-count');
   if (el) el.textContent = total;  // siempre el total (mis + equipo)
 
-  const misCount    = document.getElementById('pend-mis-count');
-  const equipoCount = document.getElementById('pend-equipo-count');
-  if (misCount)    misCount.textContent    = myCount;
-  if (equipoCount) equipoCount.textContent = total;
+  const misCount     = document.getElementById('pend-mis-count');
+  const equipoCount  = document.getElementById('pend-equipo-count');
+  const vencidoCount = document.getElementById('pend-vencido-count');
+  if (misCount)     misCount.textContent    = myCount;
+  if (equipoCount)  equipoCount.textContent = total;
+  if (vencidoCount) {
+    const nVenc = pendientes.filter(p => { const v = vencimientoInfo(p.createdAt); return v && v.urgente; }).length;
+    vencidoCount.textContent = nVenc;
+  }
 
   // ── Más antiguo (sobre TODOS los pendientes activos, no solo los del filtro) ──
   const valEl = document.getElementById('pend-mas-antiguo-val');

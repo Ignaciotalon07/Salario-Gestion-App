@@ -1693,6 +1693,15 @@
               >
                 🔒 Internos
               </button>
+              <button
+                id="pend-vencido-btn"
+                class="filter-chip pend-cat--sm"
+                onclick="toggleVencidoFilter(this)"
+                title="Mostrar solo pendientes vencidos (más de 5 días)"
+              >
+                🔴 Vencidos
+                <span id="pend-vencido-count" class="filter-count">0</span>
+              </button>
             </div>
 
             <div id="pend-list">
@@ -2823,7 +2832,8 @@ Paso 2: ..."
               type="number"
               placeholder="Ej: 1.5"
               step="0.5"
-              min="0"
+              min="0.5"
+              required
             />
           </div>
         </div>

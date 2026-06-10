@@ -398,11 +398,12 @@ function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro, tipoFiltro) {
     const solucionPasos  = solObj && Array.isArray(solObj.pasos) ? solObj.pasos : [];
 
     const modalData = _escHtml(JSON.stringify({
+      id: c.id,
       fecha, cat, subtema, asesor, repetida: c.repetida,
       descripcion: c.descripcion || '',
       solucionTitulo,
       solucionPasos,
-      tiempo: c.tiempo || null,
+      tiempo: c.tiempo ?? null,
       tipo: c.tipoConsulta || 'soporte'
     }));
 
@@ -487,7 +488,7 @@ function abrirDetalleConsulta(btn) {
         </div>` : ''}
         <div style="display:flex;gap:16px;padding-top:8px;border-top:1px solid var(--border)">
           <div><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Asesor</div><div style="font-size:13px;font-weight:500">${data.asesor}</div></div>
-          ${data.tiempo ? `<div><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Tiempo</div><div style="font-size:13px;font-weight:500">${data.tiempo} hs</div></div>` : ''}
+          <div><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Tiempo</div><div style="font-size:13px;font-weight:500">${data.tiempo != null ? data.tiempo + ' hs' : '—'}</div></div>
         </div>
         ${data.solucionTitulo ? `
         <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
@@ -518,10 +519,60 @@ function abrirDetalleConsulta(btn) {
           <button onclick="document.getElementById('modal-detalle-consulta').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text3)">✕</button>
         </div>
         ${html}
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+          <button onclick="eliminarConsultaDesdeModal('${data.id}')"
+            style="background:none;border:1px solid var(--danger,#e53e3e);color:var(--danger,#e53e3e);border-radius:8px;padding:7px 16px;font-size:13px;cursor:pointer;transition:background 0.15s"
+            onmouseover="this.style.background='rgba(229,62,62,0.08)'" onmouseout="this.style.background='none'">
+            🗑 Eliminar consulta
+          </button>
+        </div>
       </div>`;
     modal.style.display = 'flex';
   } catch(e) {
     console.error('Error abriendo detalle consulta', e);
+  }
+}
+
+// ────────── Eliminar consulta ──────────
+
+async function eliminarConsultaDesdeModal(id) {
+  if (!id) return;
+
+  // Primera confirmación
+  const ok1 = confirm('¿Seguro que querés eliminar esta consulta? Esta acción no se puede deshacer.');
+  if (!ok1) return;
+
+  // Segunda confirmación para evitar errores accidentales
+  const ok2 = confirm('Última confirmación: la consulta será eliminada permanentemente.');
+  if (!ok2) return;
+
+  try {
+    await dbDelete('consultas', id);
+
+    // Actualizar el array global
+    if (typeof consultas !== 'undefined') {
+      consultas = consultas.filter(c => c.id !== id);
+    }
+
+    // Cerrar modal
+    const modal = document.getElementById('modal-detalle-consulta');
+    if (modal) modal.style.display = 'none';
+
+    // Refrescar la vista del cliente
+    const clienteActual = typeof clientes !== 'undefined'
+      ? clientes.find(c => c.id === _detalleClienteId)
+      : null;
+    if (clienteActual) abrirDetalleCliente(clienteActual.id);
+
+    // Refrescar métricas generales si están visibles
+    if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
+    if (typeof refreshConsultasPage === 'function') refreshConsultasPage();
+    if (typeof renderClientes === 'function') renderClientes();
+
+    toast('Consulta eliminada.');
+  } catch (e) {
+    console.error('Error eliminando consulta', e);
+    toast('Error al eliminar la consulta. Intentá de nuevo.');
   }
 }
 
