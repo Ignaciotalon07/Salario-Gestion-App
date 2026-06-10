@@ -2928,17 +2928,35 @@ input[type=date]:focus {
   margin: 0 auto 4px;
   flex-shrink: 0;
 }
+/* Desktop: modal centrado */
+@media (min-width: 901px) {
+  .mtm-overlay {
+    align-items: center;
+  }
+  .mtm-sheet {
+    max-width: 640px;
+    border-radius: 16px;
+    padding: 24px 28px 28px;
+    max-height: 88vh;
+    animation: mtm-fade-in 0.2s ease;
+  }
+  .mtm-handle { display: none; }
+  @keyframes mtm-fade-in {
+    from { opacity: 0; transform: scale(0.97) translateY(8px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+}
 .mtm-header {
   display: flex;
   align-items: flex-start;
   gap: 10px;
 }
 .mtm-num {
-  font-size: 13px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--text3);
   flex-shrink: 0;
-  padding-top: 2px;
+  line-height: 1;
 }
 .mtm-title {
   flex: 1;
@@ -3038,6 +3056,14 @@ input[type=date]:focus {
   border-color: var(--border2);
   color: var(--text);
 }
+/* Scrollbar del modal de tarea */
+.mtm-sheet {
+  scrollbar-color: var(--border2) transparent;
+  scrollbar-width: thin;
+}
+.mtm-sheet::-webkit-scrollbar       { width: 5px; }
+.mtm-sheet::-webkit-scrollbar-track { background: transparent; }
+.mtm-sheet::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
 
 
 /* ────────────────────────────────────────
@@ -4868,3 +4894,139 @@ input[type=date]:focus {
   padding: 1px 5px;
   line-height: 1.4;
 }
+
+/* ── Notas y archivos dentro del modal de tarea ─────────────── */
+.mtm-seccion {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.mtm-seccion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.mtm-seccion-titulo {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text3);
+}
+.mtm-seccion-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+.mtm-seccion-btn:hover { background: var(--hover); }
+.mtm-nota {
+  padding: 10px 12px;
+  background: var(--surface2);
+  border-radius: 8px;
+  margin-bottom: 7px;
+  border: 1px solid var(--border);
+}
+.mtm-nota-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+.mtm-nota-autor {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  flex: 1;
+}
+.mtm-nota-time {
+  font-size: 11px;
+  color: var(--text3);
+}
+.mtm-nota-del {
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.mtm-nota-del:hover { color: var(--red); }
+.mtm-nota-texto {
+  font-size: 13px;
+  color: var(--text2);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.mtm-nota-form {
+  margin-top: 8px;
+  display: none;
+}
+.mtm-nota-form.open { display: block; }
+.mtm-nota-textarea {
+  width: 100%;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--surface2);
+  color: var(--text);
+  resize: vertical;
+  min-height: 70px;
+  box-sizing: border-box;
+}
+.mtm-archivo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-bottom: 6px;
+}
+.mtm-archivo-icono { font-size: 20px; flex-shrink: 0; line-height: 1; }
+.mtm-archivo-info  { flex: 1; min-width: 0; }
+.mtm-archivo-nombre {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mtm-archivo-meta  { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.mtm-archivo-btns  { display: flex; gap: 5px; flex-shrink: 0; }
+.mtm-archivo-dl {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.mtm-archivo-dl:hover  { background: var(--hover); }
+.mtm-archivo-del {
+  width: 28px; height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text3);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit;
+}
+.mtm-archivo-del:hover { color: var(--red); border-color: var(--red); }
+.mtm-empty { font-size: 12px; color: var(--text3); padding: 2px 0; }

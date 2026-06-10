@@ -7,7 +7,8 @@
 // Plantilla: implementacion_plantilla (las 23 etapas seed)
 
 let implTareas = [];          // todas las tareas de todos los clientes impl
-let implTareaNotas   = {};    // { tarea_id: [nota, nota, ...] }
+let implTareaNotas    = {};   // { tarea_id: [nota, nota, ...] }
+let implTareaArchivos = {};   // { tarea_id: [archivo, ...] }
 let implFasesExtra   = {};    // { cliente_id: [{id, nombre, icono, orden}] } — fases custom por cliente
 let implActividadLog = {};    // { cliente_id: [evento, ...] } — cargado lazy
 let _actividadAbierta = {};   // { cliente_id: bool }
@@ -777,6 +778,25 @@ async function initImplementacion() {
       }
     }
 
+    // Cargar archivos adjuntos de todas las tareas
+    implTareaArchivos = {};
+    if (implTareas.length > 0) {
+      const tareaIds = implTareas.map(t => t.id);
+      const { data: archivosRows, error: errArchivos } = await sb()
+        .from('implementacion_tarea_archivos')
+        .select('*')
+        .in('tarea_id', tareaIds)
+        .order('created_at', { ascending: true });
+      if (errArchivos) {
+        console.warn('Error cargando archivos de tareas', errArchivos);
+      } else {
+        (archivosRows || []).forEach(a => {
+          if (!implTareaArchivos[a.tarea_id]) implTareaArchivos[a.tarea_id] = [];
+          implTareaArchivos[a.tarea_id].push(a);
+        });
+      }
+    }
+
     // Recalcular Gantt de todos los clientes ANTES del primer render
     // para que las fechas mostradas siempre sean correctas.
     const clienteIds = [...new Set(implTareas.map(t => t.cliente_id))];
@@ -1395,13 +1415,13 @@ function renderImplTarea(t, idxEnFase, tareasDeFase, numGlobal) {
       ? `<span class="impl-tarea__pred-info" title="${numPred} predecesora${numPred !== 1 ? 's' : ''}">🔗 ${numPred}</span>`
       : '';
 
-  // Indicador del boton de notas: muestra contador
+  // Indicador de notas: solo muestra el contador (las notas se agregan desde el modal)
   const notasTarea = implTareaNotas[t.id] || [];
   const notasCount = notasTarea.length;
   const isExpanded = !!(window._implTareaExpanded && window._implTareaExpanded[t.id]);
   const notasIndicator = notasCount > 0
-    ? `<button class="impl-tarea__notas-btn impl-tarea__notas-btn--has" onclick="event.stopPropagation(); toggleImplNotaForm('${t.id}', true)" title="${notasCount} nota${notasCount !== 1 ? 's' : ''} — click para agregar otra">📝 ${notasCount}</button>`
-    : `<button class="impl-tarea__notas-btn" onclick="event.stopPropagation(); toggleImplNotaForm('${t.id}', true)" title="Agregar nota">＋</button>`;
+    ? `<span class="impl-tarea__notas-btn impl-tarea__notas-btn--has" title="${notasCount} nota${notasCount !== 1 ? 's' : ''}">📝 ${notasCount}</span>`
+    : '';
 
   // Vencida: fecha estimada en el pasado sin completar
   const isVencida = isTareaVencida(t);
@@ -1547,6 +1567,7 @@ function renderImplNotasSection(tareaId, notas, isExpanded) {
           </button>
         </div>
         ${renderImplHistorial(tareaId)}
+        ${renderImplArchivos(tareaId)}
       </div>
     </div>`;
 }
@@ -2178,6 +2199,8 @@ async function eliminarImplNota(notaId, tareaId) {
       }
     }
     renderImplementacion();
+    // Si el modal está abierto mostrando esta tarea, refrescamos el panel
+    if (window._modalTareaId === tareaId) _refreshModalNotasArchivos(tareaId);
     toast('Nota eliminada');
   } catch (e) {
     console.error('Error eliminando nota', e);
@@ -2234,6 +2257,9 @@ function suscribirImplementacion() {
     .on('postgres_changes',
         { event: '*', schema: 'public', table: 'implementacion_fases_cliente' },
         (payload) => handleImplFaseClienteChange(payload))
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'implementacion_tarea_archivos' },
+        (payload) => handleImplArchivoChange(payload))
     .subscribe();
 }
 
@@ -2289,6 +2315,7 @@ function handleImplNotaChange(payload) {
     if (!implTareaNotas[tid].find(n => n.id === newRow.id)) {
       implTareaNotas[tid].push(newRow);
       renderImplementacion();
+      if (window._modalTareaId === tid) _refreshModalNotasArchivos(tid);
       // Toast solo si fue otro miembro del equipo
       const me = (typeof currentMember !== 'undefined' && currentMember) ? currentMember.email : null;
       if (me && newRow.autor_email !== me) {
@@ -2312,6 +2339,7 @@ function handleImplNotaChange(payload) {
       implTareaNotas[tid] = implTareaNotas[tid].filter(n => n.id !== oldRow.id);
       if (implTareaNotas[tid].length !== before) {
         renderImplementacion();
+        if (window._modalTareaId === tid) _refreshModalNotasArchivos(tid);
       }
     }
   }
@@ -3553,14 +3581,9 @@ async function recalcularTodasLasFechas() {
 // ─────────────────────────────────────────────────────────
 
 function handleImplTareaClick(tareaId, event) {
-  if (window.matchMedia('(max-width: 900px)').matches) {
-    // En mobile: abrir modal
-    event.stopPropagation();
-    abrirModalTareaMobile(tareaId);
-  } else {
-    // En desktop: comportamiento original (expandir notas)
-    toggleImplTareaExpanded(tareaId, event);
-  }
+  // Siempre abrir modal (mobile y desktop)
+  event.stopPropagation();
+  abrirModalTareaMobile(tareaId);
 }
 
 function abrirModalTareaMobile(tareaId) {
@@ -3614,15 +3637,22 @@ function abrirModalTareaMobile(tareaId) {
   const lockMsg = modal.querySelector('.mtm-lock-msg');
   if (lockMsg) lockMsg.style.display = puedoEditar ? 'none' : 'block';
 
+  // Guardar id abierto para refresh por realtime
+  window._modalTareaId = tareaId;
+
   // Mostrar modal
   modal.classList.add('mtm--open');
   document.body.style.overflow = 'hidden';
+
+  // Inyectar notas y archivos
+  _refreshModalNotasArchivos(tareaId);
 }
 
 function cerrarModalTareaMobile() {
   const modal = document.getElementById('modal-tarea-mobile');
   if (modal) modal.classList.remove('mtm--open');
   document.body.style.overflow = '';
+  window._modalTareaId = null;
 }
 
 async function confirmarEstadoTareaMobile() {
@@ -3641,7 +3671,323 @@ async function confirmarEstadoTareaMobile() {
     cerrarModalTareaMobile();
   } catch (e) {
     btn.disabled = false;
-    btn.textContent = 'Confirmar';
+    btn.textContent = 'Guardar estado';
     alert('No se pudo guardar: ' + e.message);
+  }
+}
+
+
+// ────────── Archivos adjuntos en tareas ──────────
+
+function _formatBytes(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function renderImplArchivos(tareaId) {
+  const archivos = implTareaArchivos[tareaId] || [];
+
+  const iconoArchivo = (mime, nombre) => {
+    const ext = (nombre || '').split('.').pop().toLowerCase();
+    if (ext === 'pdf' || (mime || '').includes('pdf'))                                           return '📄';
+    if (['xlsx','xls','csv','ods'].includes(ext) || (mime || '').includes('sheet') || (mime || '').includes('excel') || (mime || '').includes('csv')) return '📊';
+    if (['docx','doc','odt'].includes(ext) || (mime || '').includes('word') || (mime || '').includes('document')) return '📝';
+    if (['pptx','ppt','odp'].includes(ext) || (mime || '').includes('presentation'))             return '📑';
+    if (['png','jpg','jpeg','gif','webp','svg'].includes(ext) || (mime || '').includes('image')) return '🖼️';
+    if (['zip','rar','7z'].includes(ext))                                                         return '🗜️';
+    if (['txt','md'].includes(ext))                                                               return '📃';
+    return '📎';
+  };
+
+  const tarjetas = archivos.map(a => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
+      <span style="font-size:22px;flex-shrink:0;line-height:1">${iconoArchivo(a.tipo_mime, a.nombre)}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+             title="${escapeHtmlImpl(a.nombre)}">${escapeHtmlImpl(a.nombre)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:1px">
+          ${escapeHtmlImpl(a.subido_por || 'Equipo')} · ${tiempoRelativoImpl(a.created_at)}${a.tamano_bytes ? ' · ' + _formatBytes(a.tamano_bytes) : ''}
+        </div>
+      </div>
+      <div style="display:flex;gap:5px;flex-shrink:0">
+        <button onclick="descargarArchivoTarea('${escapeHtmlImpl(a.id)}', '${escapeHtmlImpl(a.storage_path)}')"
+          title="Descargar"
+          style="display:flex;align-items:center;gap:4px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);font-size:11px;font-weight:500;cursor:pointer;white-space:nowrap"
+          onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background='var(--surface)'">
+          ⬇ Descargar
+        </button>
+        <button onclick="eliminarArchivoTarea('${escapeHtmlImpl(a.id)}', '${escapeHtmlImpl(a.storage_path)}', '${escapeHtmlImpl(tareaId)}')"
+          title="Eliminar"
+          style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text3);font-size:14px;cursor:pointer;line-height:1"
+          onmouseover="this.style.color='var(--red)';this.style.borderColor='var(--red)'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border)'">
+          ×
+        </button>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3)">
+          📎 Archivos${archivos.length > 0 ? ` <span style="font-weight:400;text-transform:none;letter-spacing:0">(${archivos.length})</span>` : ''}
+        </span>
+        <button onclick="abrirSelectorArchivo('${escapeHtmlImpl(tareaId)}')"
+          style="display:flex;align-items:center;gap:4px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text2);font-size:11px;font-weight:500;cursor:pointer"
+          onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background='var(--surface)'">
+          + Adjuntar
+        </button>
+      </div>
+      ${archivos.length > 0
+        ? `<div style="display:flex;flex-direction:column;gap:6px">${tarjetas}</div>`
+        : `<div style="font-size:12px;color:var(--text3);padding:2px 0">Sin archivos adjuntos.</div>`}
+    </div>`;
+}
+
+function abrirSelectorArchivo(tareaId) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.png,.jpg,.jpeg,.gif,.csv,.txt,.zip';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    await subirArchivoTarea(tareaId, file);
+  };
+  input.click();
+}
+
+async function subirArchivoTarea(tareaId, file) {
+  // Botón de adjuntar → estado de carga visual
+  const btns = document.querySelectorAll(`[onclick="abrirSelectorArchivo('${tareaId}')"]`);
+  btns.forEach(b => { b.disabled = true; b.textContent = '⏳ Subiendo...'; });
+
+  try {
+    // Ruta: tarea_id / timestamp_nombre (evita colisiones)
+    const storagePath = `${tareaId}/${Date.now()}_${file.name}`;
+
+    const { error: uploadError } = await sb().storage
+      .from('implementacion-archivos')
+      .upload(storagePath, file);
+    if (uploadError) throw uploadError;
+
+    // Guardar metadatos en la tabla
+    const subidoPor = (typeof currentMember !== 'undefined' && currentMember)
+      ? (currentMember.nombre || currentMember.email)
+      : 'Equipo';
+
+    await dbInsert('implementacion_tarea_archivos', {
+      tarea_id:     tareaId,
+      nombre:       file.name,
+      storage_path: storagePath,
+      tipo_mime:    file.type || null,
+      tamano_bytes: file.size || null,
+      subido_por:   subidoPor,
+    });
+
+    // El realtime se encarga del re-render; no hacemos nada más
+    toast(`Archivo "${file.name}" subido.`);
+  } catch (e) {
+    console.error('Error subiendo archivo', e);
+    toast('Error al subir el archivo. Intentá de nuevo.');
+  } finally {
+    btns.forEach(b => { b.disabled = false; b.textContent = '+ Adjuntar'; });
+  }
+}
+
+async function descargarArchivoTarea(archivoId, storagePath) {
+  try {
+    const { data, error } = await sb().storage
+      .from('implementacion-archivos')
+      .createSignedUrl(storagePath, 3600); // URL válida por 1 hora
+    if (error) throw error;
+    window.open(data.signedUrl, '_blank');
+  } catch (e) {
+    console.error('Error descargando archivo', e);
+    toast('Error al generar el link de descarga.');
+  }
+}
+
+async function eliminarArchivoTarea(archivoId, storagePath, tareaId) {
+  if (!confirm('¿Eliminar este archivo? Esta acción no se puede deshacer.')) return;
+
+  try {
+    // Borrar del storage
+    const { error: storageError } = await sb().storage
+      .from('implementacion-archivos')
+      .remove([storagePath]);
+    if (storageError) throw storageError;
+
+    // Borrar metadatos de la DB
+    await dbDelete('implementacion_tarea_archivos', archivoId);
+
+    // Actualizar array local (el realtime también lo hace, pero esto es instantáneo)
+    if (implTareaArchivos[tareaId]) {
+      implTareaArchivos[tareaId] = implTareaArchivos[tareaId].filter(a => a.id !== archivoId);
+    }
+    renderImplementacion();
+    if (window._modalTareaId === tareaId) _refreshModalNotasArchivos(tareaId);
+    toast('Archivo eliminado.');
+  } catch (e) {
+    console.error('Error eliminando archivo', e);
+    toast('Error al eliminar el archivo.');
+  }
+}
+
+function handleImplArchivoChange(payload) {
+  const { eventType, new: newRow, old: oldRow } = payload;
+  if (eventType === 'INSERT') {
+    const tid = newRow.tarea_id;
+    if (!implTareaArchivos[tid]) implTareaArchivos[tid] = [];
+    if (!implTareaArchivos[tid].find(a => a.id === newRow.id)) {
+      implTareaArchivos[tid].push(newRow);
+      renderImplementacion();
+      if (window._modalTareaId === tid) _refreshModalNotasArchivos(tid);
+      // Toast si fue otro miembro del equipo
+      const me = (typeof currentMember !== 'undefined' && currentMember) ? currentMember.email : null;
+      if (me && newRow.subido_por && newRow.subido_por !== (currentMember.nombre || currentMember.email)) {
+        toast(`${newRow.subido_por} adjuntó "${newRow.nombre}" en una tarea`);
+      }
+    }
+  } else if (eventType === 'DELETE') {
+    for (const tid in implTareaArchivos) {
+      implTareaArchivos[tid] = implTareaArchivos[tid].filter(a => a.id !== oldRow.id);
+    }
+    renderImplementacion();
+  }
+}
+
+
+// ────────── Modal de tarea: notas y archivos ──────────────────────────────
+
+/**
+ * Inyecta el HTML de notas + archivos en el panel #mtm-notas-archivos
+ * del modal de tarea. Se llama al abrir el modal y en cada cambio
+ * vía realtime mientras el modal esté abierto.
+ */
+function _refreshModalNotasArchivos(tareaId) {
+  const container = document.getElementById('mtm-notas-archivos');
+  if (!container) return;
+
+  const notas    = implTareaNotas[tareaId]    || [];
+  const archivos = implTareaArchivos[tareaId] || [];
+
+  const iconoArchivo = (mime, nombre) => {
+    const ext = (nombre || '').split('.').pop().toLowerCase();
+    if (ext === 'pdf' || (mime||'').includes('pdf'))                                               return '📄';
+    if (['xlsx','xls','csv','ods'].includes(ext) || (mime||'').includes('sheet') || (mime||'').includes('excel')) return '📊';
+    if (['docx','doc','odt'].includes(ext) || (mime||'').includes('word') || (mime||'').includes('document'))     return '📝';
+    if (['pptx','ppt','odp'].includes(ext) || (mime||'').includes('presentation'))                 return '📑';
+    if (['png','jpg','jpeg','gif','webp','svg'].includes(ext) || (mime||'').includes('image'))     return '🖼️';
+    if (['zip','rar','7z'].includes(ext))                                                           return '🗜️';
+    if (['txt','md'].includes(ext))                                                                 return '📃';
+    return '📎';
+  };
+
+  // ── Sección Notas ──────────────────────────────────────────────────────
+  const notasHTML = notas.map(n => `
+    <div class="mtm-nota">
+      <div class="mtm-nota-header">
+        <span class="mtm-nota-autor">${escapeHtmlImpl(n.autor_nombre || 'Equipo')}</span>
+        <span class="mtm-nota-time">${tiempoRelativoImpl(n.created_at)}</span>
+        <button class="mtm-nota-del"
+          onclick="eliminarImplNota('${n.id}', '${n.tarea_id}')" title="Eliminar nota">×</button>
+      </div>
+      <div class="mtm-nota-texto">${escapeHtmlImpl(n.texto)}</div>
+    </div>`).join('');
+
+  // ── Sección Archivos ───────────────────────────────────────────────────
+  const archivosHTML = archivos.map(a => `
+    <div class="mtm-archivo">
+      <span class="mtm-archivo-icono">${iconoArchivo(a.tipo_mime, a.nombre)}</span>
+      <div class="mtm-archivo-info">
+        <div class="mtm-archivo-nombre" title="${escapeHtmlImpl(a.nombre)}">${escapeHtmlImpl(a.nombre)}</div>
+        <div class="mtm-archivo-meta">
+          ${escapeHtmlImpl(a.subido_por || 'Equipo')} · ${tiempoRelativoImpl(a.created_at)}${a.tamano_bytes ? ' · ' + _formatBytes(a.tamano_bytes) : ''}
+        </div>
+      </div>
+      <div class="mtm-archivo-btns">
+        <button class="mtm-archivo-dl"
+          onclick="descargarArchivoTarea('${a.id}', '${escapeHtmlImpl(a.storage_path)}')">⬇ Bajar</button>
+        <button class="mtm-archivo-del"
+          onclick="eliminarArchivoTarea('${a.id}', '${escapeHtmlImpl(a.storage_path)}', '${tareaId}')">×</button>
+      </div>
+    </div>`).join('');
+
+  container.innerHTML = `
+    <!-- Notas -->
+    <div class="mtm-seccion">
+      <div class="mtm-seccion-header">
+        <span class="mtm-seccion-titulo">📝 Notas${notas.length > 0 ? ` (${notas.length})` : ''}</span>
+        <button class="mtm-seccion-btn" onclick="_toggleModalNotaForm('${tareaId}')">+ Nueva nota</button>
+      </div>
+      ${notas.length > 0
+        ? notasHTML
+        : '<div class="mtm-empty">Sin notas todavía.</div>'}
+      <div class="mtm-nota-form" id="mtm-nota-form-${tareaId}">
+        <textarea class="mtm-nota-textarea" id="mtm-nota-input-${tareaId}"
+          placeholder="¿Qué pasó? Ej: el cliente envió los recibos..."></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn-primary btn-primary--sm"
+            onclick="agregarNotaEnModal('${tareaId}')">Guardar</button>
+          <button class="btn-sm"
+            onclick="_toggleModalNotaForm('${tareaId}')">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Archivos -->
+    <div class="mtm-seccion">
+      <div class="mtm-seccion-header">
+        <span class="mtm-seccion-titulo">📎 Archivos${archivos.length > 0 ? ` (${archivos.length})` : ''}</span>
+        <button class="mtm-seccion-btn" onclick="abrirSelectorArchivo('${tareaId}')">+ Adjuntar</button>
+      </div>
+      ${archivos.length > 0
+        ? archivosHTML
+        : '<div class="mtm-empty">Sin archivos adjuntos.</div>'}
+    </div>`;
+}
+
+/** Muestra/oculta el form de nota dentro del modal */
+function _toggleModalNotaForm(tareaId) {
+  const form  = document.getElementById(`mtm-nota-form-${tareaId}`);
+  const input = document.getElementById(`mtm-nota-input-${tareaId}`);
+  if (!form) return;
+  const abriendo = !form.classList.contains('open');
+  form.classList.toggle('open', abriendo);
+  if (abriendo && input) setTimeout(() => input.focus(), 50);
+}
+
+/** Guarda una nota desde el modal (sin recargar toda la lista) */
+async function agregarNotaEnModal(tareaId) {
+  const ta = document.getElementById(`mtm-nota-input-${tareaId}`);
+  if (!ta) return;
+  const texto = ta.value.trim();
+  if (!texto) { ta.focus(); return; }
+
+  if (typeof currentMember === 'undefined' || !currentMember) {
+    alert('No se pudo identificar tu sesión. Recargá la página.');
+    return;
+  }
+
+  try {
+    const inserted = await dbInsert('implementacion_tarea_notas', {
+      tarea_id:     tareaId,
+      autor_email:  currentMember.email,
+      autor_nombre: currentMember.nombre,
+      texto
+    });
+
+    if (!implTareaNotas[tareaId]) implTareaNotas[tareaId] = [];
+    if (!implTareaNotas[tareaId].find(n => n.id === inserted.id)) {
+      implTareaNotas[tareaId].push(inserted);
+    }
+    ta.value = '';
+    _refreshModalNotasArchivos(tareaId);   // refresh del modal
+    renderImplementacion();               // actualiza el badge de notas en la lista
+    toast('Nota agregada');
+  } catch (e) {
+    console.error('Error guardando nota', e);
+    alert('No se pudo guardar la nota: ' + e.message);
   }
 }
