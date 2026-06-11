@@ -2184,7 +2184,12 @@
               </button>
             </div>
 
-            <div id="kb-detail" class="detail-panel"></div>
+            <!-- Modal detalle de solución -->
+            <div id="kb-detail-overlay" class="kb-modal-overlay" onclick="cerrarKB()">
+              <div class="kb-modal-sheet" onclick="event.stopPropagation()">
+                <div id="kb-detail"></div>
+              </div>
+            </div>
 
             <div class="card" style="padding: 0; overflow: hidden">
               <table class="tbl" id="kb-table">
@@ -2296,6 +2301,14 @@ Paso 2: ..."
                   </select>
                 </div>
               </div>
+              <!-- Archivos adjuntos -->
+              <div class="form-group">
+                <label class="fl">Archivos adjuntos</label>
+                <div id="kb-archivos-form">
+                  <!-- Se inyecta dinámicamente por JS -->
+                </div>
+              </div>
+
               <div style="display: flex; gap: 10px">
                 <button
                   class="btn-primary"
@@ -2924,6 +2937,12 @@ Paso 2: ..."
               como nueva solución a la base.
             </div>
           </div>
+        </div>
+
+        <!-- Archivos adjuntos a la solución -->
+        <div class="form-group" id="r-archivos-group">
+          <label class="fl">Archivos adjuntos a la solución <span style="font-size:11px;color:var(--text3);font-weight:400">(opcional — se guardan en la base de soluciones)</span></label>
+          <div id="r-archivos-consulta"></div>
         </div>
 
         <div

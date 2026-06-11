@@ -9,6 +9,8 @@ let kbFiltro      = '';
 let kbBuscador    = '';
 let kbActiva      = null;
 let kbEditId      = null;   // si esta seteado, el form de "Nueva solucion" guarda como edicion
+let kbArchivos    = {};     // { solucion_id: [archivo, ...] }
+let _kbArchivosStaged = []; // File objects pendientes para una nueva solución
 
 // ────────── Mapeo DB <-> UI ──────────
 
@@ -40,6 +42,16 @@ function formatFechaCorta(timestamp) {
 // ────────── Init ──────────
 
 async function initKB() {
+  kbArchivos = {};
+  const { data: archRows } = await sb()
+    .from('soluciones_archivos')
+    .select('*')
+    .order('created_at', { ascending: true });
+  (archRows || []).forEach(a => {
+    if (!kbArchivos[a.solucion_id]) kbArchivos[a.solucion_id] = [];
+    kbArchivos[a.solucion_id].push(a);
+  });
+
   try {
     const rows = await dbList('soluciones', { orderBy: 'usos', ascending: false });
     soluciones = rows.map(dbRowToSolucion);
@@ -166,8 +178,8 @@ function verKBDetalle(id) {
   if (!s) return;
   const cat = CATS[s.cat] || { label: s.cat, bg: '#eee', text: '#444' };
   kbActiva = id;
+  const overlay = document.getElementById('kb-detail-overlay');
   const box = document.getElementById('kb-detail');
-  box.className = 'detail-panel open';
   box.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
       <div>
@@ -175,7 +187,7 @@ function verKBDetalle(id) {
         <div style="font-size:15px;font-weight:600;line-height:1.4;color:var(--accent-text)">${escapeHtmlKB(s.titulo)}</div>
         <div style="font-size:11px;color:var(--text3);margin-top:4px">Por ${escapeHtmlKB(s.autor)} &middot; Actualizado ${s.fecha} &middot; Usado ${s.usos} ${s.usos === 1 ? 'vez' : 'veces'} &middot; ${escapeHtmlKB(s.aplica)}</div>
       </div>
-      <button class="btn-sm" id="kb-cerrar-btn" onclick="cerrarKB()">Cerrar</button>
+      <button onclick="cerrarKB()" style="background:none;border:none;font-size:22px;line-height:1;color:var(--text3);cursor:pointer;padding:2px 4px;border-radius:6px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">✕</button>
     </div>
     <div style="margin-bottom:14px">
       <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Pasos</div>
@@ -186,14 +198,19 @@ function verKBDetalle(id) {
       <button class="btn-sm" onclick="copiarPasosWA('${s.id}')" title="Copiar como mensaje de WhatsApp (numerado, sin formato)">📋 Copiar pasos</button>
       <button class="btn-sm" onclick="editarSolucion('${s.id}')">Editar</button>
       <button class="btn-sm" style="margin-left:auto;color:var(--red)" onclick="eliminarSolucion('${s.id}')">Eliminar</button>
-    </div>`;
-  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    </div>
+    <div id="kb-detail-archivos" style="margin-top:14px">${_renderKbArchivosDetalle(s.id)}</div>`;
+  if (overlay) {
+    overlay.classList.add('kb-modal--open');
+    document.body.style.overflow = 'hidden';
+  }
 }
 
 function cerrarKB() {
   kbActiva = null;
-  const box = document.getElementById('kb-detail');
-  if (box) box.className = 'detail-panel';
+  const overlay = document.getElementById('kb-detail-overlay');
+  if (overlay) overlay.classList.remove('kb-modal--open');
+  document.body.style.overflow = '';
 }
 
 // ────────── Buscar / Filtrar ──────────
@@ -230,6 +247,10 @@ function showKbForm() {
   const submitBtn = document.getElementById('kb-form-submit');
   if (submitBtn) submitBtn.textContent = 'Guardar solución';
 
+  // Limpiar archivos staged (nueva solución)
+  _kbArchivosStaged = [];
+  _renderKbArchivosForm(null);
+
   // Toggle: si esta visible, lo cerramos; si no, lo abrimos y hacemos scroll
   const yaVisible = f.style.display !== 'none' && f.style.display !== '';
   if (yaVisible) {
@@ -260,6 +281,10 @@ function editarSolucion(id) {
     if (subSel && s.sub) subSel.value = s.sub;
   }, 0);
   document.getElementById('kb-pasos').value = (s.pasos || []).join('\n');
+  // Renderizar archivos del form (modo edición)
+  _kbArchivosStaged = [];
+  _renderKbArchivosForm(id);
+
   // Cambiar titulo del form
   const titleEl = f.querySelector('.card-title');
   if (titleEl) titleEl.textContent = `Editar: ${s.titulo}`;
@@ -317,7 +342,14 @@ async function guardarKB() {
         autor,
         usos: 0
       };
-      await dbInsert('soluciones', row);
+      const inserted = await dbInsert('soluciones', row);
+      // Subir archivos staged si los hay
+      if (_kbArchivosStaged.length > 0 && inserted && inserted.id) {
+        for (const file of _kbArchivosStaged) {
+          await _subirArchivoKB(inserted.id, file);
+        }
+        _kbArchivosStaged = [];
+      }
       toast('Solución agregada a la base');
     }
 
@@ -407,6 +439,12 @@ function updateKBSubtemas() {
 
 let _solucionesChannel = null;
 function suscribirSoluciones() {
+  // Realtime para archivos de soluciones
+  sb().channel('soluciones-archivos-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'soluciones_archivos' },
+      handleSolucionArchivoChange)
+    .subscribe();
+
   if (_solucionesChannel) return;
   _solucionesChannel = sb()
     .channel('soluciones-realtime')
@@ -441,3 +479,220 @@ function handleSolucionChange(payload) {
 }
 
 window.addEventListener('app-ready', initKB);
+
+
+// ────────── Archivos adjuntos en soluciones ───────────────────────────────
+
+const _iconoArchivoKB = (mime, nombre) => {
+  const ext = (nombre || '').split('.').pop().toLowerCase();
+  if (ext === 'pdf' || (mime||'').includes('pdf'))                                               return '📄';
+  if (['xlsx','xls','csv','ods'].includes(ext) || (mime||'').includes('sheet') || (mime||'').includes('excel')) return '📊';
+  if (['docx','doc','odt'].includes(ext) || (mime||'').includes('word') || (mime||'').includes('document'))     return '📝';
+  if (['pptx','ppt','odp'].includes(ext) || (mime||'').includes('presentation'))                 return '📑';
+  if (['png','jpg','jpeg','gif','webp','svg'].includes(ext) || (mime||'').includes('image'))     return '🖼️';
+  if (['zip','rar','7z'].includes(ext))                                                           return '🗜️';
+  if (['txt','md'].includes(ext))                                                                 return '📃';
+  return '📎';
+};
+
+const _fmtBytesKB = (bytes) => {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+/** Renderiza el panel de archivos en el form (creación o edición) */
+function _renderKbArchivosForm(solucionId) {
+  const container = document.getElementById('kb-archivos-form');
+  if (!container) return;
+
+  const archivos = solucionId ? (kbArchivos[solucionId] || []) : [];
+  const isEditing = !!solucionId;
+
+  const listaHTML = archivos.map(a => `
+    <div class="mtm-archivo">
+      <span class="mtm-archivo-icono">${_iconoArchivoKB(a.tipo_mime, a.nombre)}</span>
+      <div class="mtm-archivo-info">
+        <div class="mtm-archivo-nombre" title="${escapeHtmlKB(a.nombre)}">${escapeHtmlKB(a.nombre)}</div>
+        <div class="mtm-archivo-meta">${escapeHtmlKB(a.subido_por || 'Equipo')} · ${_fmtBytesKB(a.tamano_bytes)}</div>
+      </div>
+      <div class="mtm-archivo-btns">
+        <button class="mtm-archivo-dl" onclick="descargarArchivoKB('${a.id}', '${escapeHtmlKB(a.storage_path)}')">⬇ Descargar</button>
+        <button class="mtm-archivo-del" onclick="eliminarArchivoKB('${a.id}', '${escapeHtmlKB(a.storage_path)}', '${a.solucion_id}')">×</button>
+      </div>
+    </div>`).join('');
+
+  // Archivos staged (solo para nueva solución)
+  const stagedHTML = !isEditing ? _kbArchivosStaged.map((f, i) => `
+    <div class="mtm-archivo">
+      <span class="mtm-archivo-icono">${_iconoArchivoKB(f.type, f.name)}</span>
+      <div class="mtm-archivo-info">
+        <div class="mtm-archivo-nombre">${escapeHtmlKB(f.name)}</div>
+        <div class="mtm-archivo-meta">${_fmtBytesKB(f.size)} · Pendiente de guardar</div>
+      </div>
+      <div class="mtm-archivo-btns">
+        <button class="mtm-archivo-del" onclick="_kbRemoveStaged(${i})">×</button>
+      </div>
+    </div>`).join('') : '';
+
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+      ${listaHTML}${stagedHTML}
+      ${archivos.length === 0 && _kbArchivosStaged.length === 0
+        ? '<div style="font-size:12px;color:var(--text3)">Sin archivos adjuntos.</div>' : ''}
+    </div>
+    <button type="button" class="btn-sm" onclick="_abrirSelectorArchivoKB()">+ Adjuntar archivo</button>`;
+}
+
+/** Renderiza la sección de archivos en el detalle de la solución */
+function _renderKbArchivosDetalle(solucionId) {
+  const archivos = kbArchivos[solucionId] || [];
+  if (archivos.length === 0) return '';
+
+  const listaHTML = archivos.map(a => `
+    <div class="mtm-archivo">
+      <span class="mtm-archivo-icono">${_iconoArchivoKB(a.tipo_mime, a.nombre)}</span>
+      <div class="mtm-archivo-info">
+        <div class="mtm-archivo-nombre" title="${escapeHtmlKB(a.nombre)}">${escapeHtmlKB(a.nombre)}</div>
+        <div class="mtm-archivo-meta">${escapeHtmlKB(a.subido_por || 'Equipo')} · ${_fmtBytesKB(a.tamano_bytes)}</div>
+      </div>
+      <div class="mtm-archivo-btns">
+        <button class="mtm-archivo-dl" onclick="descargarArchivoKB('${a.id}', '${escapeHtmlKB(a.storage_path)}')">⬇ Descargar</button>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div style="border-top:1px solid var(--border);padding-top:12px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);margin-bottom:8px">
+        📎 Archivos (${archivos.length})
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">${listaHTML}</div>
+    </div>`;
+}
+
+function _abrirSelectorArchivoKB() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.png,.jpg,.jpeg,.gif,.csv,.txt,.zip';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (kbEditId) {
+      // Edición: subir directo
+      await _subirArchivoKB(kbEditId, file);
+    } else {
+      // Nueva solución: agregar al staging
+      _kbArchivosStaged.push(file);
+      _renderKbArchivosForm(null);
+    }
+  };
+  input.click();
+}
+
+function _kbRemoveStaged(idx) {
+  _kbArchivosStaged.splice(idx, 1);
+  _renderKbArchivosForm(null);
+}
+
+async function _subirArchivoKB(solucionId, file) {
+  try {
+    const storagePath = `${solucionId}/${Date.now()}_${file.name}`;
+    const { error: uploadError } = await sb().storage
+      .from('soluciones-archivos')
+      .upload(storagePath, file);
+    if (uploadError) throw uploadError;
+
+    const subidoPor = (typeof currentMember !== 'undefined' && currentMember)
+      ? (currentMember.nombre || currentMember.email)
+      : 'Equipo';
+
+    const inserted = await dbInsert('soluciones_archivos', {
+      solucion_id:  solucionId,
+      nombre:       file.name,
+      storage_path: storagePath,
+      tipo_mime:    file.type || null,
+      tamano_bytes: file.size || null,
+      subido_por:   subidoPor,
+    });
+
+    // Actualización local inmediata (sin esperar al realtime)
+    if (inserted && inserted.id) {
+      if (!kbArchivos[solucionId]) kbArchivos[solucionId] = [];
+      if (!kbArchivos[solucionId].find(a => a.id === inserted.id)) {
+        kbArchivos[solucionId].push(inserted);
+      }
+    }
+    // Re-renderizar form y detalle
+    _renderKbArchivosForm(kbEditId === solucionId ? solucionId : null);
+    const detArchivos = document.getElementById('kb-detail-archivos');
+    if (detArchivos && kbActiva === solucionId) {
+      detArchivos.innerHTML = _renderKbArchivosDetalle(solucionId);
+    }
+    toast(`Archivo "${file.name}" subido.`);
+  } catch (e) {
+    console.error('Error subiendo archivo KB', e);
+    toast('Error al subir el archivo. Intentá de nuevo.');
+  }
+}
+
+async function descargarArchivoKB(archivoId, storagePath) {
+  try {
+    const { data, error } = await sb().storage
+      .from('soluciones-archivos')
+      .createSignedUrl(storagePath, 3600);
+    if (error) throw error;
+    window.open(data.signedUrl, '_blank');
+  } catch (e) {
+    console.error('Error descargando archivo KB', e);
+    toast('Error al generar el link de descarga.');
+  }
+}
+
+async function eliminarArchivoKB(archivoId, storagePath, solucionId) {
+  if (!confirm('¿Eliminar este archivo?')) return;
+  try {
+    const { error: storageError } = await sb().storage
+      .from('soluciones-archivos')
+      .remove([storagePath]);
+    if (storageError) throw storageError;
+
+    await dbDelete('soluciones_archivos', archivoId);
+
+    if (kbArchivos[solucionId]) {
+      kbArchivos[solucionId] = kbArchivos[solucionId].filter(a => a.id !== archivoId);
+    }
+    _renderKbArchivosForm(kbEditId);
+    // Refrescar detalle si está abierto
+    const detArchivos = document.getElementById('kb-detail-archivos');
+    if (detArchivos && kbActiva === solucionId) {
+      detArchivos.innerHTML = _renderKbArchivosDetalle(solucionId);
+    }
+    toast('Archivo eliminado.');
+  } catch (e) {
+    console.error('Error eliminando archivo KB', e);
+    toast('Error al eliminar el archivo.');
+  }
+}
+
+function handleSolucionArchivoChange(payload) {
+  const { eventType, new: newRow, old: oldRow } = payload;
+  if (eventType === 'INSERT') {
+    const sid = newRow.solucion_id;
+    if (!kbArchivos[sid]) kbArchivos[sid] = [];
+    if (!kbArchivos[sid].find(a => a.id === newRow.id)) {
+      kbArchivos[sid].push(newRow);
+      // Refrescar form si está editando esta solución
+      if (kbEditId === sid) _renderKbArchivosForm(sid);
+      // Refrescar detalle si está abierto
+      const detArchivos = document.getElementById('kb-detail-archivos');
+      if (detArchivos && kbActiva === sid) {
+        detArchivos.innerHTML = _renderKbArchivosDetalle(sid);
+      }
+    }
+  } else if (eventType === 'DELETE') {
+    for (const sid in kbArchivos) {
+      kbArchivos[sid] = kbArchivos[sid].filter(a => a.id !== oldRow.id);
+    }
+  }
+}

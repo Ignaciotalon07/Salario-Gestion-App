@@ -9,7 +9,8 @@
 // ── Array global de consultas (cargado al init, sincronizado via realtime) ──
 let consultas = [];
 
-let consultaSolucionId = null; // id de la solución de la base elegida (si la hay)
+let consultaSolucionId      = null; // id de la solución de la base elegida (si la hay)
+let _consultaArchivosStaged = [];  // File objects pendientes para adjuntar a la solución
 
 // ────────── Mapeo DB <-> UI ──────────
 
@@ -41,6 +42,10 @@ function abrirModalConsulta(clientePreseleccionado) {
 
   // Inyectar categorías custom al desplegable
   cargarCategoriasCustom();
+
+  // Inicializar panel de archivos
+  _consultaArchivosStaged = [];
+  _renderConsultaArchivos();
 
   // Si viene con cliente pre-seleccionado, rellenarlo
   if (clientePreseleccionado) {
@@ -497,6 +502,15 @@ async function guardarConsulta(mantenerAbierto = false) {
       timestamp:    new Date().toISOString()
     });
 
+    // Subir archivos staged a la solución (nueva o existente de la base)
+    const solIdParaArchivos = esProg ? null : (consultaSolucionId || nuevaSolucionId || null);
+    if (solIdParaArchivos && _consultaArchivosStaged.length > 0) {
+      for (const file of _consultaArchivosStaged) {
+        try { await _subirArchivoKB(solIdParaArchivos, file); } catch (e) { /* no bloquear */ }
+      }
+      _consultaArchivosStaged = [];
+    }
+
     if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
     // Recalcular autonomía y score del cliente con la nueva consulta incluida
     await recalcularAutonomiaCliente(cliente);
@@ -769,6 +783,8 @@ function resetFormConsulta() {
 
   // Solución elegida de la base y su textarea
   consultaSolucionId = null;
+  _consultaArchivosStaged = [];
+  _renderConsultaArchivos();
   renderSolucionElegida();
   const sol = document.getElementById('r-sol');
   if (sol) sol.value = '';
@@ -791,3 +807,65 @@ function escapeHtmlConsulta(str) {
 }
 
 window.addEventListener('app-ready', initConsultas);
+
+
+// ────────── Archivos adjuntos en el form de consulta ─────────────────────
+
+function _renderConsultaArchivos() {
+  const container = document.getElementById('r-archivos-consulta');
+  if (!container) return;
+
+  const _icon = (mime, nombre) => {
+    const ext = (nombre || '').split('.').pop().toLowerCase();
+    if (ext === 'pdf' || (mime||'').includes('pdf'))                                               return '📄';
+    if (['xlsx','xls','csv','ods'].includes(ext) || (mime||'').includes('sheet'))                  return '📊';
+    if (['docx','doc','odt'].includes(ext) || (mime||'').includes('word'))                         return '📝';
+    if (['pptx','ppt','odp'].includes(ext) || (mime||'').includes('presentation'))                 return '📑';
+    if (['png','jpg','jpeg','gif','webp','svg'].includes(ext) || (mime||'').includes('image'))     return '🖼️';
+    if (['zip','rar','7z'].includes(ext))                                                           return '🗜️';
+    return '📎';
+  };
+
+  const _fmtB = (bytes) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024*1024) return `${(bytes/1024).toFixed(1)} KB`;
+    return `${(bytes/1024/1024).toFixed(1)} MB`;
+  };
+
+  const listaHTML = _consultaArchivosStaged.map((f, i) => `
+    <div class="mtm-archivo">
+      <span class="mtm-archivo-icono">${_icon(f.type, f.name)}</span>
+      <div class="mtm-archivo-info">
+        <div class="mtm-archivo-nombre">${f.name}</div>
+        <div class="mtm-archivo-meta">${_fmtB(f.size)} · Pendiente de guardar</div>
+      </div>
+      <div class="mtm-archivo-btns">
+        <button class="mtm-archivo-del" onclick="_consultaRemoveStaged(${i})">×</button>
+      </div>
+    </div>`).join('');
+
+  container.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+      ${_consultaArchivosStaged.length > 0 ? listaHTML : '<div style="font-size:12px;color:var(--text3)">Sin archivos.</div>'}
+    </div>
+    <button type="button" class="btn-sm" onclick="_abrirSelectorArchivoConsulta()">+ Adjuntar archivo</button>`;
+}
+
+function _abrirSelectorArchivoConsulta() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.png,.jpg,.jpeg,.gif,.csv,.txt,.zip';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    _consultaArchivosStaged.push(file);
+    _renderConsultaArchivos();
+  };
+  input.click();
+}
+
+function _consultaRemoveStaged(idx) {
+  _consultaArchivosStaged.splice(idx, 1);
+  _renderConsultaArchivos();
+}

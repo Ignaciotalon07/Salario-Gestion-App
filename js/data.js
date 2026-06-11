@@ -29,7 +29,7 @@ const CATS = {
     color: '#b45309',
     bg: '#fef8ee',
     text: '#7c3a06',
-    sub: ['Version 3.x', 'Cambios en liquidacion', 'Nuevos modulos', 'Migracion de datos', 'Cambios en AFIP']
+    sub: ['Version', 'Cambios en liquidacion', 'Nuevos modulos', 'Migracion de datos', 'Cambios en AFIP']
   },
   fuera: {
     label: 'Fuera del sistema',
