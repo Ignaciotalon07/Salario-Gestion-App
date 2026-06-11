@@ -2473,14 +2473,20 @@ input[type=date]:focus {
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 13px;
-  transition: background 0.12s ease;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
 }
-/* Las tareas que tienen notas son clickeables (toggle expand) */
+.impl-tarea:hover {
+  background: var(--hover);
+  border-color: #E65C00;
+  box-shadow: 0 2px 8px rgba(230,92,0,0.12);
+}
+/* Compatibilidad con clase legacy */
 .impl-tarea--has-notas {
   cursor: pointer;
 }
 .impl-tarea--has-notas:hover {
-  background: rgba(45, 45, 142, 0.05);
+  background: var(--hover);
 }
 .impl-tarea--expanded {
   background: rgba(45, 45, 142, 0.06);
@@ -3974,7 +3980,7 @@ input[type=date]:focus {
   overflow: hidden;
   transition: border-color var(--transition);
 }
-.impl-fase-grupo--activa  { border-color: var(--accent); }
+.impl-fase-grupo--open { border-color: var(--accent); }
 .impl-fase-grupo--completa { border-color: var(--green); opacity: 0.85; }
 
 .impl-fase-header {
@@ -3988,8 +3994,7 @@ input[type=date]:focus {
   gap: 12px;
   transition: background var(--transition);
 }
-.impl-fase-header:hover { background: var(--border); }
-.impl-fase-grupo--activa  .impl-fase-header { background: var(--accent-light); }
+.impl-fase-header:hover { background: var(--accent-light); }
 .impl-fase-grupo--completa .impl-fase-header { background: var(--green-bg); }
 
 .impl-fase-header__left {
@@ -4052,8 +4057,7 @@ input[type=date]:focus {
 }
 
 [data-theme="dark"] .impl-fase-header { background: var(--surface2); }
-[data-theme="dark"] .impl-fase-header:hover { background: rgba(255,255,255,0.06); }
-[data-theme="dark"] .impl-fase-grupo--activa .impl-fase-header { background: rgba(99,102,241,0.12); }
+[data-theme="dark"] .impl-fase-header:hover { background: rgba(99,102,241,0.12); }
 [data-theme="dark"] .impl-fase-grupo--completa .impl-fase-header { background: rgba(45,106,45,0.15); }
 
 /* ════════════════════════════════════

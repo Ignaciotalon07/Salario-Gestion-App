@@ -1260,7 +1260,13 @@ window._implFaseExpanded = window._implFaseExpanded || {};
 
 function toggleFaseExpanded(clienteId, faseIdx) {
   const key = `${clienteId}_${faseIdx}`;
-  window._implFaseExpanded[key] = !window._implFaseExpanded[key];
+  // Calcular el estado real actual (igual que en el render) para invertirlo bien
+  const fasesCliente = getFasesParaCliente(clienteId);
+  const tareasCliente = implTareas.filter(t => t.cliente_id === clienteId);
+  const fases = calcularFases(tareasCliente, fasesCliente);
+  const f = fases[faseIdx];
+  const currentlyExpanded = window._implFaseExpanded[key] ?? false;
+  window._implFaseExpanded[key] = !currentlyExpanded;
   renderImplementacion();
 }
 
@@ -1288,7 +1294,7 @@ function renderListaFases(c, tareasCliente, tareasVisibles) {
       const tareasVisFase   = tareasVisibles.filter(t => (t.fase || 'relevamiento') === f.key);
       const isExpanded = hayFiltro
         ? tareasVisFase.length > 0
-        : (window._implFaseExpanded[key] ?? f.estado === 'activa');
+        : (window._implFaseExpanded[key] ?? false);
 
       const colorBar  = f.estado === 'completa' ? 'var(--green)'
                       : f.estado === 'activa'   ? 'var(--accent)'
@@ -1302,7 +1308,7 @@ function renderListaFases(c, tareasCliente, tareasVisibles) {
       const tareasRender = hayFiltro ? tareasVisFase : tareasDeFase;
 
       return `
-        <div class="impl-fase-grupo ${f.estado === 'completa' ? 'impl-fase-grupo--completa' : f.estado === 'activa' ? 'impl-fase-grupo--activa' : ''}">
+        <div class="impl-fase-grupo ${f.estado === 'completa' ? 'impl-fase-grupo--completa' : f.estado === 'activa' ? 'impl-fase-grupo--activa' : ''} ${isExpanded ? 'impl-fase-grupo--open' : ''}">
           <div class="impl-fase-header" onclick="toggleFaseExpanded('${c.id}', ${i})">
             <div class="impl-fase-header__left">
               <span class="impl-fase-num">Fase ${i + 1}</span>
@@ -3625,17 +3631,8 @@ function abrirModalTareaMobile(tareaId) {
     predEl.innerHTML = predNombres.map(n => `<span class="mtm-pred-item">${n}</span>`).join('');
   }
 
-  // Select de estado
-  const sel = modal.querySelector('#mtm-estado-sel');
-  sel.value = t.estado;
-  sel.disabled = !puedoEditar;
-
-  // Guardar id en el modal para confirmar
+  // Guardar id en el modal para refresh de notas/archivos
   modal.dataset.tareaId = tareaId;
-
-  // Mensaje de permiso
-  const lockMsg = modal.querySelector('.mtm-lock-msg');
-  if (lockMsg) lockMsg.style.display = puedoEditar ? 'none' : 'block';
 
   // Guardar id abierto para refresh por realtime
   window._modalTareaId = tareaId;
@@ -3655,26 +3652,7 @@ function cerrarModalTareaMobile() {
   window._modalTareaId = null;
 }
 
-async function confirmarEstadoTareaMobile() {
-  const modal = document.getElementById('modal-tarea-mobile');
-  if (!modal) return;
 
-  const tareaId = modal.dataset.tareaId;
-  const nuevoEstado = modal.querySelector('#mtm-estado-sel').value;
-
-  const btn = modal.querySelector('.mtm-confirm-btn');
-  btn.disabled = true;
-  btn.textContent = 'Guardando...';
-
-  try {
-    await cambiarEstadoTarea(tareaId, nuevoEstado);
-    cerrarModalTareaMobile();
-  } catch (e) {
-    btn.disabled = false;
-    btn.textContent = 'Guardar estado';
-    alert('No se pudo guardar: ' + e.message);
-  }
-}
 
 
 // ────────── Archivos adjuntos en tareas ──────────
@@ -3908,7 +3886,7 @@ function _refreshModalNotasArchivos(tareaId) {
       </div>
       <div class="mtm-archivo-btns">
         <button class="mtm-archivo-dl"
-          onclick="descargarArchivoTarea('${a.id}', '${escapeHtmlImpl(a.storage_path)}')">⬇ Bajar</button>
+          onclick="descargarArchivoTarea('${a.id}', '${escapeHtmlImpl(a.storage_path)}')">⬇ Descargar</button>
         <button class="mtm-archivo-del"
           onclick="eliminarArchivoTarea('${a.id}', '${escapeHtmlImpl(a.storage_path)}', '${tareaId}')">×</button>
       </div>
