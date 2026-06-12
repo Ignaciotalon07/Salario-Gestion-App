@@ -492,7 +492,7 @@ function _cpRefreshMetricas() {
       : 'sin datos aún';
   }
   set('cp-prom', promDia);
-  set('cp-sub',  `${all.length} consulta${all.length !== 1 ? 's' : ''} registrada${all.length !== 1 ? 's' : ''} en total`);
+  // cp-sub es texto fijo definido en el HTML, no se sobreescribe
 }
 
 // ════════════════════════════════════════════════════════════════

@@ -1010,7 +1010,12 @@ html {
   flex: 1;
   padding: 4px 2px;
   margin: 12px 0;
+  scrollbar-color: var(--border2) transparent;
+  scrollbar-width: thin;
 }
+.modal-body::-webkit-scrollbar       { width: 5px; }
+.modal-body::-webkit-scrollbar-track { background: transparent; }
+.modal-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
 @keyframes modalDialogIn {
   from { transform: translateY(8px); opacity: 0; }
   to   { transform: translateY(0);   opacity: 1; }
@@ -5062,3 +5067,104 @@ input[type=date]:focus {
 }
 .mtm-archivo-del:hover { color: var(--red); border-color: var(--red); }
 .mtm-empty { font-size: 12px; color: var(--text3); padding: 2px 0; }
+
+/* ═══════════════════════════════════════════
+   REPOSITORIO
+   ═══════════════════════════════════════════ */
+.repo-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  transition: border-color 0.15s;
+}
+.repo-card:hover { border-color: var(--border2); }
+.repo-card--revisado { opacity: 0.65; }
+
+.repo-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.repo-cat-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.repo-card-meta {
+  font-size: 11px;
+  color: var(--text3);
+  flex: 1;
+}
+.repo-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.repo-revisado-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--green);
+  padding: 3px 8px;
+  background: var(--green-bg);
+  border-radius: 20px;
+}
+.repo-card-titulo {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+.repo-card-desc {
+  font-size: 13px;
+  color: var(--text2);
+  margin-bottom: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.repo-archivos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.repo-archivo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.repo-archivo-icono { font-size: 18px; flex-shrink: 0; }
+.repo-archivo-nombre {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.repo-archivo-meta { font-size: 11px; color: var(--text3); white-space: nowrap; }
+.repo-asignar-btn { font-weight: 600; }
+.repo-asignar-opcion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  padding: 4px 0;
+}
+.repo-asignar-opcion input { cursor: pointer; width: 15px; height: 15px; }

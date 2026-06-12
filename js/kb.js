@@ -597,7 +597,9 @@ function _kbRemoveStaged(idx) {
 
 async function _subirArchivoKB(solucionId, file) {
   try {
-    const storagePath = `${solucionId}/${Date.now()}_${file.name}`;
+    // Sanitizar nombre para el path de storage (tildes y espacios rompen Supabase)
+    const safeName = file.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storagePath = `${solucionId}/${Date.now()}_${safeName}`;
     const { error: uploadError } = await sb().storage
       .from('soluciones-archivos')
       .upload(storagePath, file);

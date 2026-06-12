@@ -556,33 +556,13 @@
               </svg>
               <span>Base de soluciones</span>
             </button>
-          </div>
-
-          <!-- Sección Administración: solo visible para Daniel Ferro -->
-          <div
-            class="sidebar-section"
-            id="nav-administracion"
-            style="display: none"
-          >
-            <div class="sidebar-section-label">Administración</div>
-            <button class="nav-item" onclick="goTo(this, 'administracion')">
-              <svg
-                class="icon"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <rect x="1" y="3" width="14" height="10" rx="1.5"></rect>
-                <path d="M1 6h14"></path>
-                <path d="M5 9h2M9 9h2"></path>
+            <button class="nav-item" onclick="goTo(this, 'repositorio')">
+              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M2 3h12v10H2z"></path>
+                <path d="M5 6h6M5 9h4"></path>
+                <path d="M2 6h12"></path>
               </svg>
-              <span>Facturación</span>
-              <span
-                class="nav-badge warn"
-                id="admin-nav-badge"
-                style="display: none"
-              ></span>
+              <span>Repositorio</span>
             </button>
           </div>
 
@@ -928,7 +908,7 @@
             <div class="page-header">
               <div>
                 <div class="page-title">Consultas</div>
-                <div class="page-sub" id="cp-sub">Histórico y métricas de atención</div>
+                <div class="page-sub" id="cp-sub">Métricas avanzadas de las consultas registradas</div>
               </div>
               <button class="btn-primary" onclick="abrirModalConsulta()">+ Registrar consulta</button>
             </div>
@@ -2330,6 +2310,31 @@ Paso 2: ..."
           </div>
 
           <!-- ════════════════════════════════════
+         REPOSITORIO
+    ════════════════════════════════════ -->
+          <div id="repositorio" class="page">
+            <div class="page-header">
+              <div>
+                <div class="page-title">Repositorio</div>
+                <div class="page-sub">Archivos y recursos del equipo</div>
+              </div>
+              <button class="btn-primary" onclick="abrirFormRepo()">+ Nuevo item</button>
+            </div>
+
+            <!-- Filtros por categoría -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+              <button class="filter-chip active" onclick="filtRepo(this,'')">Todos</button>
+              <button class="filter-chip" onclick="filtRepo(this,'actualizacion')">📦 Actualizaciones</button>
+              <button class="filter-chip" onclick="filtRepo(this,'modulo')">🧩 Módulos</button>
+              <button class="filter-chip" onclick="filtRepo(this,'bug')">🐛 Bugs</button>
+              <button class="filter-chip" onclick="filtRepo(this,'manual')">📄 Manuales</button>
+              <button class="filter-chip" onclick="filtRepo(this,'clientes')">📢 Para clientes</button>
+            </div>
+
+            <div id="repo-list"></div>
+          </div>
+
+          <!-- ════════════════════════════════════
          ALERTAS
     ════════════════════════════════════ -->
           <div id="alertas" class="page">
@@ -2403,141 +2408,7 @@ Paso 2: ..."
             </div>
           </div>
 
-          <!-- ════════════════════════════════════
-         ADMINISTRACIÓN — solo para Daniel Ferro
-    ════════════════════════════════════ -->
-          <div id="administracion" class="page">
-            <div class="page-header">
-              <div>
-                <div class="page-title">Facturación</div>
-                <div class="page-sub" id="admin-page-sub">
-                  Estado de cuenta de todos los clientes
-                </div>
-              </div>
-              <div class="admin-mes-selector">
-                <select
-                  id="admin-sel-mes"
-                  onchange="actualizarFiltroAdminMes()"
-                  style="margin-bottom: 0; width: 130px"
-                >
-                  <!-- Opciones generadas por JS en initAdministracion() -->
-                </select>
-                <select
-                  id="admin-sel-anio"
-                  onchange="actualizarFiltroAdminMes()"
-                  style="margin-bottom: 0; width: 90px"
-                >
-                  <!-- Opciones generadas por JS en initAdministracion() -->
-                </select>
-              </div>
-            </div>
 
-            <!-- Métricas rápidas -->
-            <div
-              class="metrics-grid"
-              style="grid-template-columns: repeat(4, 1fr)"
-            >
-              <div class="metric-card">
-                <div class="metric-label">Total clientes</div>
-                <div
-                  class="metric-value"
-                  id="admin-m-total"
-                  style="color: var(--accent)"
-                >
-                  —
-                </div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-label">Al día</div>
-                <div
-                  class="metric-value"
-                  id="admin-m-aldia"
-                  style="color: var(--green)"
-                >
-                  —
-                </div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-label">Adeudan</div>
-                <div
-                  class="metric-value"
-                  id="admin-m-deben"
-                  style="color: var(--red)"
-                >
-                  —
-                </div>
-              </div>
-              <div class="metric-card">
-                <div class="metric-label">Facturado este mes</div>
-                <div
-                  class="metric-value"
-                  id="admin-m-monto"
-                  style="color: var(--blue); font-size: 20px"
-                >
-                  —
-                </div>
-              </div>
-            </div>
-
-            <!-- Filtros -->
-            <div class="filter-row">
-              <input
-                type="text"
-                placeholder="Buscar cliente..."
-                style="width: 220px; margin-bottom: 0"
-                oninput="filtrarAdminTexto(this.value)"
-              />
-              <button
-                class="filter-chip active"
-                onclick="filtrarAdminEstado('', this)"
-              >
-                Todos
-              </button>
-              <button
-                class="filter-chip"
-                onclick="filtrarAdminEstado('aldia', this)"
-              >
-                ✅ Al día
-              </button>
-              <button
-                class="filter-chip"
-                onclick="filtrarAdminEstado('debe', this)"
-              >
-                🔴 Adeudan
-              </button>
-            </div>
-
-            <!-- Tabla de clientes -->
-            <div class="card" style="padding: 0; overflow: hidden">
-              <table class="tbl" id="admin-tabla">
-                <thead>
-                  <tr>
-                    <th style="width: 24%; padding-left: 20px">Cliente</th>
-                    <th style="width: 10%">Último mes</th>
-                    <th style="width: 11%">Fecha factura</th>
-                    <th style="width: 12%">Próx. facturación</th>
-                    <th style="width: 10%">Monto</th>
-                    <th style="width: 11%">Estado</th>
-                    <th style="width: 22%; padding-right: 16px"></th>
-                  </tr>
-                </thead>
-                <tbody id="admin-tbody">
-                  <tr>
-                    <td
-                      colspan="7"
-                      style="
-                        text-align: center;
-                        color: var(--text3);
-                        padding: 32px;
-                      "
-                    >
-                      Cargando...
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
 
           <!-- ════════════════════════════════════
          CONFIGURACIÓN
@@ -2662,10 +2533,10 @@ Paso 2: ..."
     <script src="js/kb.js"></script>
     <script src="js/implementacion.js"></script>
     <script src="js/cliente-detalle.js"></script>
-    <script src="js/administracion.js"></script>
     <script src="js/charts.js"></script>
     <script src="js/alertas.js"></script>
     <script src="js/consultas-page.js"></script>
+    <script src="js/repositorio.js"></script>
 
     <!-- ════════════════════════════════════
        MODAL — Registrar consulta
@@ -3002,5 +2873,46 @@ Paso 2: ..."
     </div>
   </div>
 
-  </body>
+  
+  <!-- ════════════════════════════════════
+     MODAL — Nuevo/Editar item Repositorio
+  ════════════════════════════════════ -->
+  <div id="repo-form-overlay" class="kb-modal-overlay" onclick="cerrarFormRepo()">
+    <div class="kb-modal-sheet" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div class="card-title" id="repo-form-title" style="margin:0">Nuevo item</div>
+        <button onclick="cerrarFormRepo()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">✕</button>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <label class="fl">Título</label>
+          <input type="text" id="repo-titulo" placeholder="Ej: Actualización v3.6 — nuevos módulos de RRHH" />
+        </div>
+        <div class="form-group">
+          <label class="fl">Categoría</label>
+          <select id="repo-cat">
+            <option value="actualizacion">📦 Actualización</option>
+            <option value="modulo">🧩 Nuevo módulo</option>
+            <option value="bug">🐛 Solución de bug</option>
+            <option value="manual">📄 Manual / Docs</option>
+            <option value="clientes">📢 Para clientes</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="fl">Descripción / notas</label>
+        <textarea id="repo-desc" style="min-height:80px" placeholder="¿Qué incluye? ¿Para qué sirve? ¿Alguna instrucción especial?..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="fl">Archivos adjuntos</label>
+        <div id="repo-archivos-form"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn-primary" id="repo-form-submit" onclick="guardarItemRepo()">Guardar</button>
+        <button class="btn-secondary" onclick="cerrarFormRepo()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+</body>
 </html>

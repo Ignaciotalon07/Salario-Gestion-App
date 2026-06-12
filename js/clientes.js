@@ -65,8 +65,6 @@ async function initClientes() {
     refrescarSelectsCliente(clientes.map(c => c.nombre));
     // Actualizar métricas del panel con el conteo real de clientes
     if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
-    // Refrescar facturación ahora que clientes está cargado (evita que aparezca en 0)
-    if (typeof renderAdministracion === 'function') renderAdministracion();
     suscribirClientes();
   } catch (e) {
     console.error('Error cargando clientes', e);

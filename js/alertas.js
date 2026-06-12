@@ -372,68 +372,6 @@ function refreshAlertas() {
     });
   }
 
-  // ── Alertas de facturación (solo para Daniel Ferro) ──
-  const me = (typeof getCurrentUserName === 'function') ? getCurrentUserName() : null;
-  if (me === 'Daniel Ferro') {
-    const allFacturas = (typeof adminFacturas !== 'undefined') ? adminFacturas : [];
-    const hoy         = new Date(); hoy.setHours(0,0,0,0);
-    const mesActual   = hoy.getMonth() + 1;
-    const anioActual  = hoy.getFullYear();
-    const MESES       = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-
-    // ── F1. Sin pago del mes actual ──
-    const sinPagoMes = allClientes.filter(c => {
-      const factura = allFacturas.find(f =>
-        f.cliente_id === c.id && f.mes === mesActual && f.anio === anioActual
-      );
-      return !factura || factura.estado !== 'pagada';
-    });
-
-    if (sinPagoMes.length > 0) {
-      const cuantos = sinPagoMes.length;
-      const lista   = sinPagoMes.slice(0, 4).map(c => c.nombre).join(', ');
-      const mas     = cuantos > 4 ? ` y ${cuantos - 4} más` : '';
-      alertas.push({
-        tipo:    'red',
-        titulo:  `${cuantos} cliente${cuantos !== 1 ? 's' : ''} sin pago en ${MESES[mesActual]}`,
-        texto:   lista + mas + '. Sin factura cargada para este mes.',
-        accion:  'Ver facturación',
-        onClick: `goTo(document.querySelector('.nav-item[onclick*=administracion]'),'administracion')`
-      });
-    }
-
-    // ── F2. Próxima facturación vencida (fecha_proxima < hoy) ──
-    const facturasPorCliente = {};
-    allFacturas.forEach(f => {
-      if (!facturasPorCliente[f.cliente_id] ||
-          f.anio > facturasPorCliente[f.cliente_id].anio ||
-          (f.anio === facturasPorCliente[f.cliente_id].anio && f.mes > facturasPorCliente[f.cliente_id].mes)) {
-        facturasPorCliente[f.cliente_id] = f;
-      }
-    });
-
-    const vencidas = Object.values(facturasPorCliente).filter(f => {
-      if (!f.fecha_proxima) return false;
-      const prox = new Date(f.fecha_proxima); prox.setHours(0,0,0,0);
-      return prox < hoy && f.estado === 'pagada';
-    });
-
-    if (vencidas.length > 0) {
-      const nombres = vencidas.slice(0, 3).map(f => {
-        const cli = allClientes.find(c => c.id === f.cliente_id);
-        return cli ? cli.nombre : '—';
-      }).join(', ');
-      const mas = vencidas.length > 3 ? ` y ${vencidas.length - 3} más` : '';
-      alertas.push({
-        tipo:    'amber',
-        titulo:  `${vencidas.length} cliente${vencidas.length !== 1 ? 's' : ''} con fecha de facturación vencida`,
-        texto:   `${nombres}${mas}. Ya pasó la fecha de próxima facturación.`,
-        accion:  'Ver facturación',
-        onClick: `goTo(document.querySelector('.nav-item[onclick*=administracion]'),'administracion')`
-      });
-    }
-  }
-
   // ── Render ──
   _renderAlertas(alertas);
 }

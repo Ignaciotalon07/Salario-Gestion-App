@@ -613,8 +613,8 @@ function cerrarPendiente(id, btn) {
     cerrarPendienteEjecutar(id, btn);
     return;
   }
-  // Implementacion: cierre directo sin métricas
-  if (p.tipoPendiente === 'implementacion') {
+  // Implementacion / Repositorio: cierre directo sin modal ni métricas
+  if (p.tipoPendiente === 'implementacion' || p.tipoPendiente === 'repositorio') {
     cerrarPendienteEjecutar(id, btn);
     return;
   }
