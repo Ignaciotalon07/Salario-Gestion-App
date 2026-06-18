@@ -1421,12 +1421,14 @@ function renderImplTarea(t, idxEnFase, tareasDeFase, numGlobal) {
       ? `<span class="impl-tarea__pred-info" title="${numPred} predecesora${numPred !== 1 ? 's' : ''}">🔗 ${numPred}</span>`
       : '';
 
-  // Indicador de notas: solo muestra el contador (las notas se agregan desde el modal)
+  // Indicador unificado: mismo ícono si hay notas O archivos
   const notasTarea = implTareaNotas[t.id] || [];
   const notasCount = notasTarea.length;
+  const archivosCount = (implTareaArchivos[t.id] || []).length;
+  const totalContenido = notasCount + archivosCount;
   const isExpanded = !!(window._implTareaExpanded && window._implTareaExpanded[t.id]);
-  const notasIndicator = notasCount > 0
-    ? `<span class="impl-tarea__notas-btn impl-tarea__notas-btn--has" title="${notasCount} nota${notasCount !== 1 ? 's' : ''}">📝 ${notasCount}</span>`
+  const notasIndicator = totalContenido > 0
+    ? `<span class="impl-tarea__notas-btn impl-tarea__notas-btn--has" title="${notasCount} nota${notasCount !== 1 ? 's' : ''}, ${archivosCount} archivo${archivosCount !== 1 ? 's' : ''}">📝<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#f59e0b;margin-left:1px;vertical-align:middle;position:relative;top:-1px"></span></span>`
     : '';
 
   // Vencida: fecha estimada en el pasado sin completar

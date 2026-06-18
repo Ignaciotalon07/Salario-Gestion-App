@@ -18,6 +18,10 @@ function goTo(btn, id) {
   if (id === 'consultas-page' && typeof refreshConsultasPage === 'function') {
     refreshConsultasPage();
   }
+  // Marcar repositorio como visto al entrar
+  if (id === 'repositorio' && typeof marcarRepositorioVisto === 'function') {
+    marcarRepositorioVisto();
+  }
 }
 
 // goClienteDetail es re-definida por cliente-detalle.js para navegar a la vista de historial.

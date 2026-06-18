@@ -8,6 +8,7 @@ let repoArchivos = {};   // { item_id: [archivo, ...] }
 let repoFiltro   = '';   // categoría activa
 let repoEditId   = null; // null = nuevo, uuid = editando
 let _repoArchivosStaged = []; // File[] para subir al guardar
+let _repoUltimoVisto = null; // timestamptz del último acceso del usuario actual
 
 // ── Config categorías ─────────────────────────────────────────────────────────
 const REPO_CATS = {
@@ -24,6 +25,17 @@ window.addEventListener('app-ready', () => {
 });
 
 async function initRepositorio() {
+  // Cargar último visto del usuario actual
+  const uid = sb().auth ? (await sb().auth.getUser()).data?.user?.id : null;
+  if (uid) {
+    const { data: visto } = await sb()
+      .from('repositorio_visto')
+      .select('ultimo_visto_at')
+      .eq('user_id', uid)
+      .maybeSingle();
+    _repoUltimoVisto = visto?.ultimo_visto_at || null;
+  }
+
   // Cargar items
   const { data: itemRows } = await sb()
     .from('repositorio_items')
@@ -43,7 +55,40 @@ async function initRepositorio() {
   });
 
   renderRepoList();
+  _updateRepoBadge();
   suscribirRepositorio();
+}
+
+// Cuenta items nuevos (creados después del último acceso del usuario)
+function _repoNuevosCount() {
+  if (!_repoUltimoVisto) return repoItems.length;
+  return repoItems.filter(i => new Date(i.created_at) > new Date(_repoUltimoVisto)).length;
+}
+
+// Actualiza el badge naranja en el nav
+function _updateRepoBadge() {
+  const badge = document.getElementById('repo-nav-badge');
+  if (!badge) return;
+  const count = _repoNuevosCount();
+  if (count > 0) {
+    badge.textContent = count;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+// Marca el repositorio como visto para el usuario actual (se llama al entrar a la sección)
+async function marcarRepositorioVisto() {
+  const uid = sb().auth ? (await sb().auth.getUser()).data?.user?.id : null;
+  if (!uid) return;
+  const ahora = new Date().toISOString();
+  await sb().from('repositorio_visto').upsert(
+    { user_id: uid, ultimo_visto_at: ahora },
+    { onConflict: 'user_id' }
+  );
+  _repoUltimoVisto = ahora;
+  _updateRepoBadge();
 }
 
 // ── Render lista ──────────────────────────────────────────────────────────────
@@ -78,17 +123,20 @@ function renderRepoCard(item) {
         </div>`).join('')
     : '<div style="font-size:12px;color:var(--text3)">Sin archivos adjuntos.</div>';
 
+  // Indicador de "nuevo" (creado después del último acceso del usuario)
+  const esNuevo = _repoUltimoVisto
+    ? new Date(item.created_at) > new Date(_repoUltimoVisto)
+    : true;
+
   return `
-    <div class="repo-card ${item.revisado ? 'repo-card--revisado' : ''}" id="repo-card-${item.id}">
+    <div class="repo-card" id="repo-card-${item.id}">
       <div class="repo-card-header">
         <span class="repo-cat-badge" style="background:${cat.bg};color:${cat.color}">
           ${cat.emoji} ${cat.label}
         </span>
+        ${esNuevo ? '<span style="font-size:11px;font-weight:600;color:#f59e0b;background:rgba(245,158,11,0.12);border-radius:4px;padding:2px 7px">Nuevo</span>' : ''}
         <span class="repo-card-meta">${_escRepo(item.subido_por || 'Equipo')} · ${fecha}</span>
         <div class="repo-card-actions">
-          ${item.revisado
-            ? '<span class="repo-revisado-badge">✓ Revisado</span>'
-            : `<button class="btn-sm" onclick="marcarRevisadoRepo('${item.id}')">Marcar revisado</button>`}
           <button class="btn-sm" onclick="editarItemRepo('${item.id}')">Editar</button>
           <button class="btn-sm repo-asignar-btn" onclick="abrirModalAsignarRepo('${item.id}')">📤 Asignar</button>
           <button class="btn-sm" style="color:var(--red)" onclick="eliminarItemRepo('${item.id}')">Eliminar</button>
@@ -460,6 +508,7 @@ function suscribirRepositorio() {
         repoItems = repoItems.filter(i => i.id !== o.id);
       }
       renderRepoList();
+      _updateRepoBadge();
     }).subscribe();
 
   sb().channel('repositorio-archivos-changes')
