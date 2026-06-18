@@ -2208,8 +2208,16 @@
               <button class="btn-primary" onclick="abrirFormRepo()">+ Nuevo item</button>
             </div>
 
-            <!-- Filtros por categoría -->
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
+            <!-- Filtros + buscador -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px">
+              <input
+                type="text"
+                id="repo-search"
+                class="form-input"
+                placeholder="Buscar..."
+                oninput="buscarRepo(this.value)"
+                style="max-width:350px;margin-right:8px"
+              />
               <button class="filter-chip active" onclick="filtRepo(this,'')">Todos</button>
               <button class="filter-chip" onclick="filtRepo(this,'actualizacion')">📦 Actualizaciones</button>
               <button class="filter-chip" onclick="filtRepo(this,'modulo')">🧩 Módulos</button>

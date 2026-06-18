@@ -6,6 +6,7 @@
 let repoItems    = [];   // todos los items
 let repoArchivos = {};   // { item_id: [archivo, ...] }
 let repoFiltro   = '';   // categoría activa
+let repoBusqueda = '';   // texto del buscador
 let repoEditId   = null; // null = nuevo, uuid = editando
 let _repoArchivosStaged = []; // File[] para subir al guardar
 let _repoUltimoVisto = null; // timestamptz del último acceso del usuario actual
@@ -96,12 +97,20 @@ function renderRepoList() {
   const container = document.getElementById('repo-list');
   if (!container) return;
 
-  const visible = repoFiltro
+  let visible = repoFiltro
     ? repoItems.filter(i => i.categoria === repoFiltro)
     : repoItems;
 
+  if (repoBusqueda.trim()) {
+    const q = repoBusqueda.trim().toLowerCase();
+    visible = visible.filter(i =>
+      (i.titulo || '').toLowerCase().includes(q) ||
+      (i.descripcion || '').toLowerCase().includes(q)
+    );
+  }
+
   if (visible.length === 0) {
-    container.innerHTML = '<div class="empty-state">No hay items en esta categoría todavía.</div>';
+    container.innerHTML = '<div class="empty-state">No se encontraron items.</div>';
     return;
   }
 
@@ -153,6 +162,11 @@ function filtRepo(btn, cat) {
   document.querySelectorAll('#repositorio .filter-chip').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   repoFiltro = cat;
+  renderRepoList();
+}
+
+function buscarRepo(texto) {
+  repoBusqueda = texto;
   renderRepoList();
 }
 
