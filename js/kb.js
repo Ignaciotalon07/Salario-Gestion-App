@@ -235,43 +235,36 @@ function filtKB(btn, cat) {
 
 function showKbForm() {
   kbEditId = null;
-  const f = document.getElementById('kb-form');
-  if (!f) return;
-  // Reset visual
   document.getElementById('kb-titulo').value = '';
   document.getElementById('kb-pasos').value = '';
   const okEl = document.getElementById('kb-ok');
   if (okEl) okEl.style.display = 'none';
-  const titleEl = f.querySelector('.card-title');
+  const titleEl = document.getElementById('kb-form-modal-title');
   if (titleEl) titleEl.textContent = 'Nueva solución';
   const submitBtn = document.getElementById('kb-form-submit');
   if (submitBtn) submitBtn.textContent = 'Guardar solución';
-
-  // Limpiar archivos staged (nueva solución)
   _kbArchivosStaged = [];
   _renderKbArchivosForm(null);
+  // Abrir modal
+  const overlay = document.getElementById('kb-form-overlay');
+  if (overlay) overlay.classList.add('kb-modal--open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('kb-titulo').focus(), 100);
+}
 
-  // Toggle: si esta visible, lo cerramos; si no, lo abrimos y hacemos scroll
-  const yaVisible = f.style.display !== 'none' && f.style.display !== '';
-  if (yaVisible) {
-    f.style.display = 'none';
-    return;
-  }
-  f.style.display = 'block';
-  // Scroll suave al form y foco en el primer campo
-  setTimeout(() => {
-    f.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    const tituloInput = document.getElementById('kb-titulo');
-    if (tituloInput) tituloInput.focus({ preventScroll: true });
-  }, 50);
+function cerrarKbForm() {
+  const overlay = document.getElementById('kb-form-overlay');
+  if (overlay) overlay.classList.remove('kb-modal--open');
+  document.body.style.overflow = '';
+  kbEditId = null;
+  _kbArchivosStaged = [];
 }
 
 function editarSolucion(id) {
   const s = soluciones.find(x => x.id === id);
   if (!s) return;
   kbEditId = id;
-  const f = document.getElementById('kb-form');
-  if (!f) return;
+  // form es modal, no necesita ref local
   // Pre-cargar valores
   document.getElementById('kb-titulo').value = s.titulo;
   document.getElementById('kb-cat').value = s.cat;
@@ -286,13 +279,15 @@ function editarSolucion(id) {
   _renderKbArchivosForm(id);
 
   // Cambiar titulo del form
-  const titleEl = f.querySelector('.card-title');
+  const titleEl = document.getElementById('kb-form-modal-title');
   if (titleEl) titleEl.textContent = `Editar: ${s.titulo}`;
   const submitBtn = document.getElementById('kb-form-submit');
   if (submitBtn) submitBtn.textContent = 'Guardar cambios';
-  // Mostrar el form
-  f.style.display = 'block';
-  f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Abrir modal
+  const overlay = document.getElementById('kb-form-overlay');
+  if (overlay) overlay.classList.add('kb-modal--open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('kb-titulo').focus(), 100);
 }
 
 async function guardarKB() {
@@ -356,8 +351,7 @@ async function guardarKB() {
     // Reset y cerrar
     document.getElementById('kb-titulo').value = '';
     document.getElementById('kb-pasos').value = '';
-    document.getElementById('kb-form').style.display = 'none';
-    kbEditId = null;
+    cerrarKbForm();
 
     // Mostrar confirmacion ok-box (compatible con el HTML existente)
     const ok = document.getElementById('kb-ok');

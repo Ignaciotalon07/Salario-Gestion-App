@@ -2193,121 +2193,7 @@
               </table>
             </div>
 
-            <div id="kb-form" class="card" style="display: none; margin-top: 0">
-              <div class="card-title">Nueva solución</div>
-              <div
-                id="kb-ok"
-                class="alert alert-green"
-                style="display: none; margin-bottom: 14px"
-              >
-                <strong>Guardado.</strong>Disponible para todo el equipo.
-              </div>
-              <div class="form-group">
-                <label class="fl"
-                  >Título — describí el problema del cliente</label
-                >
-                <input
-                  type="text"
-                  id="kb-titulo"
-                  placeholder="El cliente no puede / no sabe / le da error..."
-                />
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="fl">Categoría</label>
-                  <select id="kb-cat" onchange="updateKBSubtemas()">
-                    <option value="">Seleccioná...</option>
-                    <option value="liquidacion">Liquidación</option>
-                    <option value="errores">Errores del sistema</option>
-                    <option value="configuracion">Configuración</option>
-                    <option value="actualizaciones">Actualizaciones</option>
-                    <option value="fuera">Fuera del sistema</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="fl">Subtema</label>
-                  <select id="kb-sub">
-                    <option>Primero elegí categoría</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="fl">Pasos de la solución (uno por línea)</label>
-                <textarea
-                  id="kb-pasos"
-                  style="min-height: 110px"
-                  placeholder="Paso 1: Ir a Configuración &gt; Parámetros
-Paso 2: ..."
-                ></textarea>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="fl">Material de apoyo</label>
-                  <select>
-                    <option>Sin material</option>
-                    <option>Video</option>
-                    <option>PDF paso a paso</option>
-                    <option>Imagen / captura</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="fl">¿Aplica a todos los clientes?</label>
-                  <select>
-                    <option>Sí, todos</option>
-                    <option>Solo módulo RRHH</option>
-                    <option>Solo con convenio colectivo</option>
-                    <option>Solo versión 3.x+</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="fl">Quién la carga</label>
-                  <select id="kb-autor">
-                    <option>Ignacio Talon</option>
-                    <option>Matias Ferro</option>
-                    <option>Daniel Colomer</option>
-                    <option>Daniel Ferro</option>
-                    <option>Renzo Moretti</option>
-                    <option>Alfredo Cesar</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="fl">Revisar en</label>
-                  <select>
-                    <option>1 mes</option>
-                    <option>3 meses</option>
-                    <option>6 meses</option>
-                    <option>Con cada actualización</option>
-                  </select>
-                </div>
-              </div>
-              <!-- Archivos adjuntos -->
-              <div class="form-group">
-                <label class="fl">Archivos adjuntos</label>
-                <div id="kb-archivos-form">
-                  <!-- Se inyecta dinámicamente por JS -->
-                </div>
-              </div>
 
-              <div style="display: flex; gap: 10px">
-                <button
-                  class="btn-primary"
-                  id="kb-form-submit"
-                  onclick="guardarKB()"
-                >
-                  Guardar solución
-                </button>
-                <button
-                  class="btn-secondary"
-                  onclick="
-                    document.getElementById('kb-form').style.display = 'none'
-                  "
-                >
-                  Cancelar
-                </button>
-              </div>
-            </div>
           </div>
 
           <!-- ════════════════════════════════════
@@ -2911,6 +2797,87 @@ Paso 2: ..."
       <div style="display:flex;gap:10px;margin-top:4px">
         <button class="btn-primary" id="repo-form-submit" onclick="guardarItemRepo()">Guardar</button>
         <button class="btn-secondary" onclick="cerrarFormRepo()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════════════════════════════════════
+     MODAL — Nueva / Editar solución KB
+  ════════════════════════════════════ -->
+  <div id="kb-form-overlay" class="kb-modal-overlay">
+    <div class="kb-modal-sheet" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div class="card-title" id="kb-form-modal-title" style="margin:0">Nueva solución</div>
+        <button onclick="cerrarKbForm()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">✕</button>
+      </div>
+      <div id="kb-ok" class="alert alert-green" style="display:none;margin-bottom:14px">
+        <strong>Guardado.</strong> Disponible para todo el equipo.
+      </div>
+      <div class="form-group">
+        <label class="fl">Título — describí el problema del cliente</label>
+        <input type="text" id="kb-titulo" placeholder="El cliente no puede / no sabe / le da error..." />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="fl">Categoría</label>
+          <select id="kb-cat" onchange="updateKBSubtemas()">
+            <option value="">Seleccioná...</option>
+            <option value="liquidacion">Liquidación</option>
+            <option value="errores">Errores del sistema</option>
+            <option value="configuracion">Configuración</option>
+            <option value="actualizaciones">Actualizaciones</option>
+            <option value="fuera">Fuera del sistema</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="fl">Subtema</label>
+          <select id="kb-sub">
+            <option>Primero elegí categoría</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="fl">Pasos de la solución (uno por línea)</label>
+        <textarea id="kb-pasos" style="min-height:110px" placeholder="Paso 1: Ir a Configuración > Parámetros&#10;Paso 2: ..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="fl">Material de apoyo</label>
+          <select>
+            <option>Sin material</option>
+            <option>Video</option>
+            <option>PDF paso a paso</option>
+            <option>Imagen / captura</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="fl">¿Aplica a todos los clientes?</label>
+          <select>
+            <option>Sí, todos</option>
+            <option>Solo módulo RRHH</option>
+            <option>Solo con convenio colectivo</option>
+            <option>Solo versión 3.x+</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="fl">Revisar en</label>
+        <select>
+          <option>Sin revisión</option>
+          <option>1 mes</option>
+          <option>3 meses</option>
+          <option>6 meses</option>
+          <option>Con cada actualización</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="fl">Archivos adjuntos</label>
+        <div id="kb-archivos-form"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn-primary" id="kb-form-submit" onclick="guardarKB()">Guardar solución</button>
+        <button class="btn-secondary" onclick="cerrarKbForm()">Cancelar</button>
       </div>
     </div>
   </div>
