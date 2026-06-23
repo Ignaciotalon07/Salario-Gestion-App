@@ -512,7 +512,8 @@ async function guardarConsulta(mantenerAbierto = false) {
     }
 
     if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
-    // Recalcular autonomía y score del cliente con la nueva consulta incluida
+    // Recalcular adopción, autonomía y score del cliente con la nueva consulta incluida
+    await recalcularAdopcionCliente(cliente);
     await recalcularAutonomiaCliente(cliente);
     await recalcularScoreCliente(cliente);
   } catch (e) {
@@ -677,6 +678,78 @@ async function recalcularAutonomiaCliente(nombreCliente) {
     if (typeof refreshAlertas    === 'function') refreshAlertas();
   } catch (e) {
     console.warn('No se pudo actualizar la autonomía de', nombreCliente, e);
+  }
+}
+
+// ────────── Cálculo de adopción automática ──────────
+//
+// Se alimenta de las consultas del último mes.
+// Tres señales:
+//   - Frecuencia mensual (40 pts): cuánto llama el cliente
+//   - Conexión remota   (30 pts): % consultas que requirieron conexión remota
+//   - Material enviado  (30 pts): % consultas que requirieron envío de material
+//
+// Requiere mínimo 3 consultas históricas para disparar.
+// Si no hay datos suficientes, no modifica el valor existente.
+
+async function recalcularAdopcionCliente(nombreCliente) {
+  const cliente = (typeof clientes !== 'undefined')
+    ? clientes.find(c => c.nombre === nombreCliente)
+    : null;
+  if (!cliente) return;
+
+  const todasDelCliente = (typeof consultas !== 'undefined')
+    ? consultas.filter(c => c.cliente === nombreCliente)
+    : [];
+
+  // Sin datos suficientes → no tocar
+  if (todasDelCliente.length < 3) return;
+
+  // Último mes
+  const ahora    = new Date();
+  const haceUnMes = new Date(ahora.getFullYear(), ahora.getMonth() - 1, ahora.getDate());
+  const recientes = todasDelCliente.filter(c => new Date(c.timestamp) >= haceUnMes);
+
+  // Sin actividad reciente → no tocar
+  if (recientes.length === 0) return;
+
+  // ── Frecuencia mensual (40 pts) ──
+  const freq = recientes.length;
+  const frecPts = freq <= 1 ? 40
+                : freq <= 2 ? 30
+                : freq <= 4 ? 20
+                : freq <= 7 ? 10
+                : 0;
+
+  // ── % conexión remota (30 pts) ──
+  const conRemota  = recientes.filter(c => c.remota === true || c.remota === 'si').length;
+  const pctRemota  = conRemota / recientes.length;
+  const remotaPts  = pctRemota <= 0.10 ? 30
+                   : pctRemota <= 0.25 ? 20
+                   : pctRemota <= 0.50 ? 10
+                   : 0;
+
+  // ── % material enviado (30 pts) ──
+  const conMaterial = recientes.filter(c => c.material && c.material !== 'ninguno').length;
+  const pctMaterial = conMaterial / recientes.length;
+  const materialPts = pctMaterial <= 0.15 ? 30
+                    : pctMaterial <= 0.35 ? 20
+                    : pctMaterial <= 0.60 ? 10
+                    : 0;
+
+  const nuevaAdopcion = Math.min(100, Math.max(0, frecPts + remotaPts + materialPts));
+
+  // Solo guardar si cambió
+  if (nuevaAdopcion === cliente.adopcion) return;
+
+  try {
+    await dbUpdate('clientes', cliente.id, { adopcion: nuevaAdopcion });
+    cliente.adopcion = nuevaAdopcion;
+    if (typeof renderClientes       === 'function') renderClientes();
+    if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
+    if (typeof refreshAlertas       === 'function') refreshAlertas();
+  } catch (e) {
+    console.warn('No se pudo actualizar la adopción de', nombreCliente, e);
   }
 }
 

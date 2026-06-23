@@ -79,8 +79,8 @@ function refreshAlertas() {
     });
   }
 
-  // ── 3. ADOPCIÓN ESTANCADA (soporte, < 50%) ──
-  const bajaAdopcion = allClientes.filter(c => c.area === 'soporte' && (c.adopcion || 0) < 50);
+  // ── 3. ADOPCIÓN BAJA (soporte, ≤ 25%) ──
+  const bajaAdopcion = allClientes.filter(c => c.area === 'soporte' && (c.adopcion || 0) <= 25);
   if (bajaAdopcion.length === 1) {
     const c = bajaAdopcion[0];
     alertas.push({

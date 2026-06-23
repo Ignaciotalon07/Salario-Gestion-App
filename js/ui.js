@@ -6,9 +6,78 @@
 function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
+  t.classList.remove('toast--error');
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
 }
+
+// Toast de error: mismo toast pero con estilo rojo y más duración.
+function toastError(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show', 'toast--error');
+  setTimeout(() => {
+    t.classList.remove('show', 'toast--error');
+  }, 4000);
+}
+
+// ────────── Error handler global ──────────
+// Traduce errores técnicos de Supabase / JS a mensajes entendibles.
+// Evita que los errores fallen silenciosamente sin que nadie se entere.
+
+function _clasificarError(err) {
+  if (!err) return 'Ocurrió un error inesperado.';
+  const msg = (err.message || err.toString()).toLowerCase();
+
+  // Errores de red / Supabase caído
+  if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('load failed')) {
+    return 'Sin conexión. Verificá tu internet o si Supabase está disponible.';
+  }
+  // RLS: el usuario no tiene permisos
+  if (msg.includes('row-level security') || msg.includes('rls') || msg.includes('permission denied')) {
+    return 'No tenés permisos para realizar esa acción.';
+  }
+  // JWT vencido / sesión expirada
+  if (msg.includes('jwt expired') || msg.includes('token expired') || msg.includes('invalid jwt')) {
+    return 'Tu sesión expiró. Recargá la página para volver a ingresar.';
+  }
+  // Límite de storage
+  if (msg.includes('exceeded the maximum allowed size') || msg.includes('payload too large')) {
+    return 'El archivo supera el límite de 50 MB permitido.';
+  }
+  // Violación de constraint (unique, FK, etc.)
+  if (msg.includes('duplicate key') || msg.includes('unique constraint')) {
+    return 'Ya existe un registro con esos datos.';
+  }
+  if (msg.includes('foreign key') || msg.includes('violates')) {
+    return 'No se puede realizar la operación: hay datos relacionados que lo impiden.';
+  }
+  // Error genérico con código HTTP de Supabase
+  if (err.status && err.status >= 500) {
+    return `Error del servidor (${err.status}). Intentá de nuevo en unos segundos.`;
+  }
+  // Fallback: mostrar el mensaje original acortado
+  const raw = err.message || err.toString();
+  return raw.length > 120 ? raw.slice(0, 117) + '…' : raw;
+}
+
+// Promesas rechazadas sin .catch() — la mayoría de los errores de dbList/dbInsert/etc.
+window.addEventListener('unhandledrejection', (e) => {
+  // Ignorar rechazos intencionales (ej: AbortController) o de libs externas
+  if (!e.reason) return;
+  const msg = _clasificarError(e.reason);
+  console.error('[Error no capturado]', e.reason);
+  toastError(msg);
+  e.preventDefault(); // evita que aparezca en la consola como "Uncaught"
+});
+
+// Errores JS síncronos (referencias nulas, typos en funciones, etc.)
+window.addEventListener('error', (e) => {
+  // Ignorar errores de carga de recursos (imágenes rotas, etc.)
+  if (e.target && e.target !== window) return;
+  console.error('[Error de script]', e.error || e.message);
+  toastError('Error inesperado en la app. Revisá la consola para más detalles.');
+});
 
 // ────────── Navegación interna de Configuración ──────────
 // La página de Configuración funciona como un menú: muestra una lista de
