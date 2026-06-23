@@ -308,8 +308,26 @@ function refreshAlertas() {
           accion:  null,
           onClick: null
         });
-      } else if ((completas / total) >= 0.30) {
-        // 30% — hito de avance
+      } else if (pct >= 75) {
+        // 75% — hito avanzado
+        alertas.push({
+          tipo:    'green',
+          titulo:  c.nombre + ' — superó el 75% de implementación 💪',
+          texto:   `${completas} de ${total} tareas completadas (${pct}%). ¡Ya está en la recta final!`,
+          accion:  'Ver implementación',
+          onClick: `goTo(document.querySelector('.nav-item[onclick*=implementacion]'), 'implementacion')`
+        });
+      } else if (pct >= 50) {
+        // 50% — hito intermedio
+        alertas.push({
+          tipo:    'green',
+          titulo:  c.nombre + ' — superó el 50% de implementación 🔥',
+          texto:   `${completas} de ${total} tareas completadas (${pct}%). ¡Va por la mitad del camino!`,
+          accion:  'Ver implementación',
+          onClick: `goTo(document.querySelector('.nav-item[onclick*=implementacion]'), 'implementacion')`
+        });
+      } else if (pct >= 30) {
+        // 30% — primer hito de avance
         alertas.push({
           tipo:    'green',
           titulo:  c.nombre + ' — superó el 30% de implementación 🚀',
