@@ -1096,58 +1096,52 @@ function _abrirDetalleRegistroAsesor(id) {
           background:transparent;border:none;cursor:pointer;color:var(--text3);font-size:20px;padding:0 4px;line-height:1;flex-shrink:0;margin-top:2px;">✕</button>
       </div>
 
-      <!-- Campos -->
-      <div style="display:flex;flex-direction:column;gap:14px">
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <div>
-            <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Asesor</div>
-            <div style="font-size:13px">${escapeHtmlPanel(c.asesor || '—')}</div>
+      <!-- Campos en grilla -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Asesor</div>
+          <div style="font-size:13px;font-weight:500">${escapeHtmlPanel(c.asesor || '—')}</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Tipo</div>
+          <div style="font-size:13px;font-weight:500">${tipoLabel}</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Categoría</div>
+          <div style="font-size:13px;font-weight:500">${escapeHtmlPanel(cat)}</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">
+            ${!esInterna ? 'Repetida / Remota' : 'Tiempo'}
           </div>
-          <div>
-            <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Tipo</div>
-            <div style="font-size:13px">${escapeHtmlPanel(tipoLabel)}</div>
+          <div style="font-size:13px;font-weight:500">
+            ${!esInterna
+              ? `${c.repetida === 'si' || c.repetida === true ? '🔁 Sí' : '—'} / ${c.conexionRemota || c.conexion_remota ? '🖥 Sí' : '—'}`
+              : (c.tiempo ? fmtHHMM(c.tiempo) : '—')}
           </div>
         </div>
-
-        <div>
-          <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Categoría</div>
-          <div style="font-size:13px;color:var(--accent)">${escapeHtmlPanel(cat)}</div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:${esInterna ? '1fr' : '1fr 1fr 1fr'};gap:12px">
-          ${!esInterna ? `
-          <div>
-            <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Repetida</div>
-            <div style="font-size:13px">${c.repetida === 'si' ? '⚠️ Sí' : 'No'}</div>
-          </div>
-          <div>
-            <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Remota</div>
-            <div style="font-size:13px">${(c.remota || c.conexionRemota || c.conexion_remota) ? '🖥 Sí' : 'No'}</div>
-          </div>` : ''}
-          <div>
-            <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Tiempo</div>
-            <div style="font-size:13px">${c.tiempo ? '⏱ ' + fmtHHMM(c.tiempo) : '—'}</div>
-          </div>
-        </div>
-
-        ${c.descripcion ? `
-        <div>
-          <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Detalle</div>
-          <div style="font-size:13px;color:var(--text2);line-height:1.6;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;">${escapeHtmlPanel(c.descripcion)}</div>
-        </div>` : ''}
-
-        ${solTitulo ? `
-        <div>
-          <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Solución utilizada</div>
-          <div style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.25);border-radius:8px;padding:12px 14px;">
-            ${solPasos.length
-              ? `<ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">${solPasos.map(p => `<li style="font-size:13px;color:var(--text2);line-height:1.5">${escapeHtmlPanel(p)}</li>`).join('')}</ol>`
-              : `<div style="font-size:13px;color:var(--text2)">✅ ${escapeHtmlPanel(solTitulo)}</div>`}
-          </div>
-        </div>` : ''}
-
       </div>
+
+      <!-- Detalle -->
+      ${(c.descripcion || c.subtema) ? `
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Detalle</div>
+        <div style="background:var(--surface2);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.6;color:var(--text)">
+          ${escapeHtmlPanel(c.descripcion || c.subtema || '')}
+        </div>
+      </div>` : ''}
+
+      <!-- Solución utilizada -->
+      ${solTitulo ? `
+      <div style="margin-bottom:16px">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Solución utilizada</div>
+        <div style="background:rgba(52,199,89,0.08);border:1px solid rgba(52,199,89,0.25);border-radius:8px;padding:12px 14px">
+          <div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:8px">${escapeHtmlPanel(solTitulo)}</div>
+          ${solPasos.length ? `<ol style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:var(--text2)">
+            ${solPasos.map(p => `<li>${escapeHtmlPanel(p)}</li>`).join('')}
+          </ol>` : ''}
+        </div>
+      </div>` : ''}
 
       <!-- Footer -->
       <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border2);display:flex;justify-content:flex-end">
@@ -1160,11 +1154,15 @@ function _abrirDetalleRegistroAsesor(id) {
           🗑 Eliminar consulta
         </button>` : ''}
       </div>
-    </div>`;
+    </div>
+  `;
 
+  // Cerrar con Escape o click fuera
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-  overlay._onKey = e => { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', overlay._onKey); } };
-  document.addEventListener('keydown', overlay._onKey);
+  document.addEventListener('keydown', function onEsc(e) {
+    if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onEsc); }
+  });
+
   document.body.appendChild(overlay);
 }
 
@@ -1174,27 +1172,9 @@ async function _eliminarDesdeDetalle(id) {
   await eliminarRegistroAsesor(id);
 }
 
-async function eliminarRegistroAsesor(id) {
-  try {
-    if (!String(id).startsWith('_temp_')) await dbDelete('consultas', id);
-    // Quitar del array en memoria
-    if (typeof consultas !== 'undefined') {
-      const idx = consultas.findIndex(c => c.id === id);
-      if (idx !== -1) consultas.splice(idx, 1);
-    }
-    if (typeof refreshPanelMetrics  === 'function') refreshPanelMetrics();
-    if (typeof refreshConsultasPage === 'function') refreshConsultasPage();
-    _renderModalAsesor();
-    if (typeof toast === 'function') toast('Registro eliminado');
-  } catch (e) {
-    console.error('Error eliminando registro', e);
-    alert('No se pudo eliminar: ' + e.message);
-  }
-}
-
+// ── Fila de registro en lista de cliente ──
 function _rowCliente(c, fmt) {
   const fecha    = new Date(c.timestamp).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit' });
-  const hsTexto  = c.tiempo ? fmtHHMM(c.tiempo) : '';
   const catLabel = (typeof CATS !== 'undefined' && CATS[c.categoria]?.label) || c.categoria || '';
   const tipoTag  = c.tipoConsulta === 'programacion' || c.tipo_consulta === 'programacion'
     ? '<span class="tipo-tag tipo-bug" style="font-size:9px">Prog</span>' : '';
@@ -1203,14 +1183,11 @@ function _rowCliente(c, fmt) {
     <div class="asesor-modal-row" ${clickable}>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${escapeHtmlPanel(c.cliente || c.cliente_nombre || '—')} ${tipoTag}
+          ${tipoTag}${escapeHtmlPanel(c.cliente || c.cliente_nombre || '—')}
         </div>
-        <div style="font-size:11px;color:var(--text3)">${escapeHtmlPanel(catLabel)}${c.subtema ? ' · ' + escapeHtmlPanel(c.subtema) : ''}</div>
+        <div style="font-size:11px;color:var(--text3)">${escapeHtmlPanel(catLabel)}${c.subtema ? ' › ' + escapeHtmlPanel(c.subtema) : ''}</div>
       </div>
-      <div style="text-align:right;flex-shrink:0;margin-left:8px">
-        ${hsTexto ? `<div style="font-size:12px;font-weight:600">${escapeHtmlPanel(hsTexto)}</div>` : ''}
-        <div style="font-size:11px;color:var(--text3)">${fecha}</div>
-      </div>
+      <div style="font-size:11px;color:var(--text3);flex-shrink:0">${fecha}</div>
     </div>`;
 }
 
@@ -1221,103 +1198,21 @@ function _rowInterna(c, fmt) {
   return `
     <div class="asesor-modal-row" ${clickable}>
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-          ${escapeHtmlPanel(c.descripcion || '(sin detalle)')}
+        <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          ${escapeHtmlPanel(c.descripcion || c.subtema || c.categoria || '—')}
         </div>
+        <div style="font-size:11px;color:var(--text3)">${escapeHtmlPanel(c.categoria || '')}</div>
       </div>
-      <div style="text-align:right;flex-shrink:0;margin-left:8px">
-        ${hsTexto ? `<div style="font-size:12px;font-weight:600">${escapeHtmlPanel(hsTexto)}</div>` : ''}
-        <div style="font-size:11px;color:var(--text3)">${fecha}</div>
-      </div>
+      <div style="font-size:12px;color:var(--amber);font-weight:600;flex-shrink:0">${hsTexto}</div>
     </div>`;
 }
 
-// Guardamos los arrays filtrados para usarlos en "ver más"
-let _masesorListaClientes = [];
-let _masesorListaInternas = [];
-
-function verMasClientes() {
-  _masesorVisiblesClientes += _MASESOR_PAGE;
-  const fmt = h => h === 0 ? '—' : (h % 1 === 0 ? h + ' hs' : h.toFixed(1) + ' hs');
-  _renderListaAsesor(
-    document.getElementById('masesor-lista-clientes'),
-    _masesorListaClientes,
-    _masesorVisiblesClientes,
-    'verMasClientes',
-    c => _rowCliente(c, fmt)
-  );
-}
-
-function verMasInternas() {
-  _masesorVisiblesInternas += _MASESOR_PAGE;
-  const fmt = h => h === 0 ? '—' : (h % 1 === 0 ? h + ' hs' : h.toFixed(1) + ' hs');
-  _renderListaAsesor(
-    document.getElementById('masesor-lista-interna'),
-    _masesorListaInternas,
-    _masesorVisiblesInternas,
-    'verMasInternas',
-    c => _rowInterna(c, fmt)
-  );
-}
-
-function _renderModalAsesor() {
-  if (!_modalAsesorNombre) return;
-
-  const todas      = (typeof consultas !== 'undefined') ? consultas : [];
-  const { inicio } = _modalAsesorRango();
-  const delAsesor  = todas.filter(c => c.asesor === _modalAsesorNombre);
-
-  // Filtrar por período
-  const { fin } = _modalAsesorRango();
-  const enPeriodo = inicio
-    ? delAsesor.filter(c => { const t = new Date(c.timestamp); return t >= inicio && t <= fin; })
-    : delAsesor;
-
-  // Separar clientes vs internas
-  _masesorListaClientes = enPeriodo
-    .filter(c => c.tipoConsulta !== 'programacion_interna' && c.tipo_consulta !== 'programacion_interna')
-    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-  _masesorListaInternas = enPeriodo
-    .filter(c => c.tipoConsulta === 'programacion_interna' || c.tipo_consulta === 'programacion_interna')
-    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-
-  // Resetear paginación al cambiar período
-  _masesorVisiblesClientes = _MASESOR_PAGE;
-  _masesorVisiblesInternas = _MASESOR_PAGE;
-
-  // sumaHs devuelve minutos totales; fmt recibe minutos
-  const sumaHs = arr => sumaMinutos(arr);
-  const fmt    = m   => fmtMinutos(m);
-
-  const hsClientes = sumaHs(_masesorListaClientes);
-  const hsInterna  = sumaHs(_masesorListaInternas);
-  const hsTotal    = hsClientes + hsInterna;
-
-  // Subtítulo
-  const { label: eqMesLabel } = _getEqMesDatos();
-  const labels = { mes: eqMesLabel, año: 'Este año', todo: 'Historial completo' };
-  const sub    = document.getElementById('modal-asesor-subtitulo');
-  if (sub) sub.textContent = labels[_modalAsesorPeriodo] + ' · ' + enPeriodo.length + ' registros';
-
-  document.getElementById('masesor-hs-clientes').textContent = fmt(hsClientes);
-  document.getElementById('masesor-hs-interna').textContent  = fmt(hsInterna);
-  document.getElementById('masesor-hs-total').textContent    = fmt(hsTotal);
-  document.getElementById('masesor-consultas').textContent   = _masesorListaClientes.length;
-
-  // Listas con paginación
-  _renderListaAsesor(
-    document.getElementById('masesor-lista-clientes'),
-    _masesorListaClientes,
-    _masesorVisiblesClientes,
-    'verMasClientes',
-    c => _rowCliente(c, fmt)
-  );
-  _renderListaAsesor(
-    document.getElementById('masesor-lista-interna'),
-    _masesorListaInternas,
-    _masesorVisiblesInternas,
-    'verMasInternas',
-    c => _rowInterna(c, fmt)
-  );
+// Escape HTML básico para usar en el panel
+function escapeHtmlPanel(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }

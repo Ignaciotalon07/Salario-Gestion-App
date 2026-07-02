@@ -759,10 +759,6 @@ function _cpEsc(str) {
   document.head.appendChild(s);
 })();
 
-// ════════════════════════════════════════════════════════════════
-// INIT
-// ════════════════════════════════════════════════════════════════
-
 window.addEventListener('app-ready', () => {
   renderConsultasPage();
 });
