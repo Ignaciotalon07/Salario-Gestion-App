@@ -2774,4 +2774,63 @@
             <option>Configuración</option>
             <option>Actualizaciones</option>
             <option>Fuera del sistema</option>
-            <opt
+            <option value="otro">Otro — nueva categoría</option>
+          </select>
+          <input type="text" id="pf-cat-custom" placeholder="Escribí la nueva categoría" style="display:none;margin-top:6px"/>
+        </div>
+        <div class="form-group">
+          <label class="fl">Prioridad</label>
+          <select id="pf-prio">
+            <option value="alta">Alta — resolver hoy</option>
+            <option value="media" selected>Media — resolver esta semana</option>
+            <option value="baja">Baja — cuando se pueda</option>
+          </select>
+        </div>
+      </div>
+      <!-- Tipo de pendiente interno -->
+      <div class="form-row" id="pf-tipo-interno-row" style="display:none">
+        <div class="form-group">
+          <label class="fl">Tipo</label>
+          <select id="pf-tipo-interno" onchange="togglePfTipoInternoCustom()">
+            <option value="reunion">📅 Reunión</option>
+            <option value="actualizacion">📢 Actualización</option>
+            <option value="revision">🔍 Revisión</option>
+            <option value="programacion">💻 Programación</option>
+            <option value="recordatorio">🔔 Recordatorio</option>
+            <option value="otro">✏️ Otro</option>
+          </select>
+          <input type="text" id="pf-tipo-interno-custom" placeholder="Describí el tipo" style="display:none;margin-top:6px"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="fl" id="pf-desc-label">¿Qué quedó pendiente? Describilo en detalle</label>
+        <textarea id="pf-desc" style="min-height:80px"
+          placeholder="Ej: El cliente no pudo generar el F931. Se revisó la configuración pero el botón sigue sin aparecer. Hay que volver a conectarse y revisar los permisos de usuario..."></textarea>
+      </div>
+      <div class="form-group" id="pf-intento-row">
+        <label class="fl">Próximo paso sugerido <span style="color:var(--text3);font-weight:400">(opcional)</span></label>
+        <textarea id="pf-prox" style="min-height:60px"
+          placeholder="Ej: Conectarse mañana temprano y revisar los permisos del usuario administrador..."></textarea>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 0 2px;border-top:1px solid var(--border);margin-top:4px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:13px;color:var(--text2)">
+          <input type="checkbox" id="pf-interno" onchange="toggleInternoForm()" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)"/>
+          <span><strong style="color:var(--text)">Pendiente interno</strong> — no contabiliza métricas de clientes</span>
+        </label>
+      </div>
+      <!-- Mensaje informativo pendiente interno -->
+      <div id="pf-interno-hint" style="display:none;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:10px 14px;margin-top:6px">
+        <div style="font-size:12px;color:var(--amber);line-height:1.6">
+          💡 <strong>Pendiente interno</strong> — No contabiliza métricas a clientes. Al cerrarlo, si el tipo es <strong>Programación</strong>, <strong>Actualización</strong> o <strong>Revisión</strong>, se te pedirán las <strong>horas trabajadas</strong> y el <strong>detalle de lo realizado</strong>, y eso sí contabilizará para las métricas del asesor. Los tipos <strong>Recordatorio</strong> y <strong>Reunión</strong> no generan métricas para nadie.
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button type="button" class="btn-primary" onclick="guardarPendiente()">Guardar pendiente</button>
+        <button class="btn-secondary" onclick="cerrarPendForm()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

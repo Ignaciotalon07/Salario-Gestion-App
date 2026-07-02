@@ -77,4 +77,11 @@ function syncMobilePendBadge() {
   const badge = document.getElementById('mobile-pend-badge');
   if (!badge) return;
   const count = (typeof pendientes !== 'undefined')
-    ? pend
+    ? pendientes.filter(p => {
+        const me = typeof getCurrentUserName === 'function' ? getCurrentUserName() : null;
+        return me && p.asesor === me;
+      }).length
+    : 0;
+  badge.textContent = count;
+  badge.style.display = count > 0 ? 'block' : 'none';
+}

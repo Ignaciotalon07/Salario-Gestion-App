@@ -1882,4 +1882,113 @@ function actualizarSugerenciasKB(sourceId, targetId) {
       return;
     }
 
-    cont.style.display = '
+    cont.style.display = 'block';
+    const plural = matches.length > 1;
+    cont.innerHTML = `
+      <div class="kb-sug-label">${matches.length} solucion${plural ? 'es' : ''} de la base coincide${plural ? 'n' : ''}:</div>
+      ${matches.map(s => `
+        <details class="kb-sug-item">
+          <summary>${escapeHtml(s.titulo)} <span class="kb-sug-cat">${escapeHtml(s.sub || '')}</span></summary>
+          <ol class="kb-sug-steps">
+            ${(s.pasos || []).map(p => `<li>${escapeHtml(p)}</li>`).join('')}
+          </ol>
+          <div class="kb-sug-meta">
+            <span>${s.usos} usos &middot; ${escapeHtml(s.autor || '')}${s.mat && s.mat !== 'Sin material' ? ' &middot; ' + escapeHtml(s.mat) : ''}</span>
+          </div>
+        </details>
+      `).join('')}
+    `;
+  }, 250);
+}
+
+// Muestra u oculta las opciones Bug y Comercial del form de nuevo pendiente
+// según el usuario logueado:
+//   - Alfredo Cesar     → soporte + implementacion + bug
+//   - Daniel Ferro      → soporte + implementacion + comercial
+//   - Resto del equipo  → solo soporte + implementacion
+// Renderiza las opciones del select "Tipo de trabajo" del form de pendientes
+// según el usuario logueado. Se llama al init y cada vez que se abre el form.
+//   - Alfredo Cesar     → soporte + implementacion + bug
+//   - Daniel Ferro      → soporte + implementacion + comercial
+//   - Resto del equipo  → solo soporte + implementacion
+function filtrarOpcionesTipoPendiente() {
+  const sel = document.getElementById('pf-tipo');
+  if (!sel) return;
+  const email         = (window._currentAuthEmail || '').toLowerCase();
+  const esAlfredo     = email.includes('alfredo');
+  const esDanielFerro = email.includes('danielferro') || email.includes('daniel.ferro');
+
+  // Reconstruir las opciones para evitar problemas de display:none en Safari/Firefox
+  const valorActual = sel.value;
+  sel.innerHTML =
+    '<option value="soporte">Soporte</option>' +
+    '<option value="implementacion">Implementación</option>' +
+    (esAlfredo     ? '<option value="bug">Programación</option>' : '') +
+    (esDanielFerro ? '<option value="comercial">Comercial (Administración)</option>' : '');
+
+  // Restaurar el valor previo si todavía es válido para este usuario
+  if (sel.querySelector(`option[value="${valorActual}"]`)) {
+    sel.value = valorActual;
+  }
+}
+
+window.addEventListener('app-ready', initPendientes);
+
+// ────────── Buscador de clientes en form de nuevo pendiente ──────────
+
+function filtrarPfClienteSearch() {
+  const input    = document.getElementById('pf-cliente-search');
+  const dropdown = document.getElementById('pf-cliente-dropdown');
+  const select   = document.getElementById('pf-cliente');
+  if (!input || !dropdown || !select) return;
+
+  const q = input.value.trim().toLowerCase();
+
+  // Si el tipo es "implementacion", mostrar solo clientes en área impl
+  const tipoTrabajo = document.getElementById('pf-tipo')?.value;
+  const soloImpl    = tipoTrabajo === 'implementacion';
+  const listaClientes = (typeof clientes !== 'undefined' && soloImpl)
+    ? clientes.filter(c => c.area === 'impl').map(c => c.nombre)
+    : null; // null = usar todas las opciones del select
+
+  const opciones = listaClientes
+    ? listaClientes
+    : Array.from(select.options)
+        .map(o => o.text)
+        .filter(t => t && t !== 'Cargando clientes...');
+
+  const filtradas = q
+    ? opciones.filter(n => n.toLowerCase().includes(q))
+    : opciones;
+
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#1e1e2e';
+  dropdown.style.background = bg;
+
+  if (filtradas.length === 0) {
+    dropdown.innerHTML = `<div style="padding:10px 14px;color:var(--text3);font-size:13px">Sin resultados</div>`;
+  } else {
+    dropdown.innerHTML = filtradas.map(n => `
+      <div
+        class="cliente-search-opt"
+        onmousedown="elegirPfClienteSearch('${n.replace(/'/g, "\\'")}')"
+        style="padding:9px 14px;cursor:pointer;font-size:13px;border-radius:6px"
+      >${n}</div>`).join('');
+  }
+  dropdown.style.display = 'block';
+}
+
+function elegirPfClienteSearch(nombre) {
+  const input    = document.getElementById('pf-cliente-search');
+  const select   = document.getElementById('pf-cliente');
+  const dropdown = document.getElementById('pf-cliente-dropdown');
+  if (input)    input.value  = nombre;
+  if (select)   select.value = nombre;
+  if (dropdown) dropdown.style.display = 'none';
+}
+
+function cerrarPfClienteSearch() {
+  setTimeout(() => {
+    const dropdown = document.getElementById('pf-cliente-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+  }, 150);
+}

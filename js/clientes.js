@@ -479,4 +479,17 @@ function handleClienteChange(payload) {
       refrescarSelectsCliente(clientes.map(c => c.nombre));
       renderClientes();
       if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
-      // Re-render pendiente
+      // Re-render pendientes en caso de que el cliente haya cambiado de Whaticket URL
+      if (typeof renderPendientes === 'function') renderPendientes();
+    }
+  } else if (eventType === 'DELETE') {
+    const c = clientes.find(c => c.id === oldRow.id);
+    if (c) delete CLIENTES_LOOKUP[c.nombre];
+    clientes = clientes.filter(c => c.id !== oldRow.id);
+    refrescarSelectsCliente(clientes.map(c => c.nombre));
+    renderClientes();
+    if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
+  }
+}
+
+window.addEventListener('app-ready', initClientes);

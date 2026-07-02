@@ -753,4 +753,21 @@ function _cpEsc(str) {
     .cp-nav-btn:hover:not(:disabled) { background: var(--surface2); }
     .cp-nav-btn:disabled { opacity: 0.35; cursor: default; }
     .cp-period-label {
-      font-size: 12px; color: var(--text3); font-weight: 500; min-width: 120px; t
+      font-size: 12px; color: var(--text3); font-weight: 500; min-width: 120px; text-align: center;
+    }
+  `;
+  document.head.appendChild(s);
+})();
+
+// ════════════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════════════
+
+window.addEventListener('app-ready', () => {
+  renderConsultasPage();
+});
+
+// Llamada desde consultas.js cuando cambia el array global `consultas`
+function refreshConsultasPage() {
+  renderConsultasPage();
+}

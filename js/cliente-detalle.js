@@ -614,4 +614,37 @@ function volverAClientes() {
   _detalleTipoFiltro = null;
   if (_detalleChartInstance) {
     _detalleChartInstance.destroy();
-    _detalleChartInstance = null
+    _detalleChartInstance = null;
+  }
+  const origen = _detalleOrigen || 'clientes';
+  _detalleOrigen = 'clientes'; // reset para la próxima vez
+
+  // Navegar a la página origen
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const paginaDestino = document.getElementById(origen);
+  if (paginaDestino) paginaDestino.classList.add('active');
+
+  // Marcar nav item del sidebar si existe
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  const navBtn = document.querySelector(`.nav-item[onclick*="${origen}"]`);
+  if (navBtn) navBtn.classList.add('active');
+
+  // Marcar mobile nav si existe
+  document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
+  const mobileBtn = document.querySelector(`.mobile-nav-item[onclick*="${origen}"]`);
+  if (mobileBtn) mobileBtn.classList.add('active');
+
+  window.scrollTo(0, 0);
+}
+
+// ────────── Helper: escape HTML ──────────
+
+function _escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
