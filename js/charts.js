@@ -1033,6 +1033,87 @@ function _renderListaAsesor(cont, items, visibles, keyVerMas, fmt) {
       : '');
 }
 
+// Listas globales del modal (para que _abrirDetalleRegistroAsesor pueda buscar en ellas)
+let _masesorListaClientes = [];
+let _masesorListaInternas = [];
+
+// Renderiza todo el contenido del modal de asesor según el período activo
+function _renderModalAsesor() {
+  if (!_modalAsesorNombre) return;
+  const { inicio, fin } = _modalAsesorRango();
+
+  const todas = (typeof consultas !== 'undefined' ? consultas : [])
+    .filter(c => {
+      if (c.asesor !== _modalAsesorNombre) return false;
+      const t = new Date(c.timestamp);
+      if (inicio && t < inicio) return false;
+      if (t > fin) return false;
+      return true;
+    })
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+  _masesorListaClientes = todas.filter(c =>
+    c.tipoConsulta !== 'programacion_interna' && c.tipo_consulta !== 'programacion_interna');
+  _masesorListaInternas = todas.filter(c =>
+    c.tipoConsulta === 'programacion_interna' || c.tipo_consulta === 'programacion_interna');
+
+  // Resetear paginación al cambiar período
+  _masesorVisiblesClientes = _MASESOR_PAGE;
+  _masesorVisiblesInternas = _MASESOR_PAGE;
+
+  // Métricas
+  const minClientes = sumaMinutos(_masesorListaClientes);
+  const minInternas = sumaMinutos(_masesorListaInternas);
+  const minTotal    = minClientes + minInternas;
+
+  const el = id => document.getElementById(id);
+  if (el('masesor-hs-clientes')) el('masesor-hs-clientes').textContent = fmtMinutos(minClientes);
+  if (el('masesor-hs-interna'))  el('masesor-hs-interna').textContent  = fmtMinutos(minInternas);
+  if (el('masesor-hs-total'))    el('masesor-hs-total').textContent    = fmtMinutos(minTotal);
+  if (el('masesor-consultas'))   el('masesor-consultas').textContent   = _masesorListaClientes.length;
+
+  // Subtítulo
+  const labels = { mes: 'Este mes', 'año': 'Este año', todo: 'Todo el historial' };
+  if (el('modal-asesor-subtitulo')) el('modal-asesor-subtitulo').textContent = labels[_modalAsesorPeriodo] || '';
+
+  // Listas paginadas
+  _renderListaAsesor(el('masesor-lista-clientes'), _masesorListaClientes, _masesorVisiblesClientes, 'verMasAsesorClientes', _rowCliente);
+  _renderListaAsesor(el('masesor-lista-interna'),  _masesorListaInternas, _masesorVisiblesInternas, 'verMasAsesorInternas', _rowInterna);
+}
+
+function verMasAsesorClientes() {
+  _masesorVisiblesClientes += _MASESOR_PAGE;
+  _renderListaAsesor(document.getElementById('masesor-lista-clientes'), _masesorListaClientes, _masesorVisiblesClientes, 'verMasAsesorClientes', _rowCliente);
+}
+
+function verMasAsesorInternas() {
+  _masesorVisiblesInternas += _MASESOR_PAGE;
+  _renderListaAsesor(document.getElementById('masesor-lista-interna'), _masesorListaInternas, _masesorVisiblesInternas, 'verMasAsesorInternas', _rowInterna);
+}
+
+async function eliminarRegistroAsesor(id) {
+  try {
+    await dbDelete('consultas', id);
+    if (typeof consultas !== 'undefined') {
+      consultas = consultas.filter(c => String(c.id) !== String(id));
+    }
+    if (typeof refreshPanelMetrics  === 'function') refreshPanelMetrics();
+    if (typeof refreshEquipoMetrics === 'function') {
+      const ahora = new Date();
+      const mesActual = (typeof consultas !== 'undefined' ? consultas : []).filter(c => {
+        const d = new Date(c.timestamp);
+        return d.getMonth() === ahora.getMonth() && d.getFullYear() === ahora.getFullYear();
+      });
+      refreshEquipoMetrics(mesActual);
+    }
+    _renderModalAsesor();
+    if (typeof toast === 'function') toast('Registro eliminado');
+  } catch (e) {
+    console.error('Error eliminando registro', e);
+    if (typeof toast === 'function') toast('Error al eliminar: ' + (e.message || e));
+  }
+}
+
 // Devuelve true si el asesor logueado puede eliminar registros del modal abierto
 function _puedoEliminarEnModal() {
   return typeof currentMember !== 'undefined'
@@ -1116,7 +1197,7 @@ function _abrirDetalleRegistroAsesor(id) {
           </div>
           <div style="font-size:13px;font-weight:500">
             ${!esInterna
-              ? `${c.repetida === 'si' || c.repetida === true ? '🔁 Sí' : '—'} / ${c.conexionRemota || c.conexion_remota ? '🖥 Sí' : '—'}`
+              ? `${c.repetida === 'si' || c.repetida === true ? 'Sí' : 'No'} / ${c.conexionRemota || c.conexion_remota ? 'Sí' : 'No'}`
               : (c.tiempo ? fmtHHMM(c.tiempo) : '—')}
           </div>
         </div>
@@ -1136,10 +1217,9 @@ function _abrirDetalleRegistroAsesor(id) {
       <div style="margin-bottom:16px">
         <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Solución utilizada</div>
         <div style="background:rgba(52,199,89,0.08);border:1px solid rgba(52,199,89,0.25);border-radius:8px;padding:12px 14px">
-          <div style="font-size:13px;font-weight:600;color:var(--green);margin-bottom:8px">${escapeHtmlPanel(solTitulo)}</div>
           ${solPasos.length ? `<ol style="margin:0;padding-left:18px;font-size:13px;line-height:1.7;color:var(--text2)">
             ${solPasos.map(p => `<li>${escapeHtmlPanel(p)}</li>`).join('')}
-          </ol>` : ''}
+          </ol>` : '<div style="font-size:13px;color:var(--text2)">${escapeHtmlPanel(solTitulo)}</div>'}
         </div>
       </div>` : ''}
 
@@ -1193,7 +1273,6 @@ function _rowCliente(c, fmt) {
 
 function _rowInterna(c, fmt) {
   const fecha     = new Date(c.timestamp).toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit' });
-  const hsTexto   = c.tiempo ? fmtHHMM(c.tiempo) : '';
   const clickable = c.id ? `onclick="_abrirDetalleRegistroAsesor('${c.id}')" style="cursor:pointer"` : '';
   return `
     <div class="asesor-modal-row" ${clickable}>
@@ -1203,7 +1282,7 @@ function _rowInterna(c, fmt) {
         </div>
         <div style="font-size:11px;color:var(--text3)">${escapeHtmlPanel(c.categoria || '')}</div>
       </div>
-      <div style="font-size:12px;color:var(--amber);font-weight:600;flex-shrink:0">${hsTexto}</div>
+      <div style="font-size:11px;color:var(--text3);flex-shrink:0">${fecha}</div>
     </div>`;
 }
 
