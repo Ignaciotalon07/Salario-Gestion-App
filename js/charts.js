@@ -10,14 +10,86 @@
 //                          Se llama desde clientes.js al cargar/cambiar el array.
 // ════════════════════════════════════
 
+// ════════════════════════════════════
+// HELPERS DE TIEMPO (formato HH.MM)
+// El sistema usa formato HH.MM donde el decimal representa minutos (0-59),
+// NO fracciones de hora. Ej: 1.30 = 1 hora 30 min, 0.45 = 45 min.
+// ════════════════════════════════════
+
+// "1.45" o 1.45 → 105 minutos totales
+function hhmmAMinutos(val) {
+  const v = parseFloat(val) || 0;
+  const h = Math.floor(v);
+  const m = Math.round((v - h) * 100);
+  return h * 60 + m;
+}
+
+// 105 minutos → 1.45 (float HH.MM para guardar en DB)
+function minutosAHHMM(totalMin) {
+  const t = Math.round(totalMin);
+  const h = Math.floor(t / 60);
+  const m = t % 60;
+  return h + m / 100;
+}
+
+// Parsea input del usuario y normaliza: "0.60" → 1.0, "1.75" → 2.15
+function parsearHHMM(str) {
+  return minutosAHHMM(hhmmAMinutos(str));
+}
+
+// Formatea minutos para display: 105 → "1h 45min", 60 → "1 hs", 30 → "30 min"
+function fmtMinutos(totalMin) {
+  const t = Math.round(totalMin || 0);
+  if (t <= 0) return '—';
+  const h = Math.floor(t / 60);
+  const m = t % 60;
+  if (m === 0) return h + ' hs';
+  if (h === 0) return m + ' min';
+  return h + 'h ' + String(m).padStart(2, '0') + 'min';
+}
+
+// Formatea un valor HH.MM float para display
+function fmtHHMM(val) {
+  return fmtMinutos(hhmmAMinutos(val));
+}
+
+// Suma un array de consultas devolviendo minutos totales
+function sumaMinutos(arr) {
+  return arr.reduce((s, c) => s + hhmmAMinutos(c.tiempo || 0), 0);
+}
+
 // Referencias a instancias de Chart.js (se crean una sola vez)
 let chartTendInstance     = null;
 let chartClientesInstance = null;
 let chartEquipoInstance   = null;
 
 // Estado del toggle de vista de equipo
-let _eqViewMode = 'mes'; // 'mes' | 'dia'
-let _eqRange    = 7;     // 7 | 30
+let _eqViewMode  = 'mes'; // 'mes' | 'dia'
+let _eqRange     = 7;     // 7 | 30
+let _eqMesOffset = 0;     // 0 = mes actual, -1 = mes anterior, etc.
+
+// Offset del mes seleccionado en el Panel general
+let _panelMesOffset = 0;  // 0 = mes actual, -1 = mes anterior, etc.
+
+// Devuelve { consultas, label, year, month } para el offset del panel
+function _getPanelMesDatos() {
+  const ahora = new Date();
+  const totalMeses = ahora.getFullYear() * 12 + ahora.getMonth() + _panelMesOffset;
+  const year  = Math.floor(totalMeses / 12);
+  const month = ((totalMeses % 12) + 12) % 12;
+  const label = new Date(year, month, 1)
+    .toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+  const labelCap = label.charAt(0).toUpperCase() + label.slice(1);
+  return { consultas: getConsultasPorMes(month, year), label: labelCap, year, month };
+}
+
+// Navega entre meses en el Panel general
+function navPanelMes(dir) {
+  const nuevoOffset = _panelMesOffset + dir;
+  if (nuevoOffset > 0) return;
+  _panelMesOffset = nuevoOffset;
+  refreshPanelMetrics();
+}
 
 function setEqView(mode) {
   _eqViewMode = mode;
@@ -28,6 +100,46 @@ function setEqView(mode) {
   if (btnDia) { btnDia.style.background = mode === 'dia' ? 'var(--accent)' : 'transparent'; btnDia.style.color = mode === 'dia' ? 'white' : 'var(--text2)'; btnDia.style.fontWeight = mode === 'dia' ? '500' : '400'; }
   if (rangeEl) rangeEl.style.display = mode === 'dia' ? 'inline-flex' : 'none';
   if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
+}
+
+// Navega entre meses en la sección Equipo
+function navEqMes(dir) {
+  const nuevoOffset = _eqMesOffset + dir;
+  if (nuevoOffset > 0) return; // no ir al futuro
+  _eqMesOffset = nuevoOffset;
+  _updateEqMesNav();
+  _refreshEquipoDelMes();
+}
+
+// Devuelve { consultas, label } para el offset actual
+function _getEqMesDatos() {
+  const ahora = new Date();
+  const totalMeses = ahora.getFullYear() * 12 + ahora.getMonth() + _eqMesOffset;
+  const year  = Math.floor(totalMeses / 12);
+  const month = ((totalMeses % 12) + 12) % 12;
+  const label = new Date(year, month, 1)
+    .toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+  const labelCap = label.charAt(0).toUpperCase() + label.slice(1);
+  return { consultas: getConsultasPorMes(month, year), label: labelCap };
+}
+
+// Actualiza la etiqueta y el estado del botón "siguiente" del nav de mes
+function _updateEqMesNav() {
+  const { label } = _getEqMesDatos();
+  const labelEl = document.getElementById('eq-mes-label');
+  const nextBtn = document.getElementById('eq-mes-next');
+  if (labelEl) labelEl.textContent = label;
+  if (nextBtn) {
+    nextBtn.disabled = (_eqMesOffset >= 0);
+    nextBtn.style.opacity = (_eqMesOffset >= 0) ? '0.35' : '1';
+    nextBtn.style.cursor  = (_eqMesOffset >= 0) ? 'default' : 'pointer';
+  }
+}
+
+// Llama a refreshEquipoMetrics con los datos del mes seleccionado
+function _refreshEquipoDelMes() {
+  const { consultas: datos } = _getEqMesDatos();
+  refreshEquipoMetrics(datos);
 }
 
 function setEqRange(dias) {
@@ -196,16 +308,34 @@ function initCharts() {
 // ────────── Métricas del panel (alimentadas por el array global `consultas`) ──────────
 
 function refreshPanelMetrics() {
-  const ahora       = new Date();
-  const mesActual   = getConsultasPorMes(ahora.getMonth(), ahora.getFullYear());
-  const anioActual  = getConsultasAnio(ahora.getFullYear());
+  // Usar el mes seleccionado con _panelMesOffset
+  const { consultas: mesActual, label: panelLabel, year: panelYear, month: panelMonth } = _getPanelMesDatos();
+  const anioActual  = getConsultasAnio(panelYear);
   const total       = mesActual.length;
   const repetidas   = mesActual.filter(c => c.repetida === 'si').length;
   const pctRep      = total > 0 ? Math.round((repetidas / total) * 100) : 0;
 
+  // ── Actualizar nav de mes ──
+  const panelLabelEl = document.getElementById('panel-mes-label');
+  const panelNextBtn = document.getElementById('panel-mes-next');
+  if (panelLabelEl) panelLabelEl.textContent = panelLabel;
+  if (panelNextBtn) {
+    panelNextBtn.disabled = (_panelMesOffset >= 0);
+    panelNextBtn.style.opacity = (_panelMesOffset >= 0) ? '0.35' : '1';
+    panelNextBtn.style.cursor  = (_panelMesOffset >= 0) ? 'default' : 'pointer';
+  }
+
+  // ── Sub del page-header: mes seleccionado ──
+  const panelSub = document.getElementById('panel-page-sub');
+  if (panelSub) panelSub.textContent = panelLabel + ' — datos en tiempo real';
+
   // ── Cards de métricas ──
   const elConsultas = document.getElementById('metric-consultas-mes');
   if (elConsultas) elConsultas.textContent = total;
+
+  // Label dinámica de la card
+  const elConsultasLabel = document.getElementById('metric-consultas-mes-label');
+  if (elConsultasLabel) elConsultasLabel.textContent = 'Consultas ' + panelLabel.split(' ')[0].toLowerCase();
 
   const elRep = document.getElementById('metric-rep-pct');
   if (elRep) {
@@ -216,24 +346,39 @@ function refreshPanelMetrics() {
   const elAnio = document.getElementById('metric-consultas-anio');
   if (elAnio) elAnio.textContent = anioActual.length;
 
-  // Sub-label consultas: cuántas hay respecto al mes anterior
-  const mesAnterior = getConsultasPorMes(
-    ahora.getMonth() === 0 ? 11 : ahora.getMonth() - 1,
-    ahora.getMonth() === 0 ? ahora.getFullYear() - 1 : ahora.getFullYear()
-  );
+  // ── Horas del equipo ese mes ──
+  const esInterna = c => c.tipoConsulta === 'programacion_interna' || c.tipo_consulta === 'programacion_interna';
+  const conTiempo = mesActual.filter(c => c.tiempo && parseFloat(c.tiempo) > 0);
+  const minClientes = sumaMinutos(conTiempo.filter(c => !esInterna(c)));
+  const minInternas = sumaMinutos(conTiempo.filter(c =>  esInterna(c)));
+  const minEquipo   = minClientes + minInternas;
+  const elHsEq    = document.getElementById('metric-hs-equipo');
+  const elHsEqSub = document.getElementById('metric-hs-equipo-sub');
+  const elHsEqLbl = document.getElementById('metric-hs-equipo-label');
+  if (elHsEqLbl) elHsEqLbl.textContent = 'Hs equipo ' + panelLabel.split(' ')[0].toLowerCase();
+  if (elHsEq)    elHsEq.textContent    = minEquipo > 0 ? fmtMinutos(minEquipo) : '—';
+  if (elHsEqSub) elHsEqSub.textContent = minEquipo > 0
+    ? fmtMinutos(minClientes) + ' clientes · ' + fmtMinutos(minInternas) + ' internas'
+    : 'Sin horas registradas';
+
+  // Sub-label consultas: comparación con el mes previo al seleccionado
+  const totalMesesPrev = panelYear * 12 + panelMonth - 1;
+  const yearPrev  = Math.floor(totalMesesPrev / 12);
+  const monthPrev = ((totalMesesPrev % 12) + 12) % 12;
+  const mesAnterior = getConsultasPorMes(monthPrev, yearPrev);
   const elSub = document.getElementById('metric-consultas-sub');
   if (elSub) {
     if (total === 0) {
-      elSub.textContent = 'Sin consultas este mes';
+      elSub.textContent = 'Sin consultas';
       elSub.className = 'metric-sub';
     } else {
       const diff = total - mesAnterior.length;
       if (diff > 0) {
         elSub.textContent = '+' + diff + ' vs mes anterior';
-        elSub.className = 'metric-sub trend-dn'; // más consultas = peor
+        elSub.className = 'metric-sub trend-dn';
       } else if (diff < 0) {
         elSub.textContent = diff + ' vs mes anterior';
-        elSub.className = 'metric-sub trend-up'; // menos consultas = mejor
+        elSub.className = 'metric-sub trend-up';
       } else {
         elSub.textContent = 'Igual que el mes anterior';
         elSub.className = 'metric-sub';
@@ -241,12 +386,20 @@ function refreshPanelMetrics() {
     }
   }
 
-  // ── Gráfico de tendencia mensual (últimos 6 meses) ──
+  // ── Gráfico de tendencia: 6 meses centrados en el mes seleccionado ──
   if (chartTendInstance) {
-    const meses = getUltimosMeses(6);
-    chartTendInstance.data.labels                  = meses.map(m => m.label);
-    chartTendInstance.data.datasets[0].data        = meses.map(m => m.consultas.length);
-    chartTendInstance.data.datasets[1].data        = meses.map(m => m.consultas.filter(c => c.repetida === 'si').length);
+    const meses = [];
+    for (let i = 5; i >= 0; i--) {
+      const totalM = panelYear * 12 + panelMonth - i;
+      const y = Math.floor(totalM / 12);
+      const m = ((totalM % 12) + 12) % 12;
+      const d = new Date(y, m, 1);
+      const lbl = d.toLocaleString('es-AR', { month: 'short' }).replace('.','').replace(/^./, s => s.toUpperCase());
+      meses.push({ label: lbl, consultas: getConsultasPorMes(m, y) });
+    }
+    chartTendInstance.data.labels           = meses.map(m => m.label);
+    chartTendInstance.data.datasets[0].data = meses.map(m => m.consultas.length);
+    chartTendInstance.data.datasets[1].data = meses.map(m => m.consultas.filter(c => c.repetida === 'si').length);
     chartTendInstance.update();
   }
 
@@ -264,7 +417,8 @@ function refreshPanelMetrics() {
   }
 
   // ── Sección equipo ──
-  refreshEquipoMetrics(mesActual);
+  _updateEqMesNav();
+  _refreshEquipoDelMes();
 
   // ── Alertas dinámicas ──
   if (typeof refreshAlertas === 'function') refreshAlertas();
@@ -346,14 +500,7 @@ function refreshClientMetrics() {
   const elSub = document.getElementById('clientes-page-sub');
   if (elSub) elSub.textContent = total + ' cliente' + (total !== 1 ? 's' : '') + ' activo' + (total !== 1 ? 's' : '');
 
-  // ── Subtítulo del Panel general: mes y año actuales ──
-  const panelSub = document.getElementById('panel-page-sub');
-  if (panelSub) {
-    const ahora = new Date();
-    const mes = ahora.toLocaleString('es-AR', { month: 'long' });
-    const anio = ahora.getFullYear();
-    panelSub.textContent = mes.charAt(0).toUpperCase() + mes.slice(1) + ' ' + anio + ' — datos en tiempo real';
-  }
+  // El sub-label del panel lo maneja refreshPanelMetrics con el mes seleccionado
 
   // ── Anillos de autonomía ──
   const pBaja  = Math.round((baja  / totalAut) * 100);
@@ -389,11 +536,20 @@ function refreshClientMetrics() {
   const tbody = document.getElementById('score-riesgo-tbody');
   if (!tbody) return;
 
-  // Incluye todos los clientes con score > 0, ordenados de mayor a menor
+  // Nombres de clientes que tienen al menos una consulta registrada
+  const todasConsultas = (typeof consultas !== 'undefined') ? consultas : [];
+  const clientesConConsultas = new Set(todasConsultas.map(c => c.cliente).filter(Boolean));
+
+  // Clientes con score asignado y al menos una consulta, agrupados: bajo (1-4) → medio (5-7) → alto (8-10), 10 primeros
+  function scoreGrupo(s) { return s <= 4 ? 0 : s <= 7 ? 1 : 2; }
   const top = lista
-    .filter(c => (c.score || 0) > 0)
-    .sort((a, b) => (b.score || 0) - (a.score || 0))
-    .slice(0, 8);
+    .filter(c => (c.score || 0) > 0 && clientesConConsultas.has(c.nombre))
+    .sort((a, b) => {
+      const ga = scoreGrupo(a.score || 0), gb = scoreGrupo(b.score || 0);
+      if (ga !== gb) return ga - gb;          // primero el grupo más bajo
+      return (a.score || 0) - (b.score || 0); // dentro del grupo, ascendente
+    })
+    .slice(0, 10);
 
   if (top.length === 0) {
     // Si hay clientes pero ninguno tiene score asignado todavía, mostrar todos
@@ -464,19 +620,29 @@ function refreshEquipoMetrics(mesActual) {
   if (!mesActual) return;
 
   const COLORES_ASESORES = ['#c0392b', '#2d6a2d', '#b45309', '#1a5fa5', '#2d2d8e', '#5f5e5a'];
-  const fmtHs = h => h % 1 === 0 ? h + ' hs' : h.toFixed(1) + ' hs';
+  // fmtHs: recibe minutos totales y devuelve texto legible
+  const fmtHs = m => fmtMinutos(m);
 
-  // ── Clientes atendidos (distintos) este mes ──
+  // Etiqueta corta del mes para los sub-labels de las cards
+  const { label: mesLabel } = _getEqMesDatos();
+  const mesCorto = mesLabel.split(' ')[0]; // "Junio 2026" → "Junio"
+
+  // ── Clientes atendidos (distintos) ese mes ──
   const clientesSet = new Set(mesActual.map(c => c.cliente).filter(Boolean));
-  const elCli = document.getElementById('eq-clientes-atendidos');
-  if (elCli) elCli.textContent = clientesSet.size || '0';
+  const elCli    = document.getElementById('eq-clientes-atendidos');
+  const elCliSub = document.getElementById('eq-clientes-atendidos-sub');
+  if (elCli)    elCli.textContent    = clientesSet.size || '0';
+  if (elCliSub) elCliSub.textContent = mesCorto;
 
-  // ── Hs totales equipo este mes ──
-  const hsTotales = mesActual.reduce((sum, c) => sum + (parseFloat(c.tiempo) || 0), 0);
-  const elHs = document.getElementById('eq-hs-totales');
-  if (elHs) elHs.textContent = hsTotales > 0 ? fmtHs(hsTotales) : '—';
+  // ── Hs totales equipo ese mes (en minutos internamente) ──
+  const hsTotales = sumaMinutos(mesActual);
+  const elHs    = document.getElementById('eq-hs-totales');
+  const elHsSub = document.getElementById('eq-hs-sub');
+  if (elHs)    elHs.textContent    = hsTotales > 0 ? fmtMinutos(hsTotales) : '—';
+  if (elHsSub) elHsSub.textContent = mesCorto;
 
   // ── Stats por asesor: arranca con los 4 conocidos en 0 ──
+  // hs se acumula en MINUTOS para poder sumar correctamente
   const porAsesor = {};
   ASESORES_EQUIPO.forEach(nombre => {
     porAsesor[nombre] = { consultas: 0, hs: 0, cats: {}, clientes: new Set() };
@@ -485,20 +651,19 @@ function refreshEquipoMetrics(mesActual) {
   // Sumar datos reales del mes
   mesActual.forEach(c => {
     if (!c.asesor) return;
-    // Si es un asesor conocido, usa esa entrada; si no, creala (por si hay otro)
     if (!porAsesor[c.asesor]) {
       porAsesor[c.asesor] = { consultas: 0, hs: 0, cats: {}, clientes: new Set() };
     }
     porAsesor[c.asesor].consultas++;
-    porAsesor[c.asesor].hs += parseFloat(c.tiempo) || 0;
+    porAsesor[c.asesor].hs += hhmmAMinutos(c.tiempo || 0); // acumular en minutos
     if (c.categoria) {
       porAsesor[c.asesor].cats[c.categoria] = (porAsesor[c.asesor].cats[c.categoria] || 0) + 1;
     }
     if (c.cliente) porAsesor[c.asesor].clientes.add(c.cliente);
   });
 
-  // Ordenar: mayor carga primero, los que tienen 0 al final
-  const sorted = Object.entries(porAsesor).sort((a, b) => b[1].consultas - a[1].consultas);
+  // Ordenar: mayor carga por horas primero, los que tienen 0 al final
+  const sorted = Object.entries(porAsesor).sort((a, b) => b[1].hs - a[1].hs);
 
   // ── Card "Más cargado" ──
   const elMasCarg    = document.getElementById('eq-mas-cargado');
@@ -508,7 +673,7 @@ function refreshEquipoMetrics(mesActual) {
       const [nombre, stats] = sorted[0];
       elMasCarg.textContent   = nombre;
       elMasCarg.style.color   = 'var(--red)';
-      if (elMasCargSub) elMasCargSub.textContent = stats.consultas + ' consultas · ' + fmtHs(stats.hs);
+      if (elMasCargSub) elMasCargSub.textContent = fmtHs(stats.hs) + ' · ' + stats.consultas + ' consultas';
     } else {
       elMasCarg.textContent = '—';
       elMasCarg.style.color = 'var(--text)';
@@ -528,7 +693,7 @@ function refreshEquipoMetrics(mesActual) {
     if (sorted.length === 0) {
       cont.innerHTML = '<div style="text-align:center;color:var(--text3);padding:32px 0;font-size:13px">Sin datos disponibles.</div>';
     } else {
-      const maxConsultas = sorted[0][1].consultas || 1;
+      const maxHs = sorted[0][1].hs || 1;
       cont.innerHTML = sorted.map(([nombre, stats], i) => {
         // Top categoría histórica del asesor
         const topCatKey   = Object.entries(stats.cats).sort((a, b) => b[1] - a[1])[0]?.[0];
@@ -536,14 +701,15 @@ function refreshEquipoMetrics(mesActual) {
           ? ((typeof CATS !== 'undefined' && CATS[topCatKey]?.label) || topCatKey)
           : null;
 
-        const prom      = stats.consultas > 0 ? stats.hs / stats.consultas : 0;
-        const promTexto = prom > 0 ? fmtHs(prom) : null;
-        const hsTexto   = stats.hs > 0 ? fmtHs(stats.hs) : '—';
+        // stats.hs está en minutos; prom también en minutos
+        const prom      = stats.consultas > 0 ? Math.round(stats.hs / stats.consultas) : 0;
+        const promTexto = prom > 0 ? fmtMinutos(prom) : null;
+        const hsTexto   = stats.hs > 0 ? fmtMinutos(stats.hs) : '—';
 
-        // Color de carga: rojo si es el más cargado, ámbar si está en el 60%, normal si no
-        const cargaColor = stats.consultas >= maxConsultas
+        // Color de carga: rojo si es el más cargado (por hs), ámbar si está en el 60%, normal si no
+        const cargaColor = stats.hs >= maxHs
           ? 'var(--red)'
-          : stats.consultas >= maxConsultas * 0.6
+          : stats.hs >= maxHs * 0.6
           ? 'var(--amber)'
           : 'var(--text)';
 
@@ -561,7 +727,7 @@ function refreshEquipoMetrics(mesActual) {
         const subDerecha = [hsTexto, promTexto ? 'prom ' + promTexto : null].filter(Boolean).join(' · ');
 
         return `
-          <div class="asesor-row">
+          <div class="asesor-row asesor-row--clickable" onclick="abrirModalAsesor(this.dataset.nombre)" data-nombre="${escapeHtmlPanel(nombre)}">
             <div class="av" style="background:${color}22;color:${color};font-size:11px;font-weight:700;flex-shrink:0">
               ${escapeHtmlPanel(iniciales)}
             </div>
@@ -680,3 +846,248 @@ function escapeHtmlPanel(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 }
+
+// ════════════════════════════════════
+// MODAL CARGA DE HORAS
+// ════════════════════════════════════
+
+function abrirModalHoras() {
+  const modal = document.getElementById('modal-horas');
+  if (!modal) return;
+  // Limpiar campos
+  const horas   = document.getElementById('mh-horas');
+  const detalle = document.getElementById('mh-detalle');
+  if (horas)   horas.value   = '';
+  if (detalle) detalle.value = '';
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  if (horas) horas.focus();
+}
+
+function cerrarModalHoras() {
+  const modal = document.getElementById('modal-horas');
+  if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+}
+
+async function guardarHoras() {
+  const horasRaw = (document.getElementById('mh-horas') || {}).value || '';
+  const horas    = horasRaw ? parsearHHMM(horasRaw) : null;
+  const detalle  = ((document.getElementById('mh-detalle') || {}).value || '').trim();
+
+  if (!horas || isNaN(horas) || horas <= 0) {
+    alert('Ingresá las horas trabajadas.');
+    document.getElementById('mh-horas').focus();
+    return;
+  }
+  if (!detalle) {
+    alert('Completá el detalle de lo realizado.');
+    document.getElementById('mh-detalle').focus();
+    return;
+  }
+
+  const asesor = (typeof currentMember !== 'undefined' && currentMember)
+    ? currentMember.nombre
+    : 'Equipo';
+
+  try {
+    await dbInsert('consultas', {
+      cliente_id:        null,
+      cliente_nombre:    null,
+      asesor,
+      categoria:         'programacion_interna',
+      subtema:           null,
+      repetida:          false,
+      descripcion:       detalle || null,
+      solucion_id:       null,
+      tiempo_resolucion: horas,
+      material:          null,
+      conexion_remota:   null,
+      tipo_consulta:     'programacion_interna'
+    });
+
+    // Actualizar array en memoria
+    if (typeof consultas !== 'undefined') {
+      consultas.unshift({
+        id:           '_temp_' + Date.now(),
+        cliente:      null,
+        asesor,
+        categoria:    'programacion_interna',
+        subtema:      null,
+        repetida:     'no',
+        descripcion:  detalle || null,
+        tiempo:       horas,
+        tipoConsulta: 'programacion_interna',
+        tipo_consulta:'programacion_interna',
+        timestamp:    new Date().toISOString()
+      });
+    }
+
+    if (typeof refreshPanelMetrics  === 'function') refreshPanelMetrics();
+    if (typeof refreshConsultasPage === 'function') refreshConsultasPage();
+
+    cerrarModalHoras();
+    if (typeof toast === 'function') toast('Horas guardadas correctamente');
+  } catch (e) {
+    console.error('Error guardando horas', e);
+    alert('No se pudo guardar: ' + e.message);
+  }
+}
+
+// ════════════════════════════════════
+// MODAL DE ASESOR
+// ════════════════════════════════════
+
+const _COLORES_ASESORES_MODAL = ['#c0392b', '#2d6a2d', '#b45309', '#1a5fa5', '#2d2d8e', '#5f5e5a'];
+
+let _modalAsesorNombre  = null;
+let _modalAsesorPeriodo = 'mes'; // 'mes' | 'año' | 'todo'
+
+// Devuelve { inicio: Date|null, fin: Date } para el período activo
+function _modalAsesorRango() {
+  const ahora = new Date();
+  if (_modalAsesorPeriodo === 'mes') {
+    // Respetar el mes seleccionado con _eqMesOffset
+    const totalMeses = ahora.getFullYear() * 12 + ahora.getMonth() + _eqMesOffset;
+    const year  = Math.floor(totalMeses / 12);
+    const month = ((totalMeses % 12) + 12) % 12;
+    const inicio = new Date(year, month, 1);
+    const fin    = new Date(year, month + 1, 0, 23, 59, 59); // último día del mes
+    return { inicio, fin };
+  }
+  if (_modalAsesorPeriodo === 'año') {
+    return { inicio: new Date(ahora.getFullYear(), 0, 1), fin: ahora };
+  }
+  return { inicio: null, fin: ahora }; // todo
+}
+
+function abrirModalAsesor(nombre) {
+  _modalAsesorNombre  = nombre;
+  _modalAsesorPeriodo = 'mes';
+
+  // Avatar: buscar índice del asesor en el ranking actual para el color
+  const todosAsesores = [...new Set(
+    (typeof consultas !== 'undefined' ? consultas : []).map(c => c.asesor).filter(Boolean)
+  )].sort();
+  const idx   = todosAsesores.indexOf(nombre);
+  const color = _COLORES_ASESORES_MODAL[idx >= 0 ? idx % _COLORES_ASESORES_MODAL.length : 0];
+  const inic  = nombre.substring(0, 2).toUpperCase();
+
+  const avatar = document.getElementById('modal-asesor-avatar');
+  if (avatar) {
+    avatar.textContent       = inic;
+    avatar.style.background  = color + '22';
+    avatar.style.color       = color;
+    avatar.style.width       = '40px';
+    avatar.style.height      = '40px';
+  }
+  document.getElementById('modal-asesor-nombre').textContent = nombre;
+
+  // Activar chip "Este mes"
+  ['mes','año','todo'].forEach(p => {
+    const btn = document.getElementById('masesor-p-' + p);
+    if (btn) btn.classList.toggle('active', p === 'mes');
+  });
+
+  // Mostrar modal
+  const modal = document.getElementById('modal-asesor');
+  if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+
+  _renderModalAsesor();
+}
+
+function cerrarModalAsesor() {
+  const modal = document.getElementById('modal-asesor');
+  if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+  _modalAsesorNombre = null;
+}
+
+function setModalAsesorPeriodo(periodo) {
+  _modalAsesorPeriodo = periodo;
+  ['mes','año','todo'].forEach(p => {
+    const btn = document.getElementById('masesor-p-' + p);
+    if (btn) btn.classList.toggle('active', p === periodo);
+  });
+  _renderModalAsesor();
+}
+
+// Cuántos registros mostrar inicialmente por sección
+const _MASESOR_PAGE = 5;
+let _masesorVisiblesClientes = _MASESOR_PAGE;
+let _masesorVisiblesInternas = _MASESOR_PAGE;
+
+// Renderiza una lista paginada dentro de un contenedor
+function _renderListaAsesor(cont, items, visibles, keyVerMas, fmt) {
+  if (!cont) return;
+  if (items.length === 0) {
+    cont.innerHTML = '<div class="empty-state" style="padding:12px 0">Sin registros en este período.</div>';
+    return;
+  }
+
+  const slice    = items.slice(0, visibles);
+  const hayMas   = items.length > visibles;
+  const restante = items.length - visibles;
+
+  cont.innerHTML = slice.map(c => fmt(c)).join('') +
+    (hayMas
+      ? `<button class="btn-ver-mas" onclick="${keyVerMas}()">Ver ${Math.min(restante, _MASESOR_PAGE)} registros más (${restante} restantes)</button>`
+      : '');
+}
+
+// Devuelve true si el asesor logueado puede eliminar registros del modal abierto
+function _puedoEliminarEnModal() {
+  return typeof currentMember !== 'undefined'
+    && currentMember
+    && currentMember.nombre === _modalAsesorNombre;
+}
+
+// Abre el panel de detalle de un registro dentro del modal del asesor
+function _abrirDetalleRegistroAsesor(id) {
+  // Buscar en ambas listas
+  const c = [..._masesorListaClientes, ..._masesorListaInternas].find(x => String(x.id) === String(id));
+  if (!c) return;
+
+  // Quitar detalle previo si había
+  document.getElementById('_asesor-detalle-overlay')?.remove();
+
+  const esInterna  = c.tipoConsulta === 'programacion_interna' || c.tipo_consulta === 'programacion_interna';
+  const puedeBorrar = _puedoEliminarEnModal() && !String(id).startsWith('_temp_');
+
+  // Solución KB
+  let solTitulo = null, solPasos = [];
+  const solId = c.solucionId || c.solucion_id;
+  if (solId && typeof soluciones !== 'undefined') {
+    const sol = soluciones.find(s => s.id === solId);
+    if (sol) { solTitulo = sol.titulo; solPasos = Array.isArray(sol.pasos) ? sol.pasos : []; }
+  }
+
+  const fecha = new Date(c.timestamp).toLocaleString('es-AR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  });
+  const fechaCap = fecha.charAt(0).toUpperCase() + fecha.slice(1);
+
+  const catLabel = (typeof CATS !== 'undefined' && CATS[c.categoria]?.label) || c.categoria || '—';
+  const cat      = esInterna ? catLabel : [catLabel, c.subtema].filter(Boolean).join(' › ');
+
+  const tipoLabels = {
+    soporte: '🎧 Soporte', programacion: '🐛 Programación', comercial: '💼 Comercial',
+    programacion_interna: '💻 Horas internas', implementacion: '🚀 Implementación',
+  };
+  const tipoLabel = tipoLabels[c.tipoConsulta || c.tipo_consulta] || c.tipoConsulta || '—';
+
+  const overlay = document.createElement('div');
+  overlay.id = '_asesor-detalle-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:16px';
+
+  overlay.innerHTML = `
+    <div style="
+      background:var(--surface);border:1px solid var(--border2);border-radius:14px;
+      width:100%;max-width:520px;max-height:90vh;
+      overflow-y:auto;scrollbar-color:var(--border2) transparent;scrollbar-width:thin;
+      padding:24px;position:relative;
+    ">
+      <!-- Header -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px">
+        <div>
+          <div style="font-size:17px;font-weight:700;margin-bottom:3px">${esInterna ? '⏱ Hora interna' : escapeHtmlPanel(c.cliente || c.cliente_nombre || '—')}</div>
+          <div sty

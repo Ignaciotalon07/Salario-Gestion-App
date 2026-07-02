@@ -450,7 +450,7 @@
                 alt="Logo"
                 style="width: 28px; height: 28px; object-fit: contain"
               />
-              <div class="brand">Salario</div>
+              <div class="brand">Salario Gestión</div>
             </div>
             <div class="sub">Gestión de clientes</div>
           </div>
@@ -615,9 +615,26 @@
                 <div class="page-title">Panel general</div>
                 <div class="page-sub" id="panel-page-sub"></div>
               </div>
-              <button class="btn-primary" onclick="abrirModalConsulta()">
-                + Registrar consulta
-              </button>
+              <!-- Columna derecha: botón + filtro de mes apilados -->
+              <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch;min-width:180px">
+                <button class="btn-primary" onclick="abrirModalConsulta()" style="height:42px;width:100%">
+                  + Registrar consulta
+                </button>
+                <div style="display:flex;align-items:center;gap:0;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;overflow:hidden;height:32px">
+                  <button id="panel-mes-prev" onclick="navPanelMes(-1)"
+                    style="background:none;border:none;border-right:1px solid var(--border2);color:var(--text2);font-size:12px;cursor:pointer;padding:0 10px;height:100%;display:flex;align-items:center;transition:background .13s"
+                    onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='none'"
+                    title="Mes anterior">◀</button>
+                  <span id="panel-mes-label"
+                    style="font-size:12px;font-weight:600;color:var(--text);flex:1;text-align:center">
+                    Cargando...
+                  </span>
+                  <button id="panel-mes-next" onclick="navPanelMes(1)" disabled
+                    style="background:none;border:none;border-left:1px solid var(--border2);color:var(--text2);font-size:12px;cursor:pointer;padding:0 10px;height:100%;display:flex;align-items:center;opacity:0.35;transition:background .13s"
+                    onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='none'"
+                    title="Mes siguiente">▶</button>
+                </div>
+              </div>
             </div>
 
             <div class="metrics-grid">
@@ -635,7 +652,7 @@
                 </div>
               </div>
               <div class="metric-card">
-                <div class="metric-label">Consultas este mes</div>
+                <div class="metric-label" id="metric-consultas-mes-label">Consultas este mes</div>
                 <div class="metric-value" id="metric-consultas-mes">0</div>
                 <div class="metric-sub" id="metric-consultas-sub">
                   Sin consultas este mes
@@ -651,6 +668,11 @@
                   0%
                 </div>
                 <div class="metric-sub">Meta: &lt; 20%</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label" id="metric-hs-equipo-label">Hs equipo este mes</div>
+                <div class="metric-value" style="color: var(--amber)" id="metric-hs-equipo">—</div>
+                <div class="metric-sub" id="metric-hs-equipo-sub">Sin horas registradas</div>
               </div>
               <div class="metric-card">
                 <div class="metric-label">Consultas este año</div>
@@ -1205,7 +1227,7 @@
                 <option value="alta">Alta</option>
               </select>
               <select
-                style="width: 145px; margin-bottom: 0"
+                style="flex: 1; min-width: 145px; margin-bottom: 0"
                 onchange="sortClientes(this.value)"
               >
                 <option value="score">Ordenar: riesgo</option>
@@ -1235,23 +1257,15 @@
               </button>
             </div>
 
-            <div
-              class="info-box"
-              style="
-                background: #fff8e8;
-                color: #7c3a06;
-                border-left: 3px solid var(--amber);
-                border-radius: 0 var(--radius) var(--radius) 0;
-                padding: 10px 14px;
-              "
-            >
-              Estos casos quedaron abiertos del día anterior. Revisalos al
-              arrancar la jornada y cerrá los que ya resolviste.
+            <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:10px 14px;margin-top:-8px;margin-bottom:20px">
+              <div style="font-size:12px;color:var(--amber);line-height:1.6">
+                💡 Acá van a estar todos los casos pendientes que quedaron sin cerrar. Revisá primero los <strong>vencidos</strong> si tenés alguno, y cerrá los que ya resolviste. Recordá que si querés guardar un simple recordatorio, seleccioná el tipo <strong>"Recordatorio"</strong> en pendiente interno para no contabilizar métricas a nadie.
+              </div>
             </div>
 
             <div
               class="metrics-grid"
-              style="grid-template-columns: repeat(3, 1fr)"
+              style="grid-template-columns: repeat(4, 1fr)"
             >
               <div class="metric-card">
                 <div class="metric-label">Pendientes activos</div>
@@ -1283,314 +1297,17 @@
                 >
                   0
                 </div>
+                <div class="metric-sub" id="pend-cerrados-mes-sub">—</div>
               </div>
-            </div>
-
-            <div
-              id="pend-form"
-              class="card"
-              style="
-                display: none;
-                border: 1px solid var(--amber);
-                background: var(--amber-bg);
-              "
-            >
-              <div class="card-title" style="color: var(--amber-text)">
-                Nuevo pendiente
-              </div>
-              <div class="form-row">
-                <!-- Tipo de trabajo: solo para pendientes de clientes -->
-                <div class="form-group" id="pf-tipo-group">
-                  <label class="fl">Tipo de trabajo</label>
-                  <select id="pf-tipo" onchange="onTipoPendienteChange()">
-                    <option value="soporte">Soporte</option>
-                    <option value="implementacion">Implementación</option>
-                    <option value="bug">Programación</option>
-                    <option value="comercial">
-                      Comercial (Administración)
-                    </option>
-                  </select>
-                </div>
-                <div class="form-group" id="pf-cliente-group">
-                  <label class="fl">Cliente</label>
-                  <div style="position: relative">
-                    <input
-                      type="text"
-                      id="pf-cliente-search"
-                      placeholder="Escribí para buscar cliente..."
-                      autocomplete="off"
-                      oninput="filtrarPfClienteSearch()"
-                      onfocus="filtrarPfClienteSearch()"
-                      onblur="cerrarPfClienteSearch()"
-                      style="width: 100%; box-sizing: border-box"
-                    />
-                    <div
-                      id="pf-cliente-dropdown"
-                      style="
-                        display: none;
-                        position: absolute;
-                        top: 100%;
-                        left: 0;
-                        right: 0;
-                        background: var(--surface);
-                        border: 1px solid var(--border);
-                        border-radius: 8px;
-                        max-height: 240px;
-                        overflow-y: auto;
-                        z-index: 9999;
-                        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-                        margin-top: 2px;
-                      "
-                    ></div>
-                  </div>
-                  <select id="pf-cliente" style="display: none">
-                    <option value="">Cargando clientes...</option>
-                  </select>
-                </div>
-                <!-- Asesor único: solo para pendientes de clientes -->
-                <div class="form-group" id="pf-asesor-group">
-                  <label class="fl">Asesor responsable</label>
-                  <select id="pf-asesor">
-                    <option>Ignacio Talon</option>
-                    <option>Matias Ferro</option>
-                    <option>Daniel Colomer</option>
-                    <option>Daniel Ferro</option>
-                    <option>Renzo Moretti</option>
-                    <option>Alfredo Cesar</option>
-                  </select>
-                </div>
-                <!-- Multi-asesor: solo para pendientes internos -->
+              <div class="metric-card">
+                <div class="metric-label">Cerrados históricos</div>
                 <div
-                  class="form-group"
-                  id="pf-asesores-multi-group"
-                  style="display: none"
+                  class="metric-value"
+                  style="color: var(--accent)"
+                  id="pend-cerrados-total"
                 >
-                  <label class="fl">Para quién es</label>
-                  <div
-                    style="
-                      display: flex;
-                      flex-wrap: wrap;
-                      gap: 6px;
-                      margin-top: 6px;
-                    "
-                  >
-                    <button
-                      type="button"
-                      class="pf-asesor-chip"
-                      data-asesor="Ignacio Talon"
-                      onclick="toggleAsesorChip(this)"
-                    >
-                      Ignacio
-                    </button>
-                    <button
-                      type="button"
-                      class="pf-asesor-chip"
-                      data-asesor="Matias Ferro"
-                      onclick="toggleAsesorChip(this)"
-                    >
-                      Matias
-                    </button>
-                    <button
-                      type="button"
-                      class="pf-asesor-chip"
-                      data-asesor="Daniel Colomer"
-                      onclick="toggleAsesorChip(this)"
-                    >
-                      Daniel
-                    </button>
-                    <button
-                      type="button"
-                      class="pf-asesor-chip"
-                      data-asesor="Daniel Ferro"
-                      onclick="toggleAsesorChip(this)"
-                    >
-                      Daniel Ferro
-                    </button>
-                    <button
-                      type="button"
-                      class="pf-asesor-chip"
-                      data-asesor="Renzo Moretti"
-                      onclick="toggleAsesorChip(this)"
-                    >
-                      Renzo
-                    </button>
-                    <button
-                      type="button"
-                      class="pf-asesor-chip"
-                      data-asesor="Alfredo Cesar"
-                      onclick="toggleAsesorChip(this)"
-                    >
-                      Alfredo
-                    </button>
-                    <label
-                      style="
-                        display: flex;
-                        align-items: center;
-                        gap: 6px;
-                        font-size: 12px;
-                        cursor: pointer;
-                        padding: 6px 14px;
-                        color: var(--text);
-                        user-select: none;
-                      "
-                      id="pf-todos-label"
-                    >
-                      <input
-                        type="checkbox"
-                        id="pf-todos-check"
-                        onchange="toggleTodosAsesores()"
-                        style="
-                          width: 14px;
-                          height: 14px;
-                          cursor: pointer;
-                          accent-color: var(--text);
-                        "
-                      />
-                      Todos
-                    </label>
-                  </div>
+                  0
                 </div>
-              </div>
-              <div class="form-row" id="pf-cat-row">
-                <div class="form-group" id="pf-cat-group">
-                  <label class="fl">Categoría</label>
-                  <select id="pf-cat" onchange="togglePfCatCustom()">
-                    <option>Liquidación de sueldos</option>
-                    <option>Errores del sistema</option>
-                    <option>Configuración</option>
-                    <option>Actualizaciones</option>
-                    <option>Fuera del sistema</option>
-                    <option value="otro">Otro — nueva categoría</option>
-                  </select>
-                  <input
-                    type="text"
-                    id="pf-cat-custom"
-                    placeholder="Escribí la nueva categoría"
-                    style="display: none; margin-top: 6px"
-                  />
-                </div>
-                <div class="form-group">
-                  <label class="fl">Prioridad</label>
-                  <select id="pf-prio">
-                    <option value="alta">Alta — resolver hoy</option>
-                    <option value="media" selected>
-                      Media — resolver esta semana
-                    </option>
-                    <option value="baja">Baja — cuando se pueda</option>
-                  </select>
-                </div>
-              </div>
-              <!-- Tipo de pendiente interno: solo visible cuando es interno -->
-              <div
-                class="form-row"
-                id="pf-tipo-interno-row"
-                style="display: none"
-              >
-                <div class="form-group">
-                  <label class="fl">Tipo</label>
-                  <select
-                    id="pf-tipo-interno"
-                    onchange="togglePfTipoInternoCustom()"
-                  >
-                    <option value="reunion">📅 Reunión</option>
-                    <option value="actualizacion">📢 Actualización</option>
-                    <option value="revision">🔍 Revisión</option>
-                    <option value="otro">✏️ Otro</option>
-                  </select>
-                  <input
-                    type="text"
-                    id="pf-tipo-interno-custom"
-                    placeholder="Describí el tipo"
-                    style="display: none; margin-top: 6px"
-                  />
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="fl" id="pf-desc-label"
-                  >¿Qué quedó pendiente? Describilo en detalle</label
-                >
-                <textarea
-                  id="pf-desc"
-                  style="min-height: 80px"
-                  placeholder="Ej: El cliente no pudo generar el F931. Se revisó la configuración pero el botón sigue sin aparecer. Hay que volver a conectarse y revisar los permisos de usuario..."
-                  oninput="actualizarSugerenciasKB()"
-                ></textarea>
-                <div
-                  id="kb-suggestions"
-                  class="kb-suggestions"
-                  style="display: none"
-                ></div>
-              </div>
-              <div class="form-row" id="pf-intento-row">
-                <div class="form-group">
-                  <label class="fl">¿Qué se intentó hasta ahora?</label>
-                  <textarea
-                    id="pf-intento"
-                    style="min-height: 60px"
-                    placeholder="Ej: Se reinició el servicio, se verificó la licencia, se revisaron los permisos..."
-                  ></textarea>
-                </div>
-                <div class="form-group">
-                  <label class="fl">Próximo paso sugerido</label>
-                  <textarea
-                    id="pf-prox"
-                    style="min-height: 60px"
-                    placeholder="Ej: Conectarse mañana temprano y revisar los permisos del usuario administrador..."
-                  ></textarea>
-                </div>
-              </div>
-              <div
-                style="
-                  display: flex;
-                  align-items: center;
-                  gap: 10px;
-                  padding: 10px 0 2px;
-                  border-top: 1px solid var(--border);
-                  margin-top: 4px;
-                "
-              >
-                <label
-                  style="
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    cursor: pointer;
-                    user-select: none;
-                    font-size: 13px;
-                    color: var(--text2);
-                  "
-                >
-                  <input
-                    type="checkbox"
-                    id="pf-interno"
-                    onchange="toggleInternoForm()"
-                    style="
-                      width: 16px;
-                      height: 16px;
-                      cursor: pointer;
-                      accent-color: var(--accent);
-                    "
-                  />
-                  <span>
-                    <strong style="color: var(--text)"
-                      >Pendiente interno</strong
-                    >
-                    — no contabiliza métricas de clientes
-                  </span>
-                </label>
-              </div>
-              <div style="display: flex; gap: 10px; margin-top: 12px">
-                <button class="btn-primary" onclick="guardarPendiente()">
-                  Guardar pendiente
-                </button>
-                <button
-                  class="btn-secondary"
-                  onclick="
-                    document.getElementById('pend-form').style.display = 'none'
-                  "
-                >
-                  Cancelar
-                </button>
               </div>
             </div>
 
@@ -1995,6 +1712,24 @@
                 <div class="page-title">Equipo</div>
                 <div class="page-sub">Carga y rendimiento por asesor</div>
               </div>
+              <!-- Columna derecha: botón + filtro de mes apilados (igual que Panel general) -->
+              <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch;min-width:180px">
+                <button class="btn-primary" onclick="abrirModalHoras()" style="height:42px;width:100%">+ Carga de horas</button>
+                <div style="display:flex;align-items:center;gap:0;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;overflow:hidden;height:32px">
+                  <button id="eq-mes-prev" onclick="navEqMes(-1)"
+                    style="background:none;border:none;border-right:1px solid var(--border2);color:var(--text2);font-size:12px;cursor:pointer;padding:0 10px;height:100%;display:flex;align-items:center;transition:background .13s"
+                    onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='none'"
+                    title="Mes anterior">◀</button>
+                  <span id="eq-mes-label"
+                    style="font-size:12px;font-weight:600;color:var(--text);flex:1;text-align:center">
+                    Cargando...
+                  </span>
+                  <button id="eq-mes-next" onclick="navEqMes(1)" disabled
+                    style="background:none;border:none;border-left:1px solid var(--border2);color:var(--text2);font-size:12px;cursor:pointer;padding:0 10px;height:100%;display:flex;align-items:center;opacity:0.35;transition:background .13s"
+                    onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='none'"
+                    title="Mes siguiente">▶</button>
+                </div>
+              </div>
             </div>
 
             <div class="metrics-grid">
@@ -2084,6 +1819,88 @@
           <!-- ════════════════════════════════════
          BASE DE SOLUCIONES
     ════════════════════════════════════ -->
+
+<!-- ── Modal Carga de horas ── -->
+<div id="modal-horas" class="kb-modal-overlay" style="display:none" onclick="if(event.target===this)cerrarModalHoras()">
+  <div class="kb-modal" style="max-width:460px;width:94%">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--border)">
+      <div style="font-size:16px;font-weight:600">Carga de horas</div>
+      <button class="kb-modal-close" onclick="cerrarModalHoras()" style="font-size:18px">✕</button>
+    </div>
+    <div style="padding:20px 24px 24px;display:flex;flex-direction:column;gap:16px">
+      <div class="form-group">
+        <label class="fl">Horas trabajadas</label>
+        <input type="text" id="mh-horas" class="form-input" placeholder="Ej: 0.30 = 30min · 1.45 = 1h 45min" style="max-width:220px"/>
+      </div>
+      <div class="form-group">
+        <label class="fl">Detalle de lo realizado</label>
+        <textarea id="mh-detalle" class="form-input" rows="4" placeholder="Describí qué se hizo en esas horas..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+        <button class="btn-secondary" onclick="cerrarModalHoras()">Cancelar</button>
+        <button class="btn-primary" onclick="guardarHoras()">Guardar horas</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Asesor ── -->
+<div id="modal-asesor" class="kb-modal-overlay" style="display:none" onclick="if(event.target===this)cerrarModalAsesor()">
+  <div class="kb-modal" style="max-width:680px;width:94%;max-height:88vh;display:flex;flex-direction:column">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;padding:20px 24px 16px;border-bottom:1px solid var(--border)">
+      <div id="modal-asesor-avatar" class="av" style="font-size:13px;font-weight:700;flex-shrink:0;width:40px;height:40px"></div>
+      <div style="flex:1">
+        <div id="modal-asesor-nombre" style="font-size:16px;font-weight:600"></div>
+        <div id="modal-asesor-subtitulo" style="font-size:12px;color:var(--text3)"></div>
+      </div>
+      <button class="kb-modal-close" onclick="cerrarModalAsesor()" style="font-size:18px">✕</button>
+    </div>
+
+    <!-- Selector período -->
+    <div style="display:flex;gap:6px;padding:14px 24px 0">
+      <button class="filter-chip active" id="masesor-p-mes"  onclick="setModalAsesorPeriodo('mes')">Este mes</button>
+      <button class="filter-chip"        id="masesor-p-año"  onclick="setModalAsesorPeriodo('año')">Este año</button>
+      <button class="filter-chip"        id="masesor-p-todo" onclick="setModalAsesorPeriodo('todo')">Todo</button>
+    </div>
+
+    <!-- Métricas -->
+    <div style="display:flex;gap:12px;padding:14px 24px;flex-wrap:wrap">
+      <div class="metric-card" style="flex:1;min-width:130px;padding:12px 16px">
+        <div class="metric-label">Hs clientes</div>
+        <div class="metric-value" id="masesor-hs-clientes" style="font-size:22px">—</div>
+      </div>
+      <div class="metric-card" style="flex:1;min-width:130px;padding:12px 16px">
+        <div class="metric-label">Hs internas</div>
+        <div class="metric-value" id="masesor-hs-interna" style="font-size:22px">—</div>
+      </div>
+      <div class="metric-card" style="flex:1;min-width:130px;padding:12px 16px">
+        <div class="metric-label">Total horas</div>
+        <div class="metric-value" id="masesor-hs-total" style="font-size:22px;color:var(--accent)">—</div>
+      </div>
+      <div class="metric-card" style="flex:1;min-width:130px;padding:12px 16px">
+        <div class="metric-label">Consultas</div>
+        <div class="metric-value" id="masesor-consultas" style="font-size:22px">—</div>
+      </div>
+    </div>
+
+    <!-- Historial -->
+    <div style="flex:1;overflow-y:auto;padding:0 24px 24px">
+      <!-- Consultas a clientes -->
+      <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">
+        Consultas a clientes
+      </div>
+      <div id="masesor-lista-clientes" style="margin-bottom:20px"></div>
+
+      <!-- Horas internas -->
+      <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">
+        Horas internas
+      </div>
+      <div id="masesor-lista-interna"></div>
+    </div>
+  </div>
+</div>
+
           <div id="biblioteca" class="page">
             <div class="page-header">
               <div>
@@ -2445,68 +2262,48 @@
         z-index: 1000;
         background: rgba(0, 0, 0, 0.55);
         backdrop-filter: blur(2px);
-        overflow-y: auto;
-        padding: 32px 16px;
+        align-items: center;
+        justify-content: center;
+        padding: 24px 16px;
       "
-      
     >
       <div
         style="
           background: var(--surface);
           border-radius: 14px;
           max-width: 680px;
+          width: 100%;
           margin: 0 auto;
           padding: 28px 28px 24px;
           position: relative;
           box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+          max-height: 90vh;
+          overflow-y: auto;
+          scrollbar-color: var(--border2) transparent;
+          scrollbar-width: thin;
         "
       >
         <!-- Header del modal -->
-        <div
-          style="
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            margin-bottom: 20px;
-          "
-        >
-          <div>
-            <div style="font-size: 17px; font-weight: 700; color: var(--text)">
-              Registrar consulta
+        <div style="position:sticky;top:-28px;background:var(--surface);z-index:1;margin:-28px -28px 20px;padding:28px 28px 16px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
+            <div>
+              <div style="font-size: 17px; font-weight: 700; color: var(--text)">Registrar consulta</div>
+              <div style="font-size: 12px; color: var(--text3); margin-top: 2px">Completá después de cada atención por WhatsApp</div>
             </div>
-            <div style="font-size: 12px; color: var(--text3); margin-top: 2px">
-              Completá después de cada atención por WhatsApp
-            </div>
+            <button id="modal-consulta-close" onclick="cerrarModalConsulta()"
+              style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text3);padding:0;line-height:1;margin-left:16px">✕</button>
           </div>
-          <button
-            id="modal-consulta-close"
-            onclick="cerrarModalConsulta()"
-            style="
-              background: none;
-              border: none;
-              cursor: pointer;
-              font-size: 20px;
-              color: var(--text3);
-              padding: 0;
-              line-height: 1;
-              margin-left: 16px;
-            "
-          >
-            ✕
-          </button>
+
+          <div id="reg-ok" style="display: none" class="alert alert-green">
+            <strong>Consulta guardada.</strong> La solución fue agregada a la base de conocimiento del equipo.
+          </div>
+
+          <div class="info-box" id="r-tip-repetida" style="margin:0">
+            Si el cliente repite la misma consulta, marcala como repetida. Eso alimenta el score de riesgo automáticamente.
+          </div>
         </div>
 
-        <div id="reg-ok" style="display: none" class="alert alert-green">
-          <strong>Consulta guardada.</strong> La solución fue agregada a la base
-          de conocimiento del equipo.
-        </div>
-
-        <div class="info-box">
-          Si el cliente repite la misma consulta, marcala como repetida. Eso
-          alimenta el score de riesgo automáticamente.
-        </div>
-
-        <div class="form-row">
+        <div class="form-row" id="r-row-cliente">
           <div class="form-group" style="flex: 1">
             <label class="fl">Cliente</label>
             <div style="position: relative">
@@ -2655,7 +2452,9 @@
           <textarea
             id="r-desc"
             placeholder="Ej: El cliente no sabía liquidar las horas extras en feriado..."
+            oninput="actualizarSugerenciasKB('r-desc', 'r-kb-suggestions')"
           ></textarea>
+          <div id="r-kb-suggestions" class="kb-suggestions" style="display:none"></div>
         </div>
 
         <div
@@ -2814,14 +2613,21 @@
      MODAL — Nueva / Editar solución KB
   ════════════════════════════════════ -->
   <div id="kb-form-overlay" class="kb-modal-overlay">
-    <div class="kb-modal-sheet" onclick="event.stopPropagation()">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <div class="card-title" id="kb-form-modal-title" style="margin:0">Nueva solución</div>
-        <button onclick="cerrarKbForm()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">✕</button>
+    <div class="kb-modal-sheet" onclick="event.stopPropagation()" style="max-height:90vh;overflow-y:auto;scrollbar-color:var(--border2) transparent;scrollbar-width:thin;padding:0">
+      <!-- Header sticky -->
+      <div style="position:sticky;top:0;background:var(--surface);z-index:1;padding:24px 28px 16px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+          <div>
+            <div style="font-size:17px;font-weight:700;color:var(--text)" id="kb-form-modal-title">Nueva solución</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Documentá la solución para que todo el equipo la pueda reutilizar</div>
+          </div>
+          <button onclick="cerrarKbForm()" style="background:none;border:none;font-size:20px;color:var(--text3);cursor:pointer;line-height:1;margin-left:16px">✕</button>
+        </div>
+        <div id="kb-ok" class="alert alert-green" style="display:none;margin:0">
+          <strong>Guardado.</strong> Disponible para todo el equipo.
+        </div>
       </div>
-      <div id="kb-ok" class="alert alert-green" style="display:none;margin-bottom:14px">
-        <strong>Guardado.</strong> Disponible para todo el equipo.
-      </div>
+      <div style="padding:0 28px 28px;display:flex;flex-direction:column;gap:14px">
       <div class="form-group">
         <label class="fl">Título — describí el problema del cliente</label>
         <input type="text" id="kb-titulo" placeholder="El cliente no puede / no sabe / le da error..." />
@@ -2887,8 +2693,85 @@
         <button class="btn-primary" id="kb-form-submit" onclick="guardarKB()">Guardar solución</button>
         <button class="btn-secondary" onclick="cerrarKbForm()">Cancelar</button>
       </div>
-    </div>
-  </div>
+    </div><!-- fin contenido -->
+    </div><!-- fin kb-modal-sheet -->
+  </div><!-- fin overlay -->
 
-</body>
-</html>
+<!-- ── Modal Nuevo Pendiente ── -->
+<div id="modal-pend-form" class="kb-modal-overlay" style="display:none">
+  <div class="kb-modal" style="max-width:720px;width:94%;max-height:90vh;overflow-y:auto">
+    <div style="position:sticky;top:0;background:var(--surface);z-index:1;padding:24px 28px 16px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
+        <div>
+          <div style="font-size:17px;font-weight:700;color:var(--text)">Nuevo pendiente</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">Completá los datos del caso que quedó sin resolver</div>
+        </div>
+        <button onclick="cerrarPendForm()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text3);padding:0;line-height:1;margin-left:16px">✕</button>
+      </div>
+      <div class="info-box" style="margin:0">
+        Describí bien el problema desde el principio. Cuanto más detalle pongas, más fácil retomarlo si lo toma otro asesor.
+      </div>
+    </div>
+    <div id="pend-form" style="padding:20px 24px 24px;display:flex;flex-direction:column;gap:14px">
+      <div class="form-row">
+        <!-- Tipo de trabajo: solo para pendientes de clientes -->
+        <div class="form-group" id="pf-tipo-group">
+          <label class="fl">Tipo de trabajo</label>
+          <select id="pf-tipo" onchange="onTipoPendienteChange()">
+            <option value="soporte">Soporte</option>
+            <option value="implementacion">Implementación</option>
+            <option value="bug">Programación</option>
+            <option value="comercial">Comercial (Administración)</option>
+          </select>
+        </div>
+        <div class="form-group" id="pf-cliente-group">
+          <label class="fl">Cliente</label>
+          <div style="position:relative">
+            <input type="text" id="pf-cliente-search" placeholder="Escribí para buscar cliente..."
+              autocomplete="off" oninput="filtrarPfClienteSearch()" onfocus="filtrarPfClienteSearch()"
+              onblur="cerrarPfClienteSearch()" style="width:100%;box-sizing:border-box"/>
+            <div id="pf-cliente-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;
+              background:var(--surface);border:1px solid var(--border);border-radius:8px;
+              max-height:240px;overflow-y:auto;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,0.35);margin-top:2px"></div>
+          </div>
+          <select id="pf-cliente" style="display:none"><option value="">Cargando clientes...</option></select>
+        </div>
+        <!-- Asesor único: solo para pendientes de clientes -->
+        <div class="form-group" id="pf-asesor-group">
+          <label class="fl">Asesor responsable</label>
+          <select id="pf-asesor">
+            <option>Ignacio Talon</option>
+            <option>Matias Ferro</option>
+            <option>Daniel Colomer</option>
+            <option>Daniel Ferro</option>
+            <option>Renzo Moretti</option>
+            <option>Alfredo Cesar</option>
+          </select>
+        </div>
+        <!-- Multi-asesor: solo para pendientes internos -->
+        <div class="form-group" id="pf-asesores-multi-group" style="display:none">
+          <label class="fl">Para quién es</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+            <button type="button" class="pf-asesor-chip" data-asesor="Ignacio Talon" onclick="toggleAsesorChip(this)">Ignacio</button>
+            <button type="button" class="pf-asesor-chip" data-asesor="Matias Ferro" onclick="toggleAsesorChip(this)">Matias</button>
+            <button type="button" class="pf-asesor-chip" data-asesor="Daniel Colomer" onclick="toggleAsesorChip(this)">Daniel</button>
+            <button type="button" class="pf-asesor-chip" data-asesor="Daniel Ferro" onclick="toggleAsesorChip(this)">Daniel Ferro</button>
+            <button type="button" class="pf-asesor-chip" data-asesor="Renzo Moretti" onclick="toggleAsesorChip(this)">Renzo</button>
+            <button type="button" class="pf-asesor-chip" data-asesor="Alfredo Cesar" onclick="toggleAsesorChip(this)">Alfredo</button>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:6px 14px;color:var(--text);user-select:none" id="pf-todos-label">
+              <input type="checkbox" id="pf-todos-check" onchange="toggleTodosAsesores()" style="width:14px;height:14px;cursor:pointer;accent-color:var(--text)"/>
+              Todos
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="form-row" id="pf-cat-row">
+        <div class="form-group" id="pf-cat-group">
+          <label class="fl">Categoría</label>
+          <select id="pf-cat" onchange="togglePfCatCustom()">
+            <option>Liquidación de sueldos</option>
+            <option>Errores del sistema</option>
+            <option>Configuración</option>
+            <option>Actualizaciones</option>
+            <option>Fuera del sistema</option>
+            <opt

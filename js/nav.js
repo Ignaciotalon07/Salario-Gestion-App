@@ -22,6 +22,12 @@ function goTo(btn, id) {
   if (id === 'repositorio' && typeof marcarRepositorioVisto === 'function') {
     marcarRepositorioVisto();
   }
+  // Forzar resize de charts de equipo al navegar (se inicializan con display:none)
+  if (id === 'equipo') {
+    setTimeout(() => {
+      if (typeof chartEquipoInstance !== 'undefined' && chartEquipoInstance) chartEquipoInstance.resize();
+    }, 30);
+  }
 }
 
 // goClienteDetail es re-definida por cliente-detalle.js para navegar a la vista de historial.
@@ -71,11 +77,4 @@ function syncMobilePendBadge() {
   const badge = document.getElementById('mobile-pend-badge');
   if (!badge) return;
   const count = (typeof pendientes !== 'undefined')
-    ? pendientes.filter(p => {
-        const me = typeof getCurrentUserName === 'function' ? getCurrentUserName() : null;
-        return me && p.asesor === me;
-      }).length
-    : 0;
-  badge.textContent = count;
-  badge.style.display = count > 0 ? 'block' : 'none';
-}
+    ? pend

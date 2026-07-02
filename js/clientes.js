@@ -100,24 +100,26 @@ function getStatsCliente(nombre) {
   const ahora = new Date();
   const todas = (typeof consultas !== 'undefined') ? consultas : [];
 
-  // Consultas de este mes para este cliente
-  const estesMes = todas.filter(c => {
+  // Todas las consultas históricas del cliente
+  const delCliente = todas.filter(c => c.cliente === nombre);
+  const totalHistorico = delCliente.length;
+
+  // Consultas de este mes (para % repetidas y hs)
+  const estesMes = delCliente.filter(c => {
     const d = new Date(c.timestamp);
-    return c.cliente === nombre &&
-           d.getMonth()    === ahora.getMonth() &&
+    return d.getMonth()    === ahora.getMonth() &&
            d.getFullYear() === ahora.getFullYear();
   });
 
-  const totalMes     = estesMes.length;
   const repetidasMes = estesMes.filter(c => c.repetida === 'si').length;
-  const pctRep       = totalMes > 0 ? Math.round((repetidasMes / totalMes) * 100) : null;
+  const pctRep       = estesMes.length > 0 ? Math.round((repetidasMes / estesMes.length) * 100) : null;
 
   // Horas consumidas este mes
   const hsMes = estesMes.reduce((sum, c) => sum + (parseFloat(c.tiempo) || 0), 0);
 
   // Categoría más frecuente (histórico)
   const catCounts = {};
-  todas.filter(c => c.cliente === nombre).forEach(c => {
+  delCliente.forEach(c => {
     if (c.categoria) catCounts[c.categoria] = (catCounts[c.categoria] || 0) + 1;
   });
   const topCatKey = Object.entries(catCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
@@ -125,7 +127,7 @@ function getStatsCliente(nombre) {
     ? ((typeof CATS !== 'undefined' && CATS[topCatKey]?.label) || topCatKey)
     : null;
 
-  return { totalMes, pctRep, topCatLabel, hsMes };
+  return { totalHistorico, pctRep, topCatLabel, hsMes };
 }
 
 // ────────── Render ──────────
@@ -139,9 +141,24 @@ function renderClientes() {
   if (tipoFilter) visible = visible.filter(c => c.tipo === tipoFilter);
   if (autFilter)  visible = visible.filter(c => c.autonomia === autFilter);
 
+  const todasConsultas = (typeof consultas !== 'undefined') ? consultas : [];
+
+  // Al ordenar por riesgo: solo clientes con al menos 1 consulta registrada
+  if (sortBy === 'score') {
+    const conConsultas = new Set(todasConsultas.map(c => c.cliente).filter(Boolean));
+    visible = visible.filter(c => conConsultas.has(c.nombre));
+  }
+
   visible.sort((a, b) => {
-    if (sortBy === 'score')     return (b.score || 0) - (a.score || 0);
-    if (sortBy === 'consultas') return 0; // sin datos por ahora
+    if (sortBy === 'score') {
+      // Score bajo primero (mayor riesgo)
+      return (a.score || 0) - (b.score || 0);
+    }
+    if (sortBy === 'consultas') {
+      const totalA = todasConsultas.filter(c => c.cliente === a.nombre).length;
+      const totalB = todasConsultas.filter(c => c.cliente === b.nombre).length;
+      return totalB - totalA;
+    }
     return (a.nombre || '').localeCompare(b.nombre || '');
   });
 
@@ -164,9 +181,7 @@ function renderClienteCard(c) {
   const autLabel      = { alta: 'Alta autonomia', media: 'Media autonomia', baja: 'Baja autonomia' }[c.autonomia] || '—';
 
   // Stats desde consultas
-  const { totalMes, pctRep, topCatLabel, hsMes } = getStatsCliente(c.nombre);
-  const ahora      = new Date();
-  const mesLabel   = ahora.toLocaleString('es-AR', { month: 'long' });
+  const { totalHistorico, pctRep, topCatLabel, hsMes } = getStatsCliente(c.nombre);
 
   // Texto de tiempo: "X hs este mes"
   const fmtHs = h => h % 1 === 0 ? h + ' hs' : h.toFixed(1) + ' hs';
@@ -217,8 +232,8 @@ function renderClienteCard(c) {
       <!-- Stats: consultas / repetidas / tiempo este mes / consulta más repetida -->
       <div class="cli-card__stats">
         <div class="cli-card__stat">
-          <div class="cli-card__stat-val">${totalMes}</div>
-          <div class="cli-card__stat-lbl">consultas en ${mesLabel}</div>
+          <div class="cli-card__stat-val">${totalHistorico}</div>
+          <div class="cli-card__stat-lbl">consultas históricas</div>
         </div>
         <div class="cli-card__stat">
           <div class="cli-card__stat-val" style="color:${repColor}">${repTexto}</div>
@@ -256,10 +271,6 @@ function renderClienteCard(c) {
         ${c.whaticket_url
           ? `<a class="btn-sm wt-btn" href="${escapeHtml(c.whaticket_url)}" target="_blank" rel="noopener">🎫 Whaticket</a>`
           : `<button class="btn-sm" onclick="vincularWhaticket('${c.id}')">🎫 Vincular</button>`}
-        <button class="btn-sm" style="margin-left:auto;color:var(--text3);font-size:11px"
-          onclick="eliminarCliente('${c.id}')">
-          Eliminar
-        </button>
       </div>
     </div>`;
 }
@@ -468,17 +479,4 @@ function handleClienteChange(payload) {
       refrescarSelectsCliente(clientes.map(c => c.nombre));
       renderClientes();
       if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
-      // Re-render pendientes en caso de que el cliente haya cambiado de Whaticket URL
-      if (typeof renderPendientes === 'function') renderPendientes();
-    }
-  } else if (eventType === 'DELETE') {
-    const c = clientes.find(c => c.id === oldRow.id);
-    if (c) delete CLIENTES_LOOKUP[c.nombre];
-    clientes = clientes.filter(c => c.id !== oldRow.id);
-    refrescarSelectsCliente(clientes.map(c => c.nombre));
-    renderClientes();
-    if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
-  }
-}
-
-window.addEventListener('app-ready', initClientes);
+      // Re-render pendiente

@@ -12,15 +12,17 @@ let _detalleChartInstance = null;
 let _detalleOrigen = 'clientes'; // página desde la que se navegó al detalle
 
 // Filtros activos en la tabla de historial
-let _detalleMesFiltro  = null;
-let _detalleTipoFiltro = null;
+let _detalleMesFiltro    = null;
+let _detalleTipoFiltro   = null;
+let _detalleHistorialLimit = 5; // cuántas consultas mostrar inicialmente
 
 // ────────── Entrada principal ──────────
 
 function goClienteDetail(clienteId) {
-  _detalleClienteId  = clienteId;
-  _detalleMesFiltro  = null;
-  _detalleTipoFiltro = null;
+  _detalleClienteId      = clienteId;
+  _detalleMesFiltro      = null;
+  _detalleTipoFiltro     = null;
+  _detalleHistorialLimit = 5;
 
   // Guardar la página actual antes de navegar
   const paginaActiva = document.querySelector('.page.active');
@@ -48,8 +50,9 @@ function renderDetalleCliente(clienteId) {
     return;
   }
 
+  // Excluir entradas temporales (_temp_) que aún no fueron confirmadas por realtime
   const consultasDelCliente = (typeof consultas !== 'undefined')
-    ? consultas.filter(c => c.cliente === cliente.nombre)
+    ? consultas.filter(c => c.cliente === cliente.nombre && !String(c.id).startsWith('_temp_'))
     : [];
 
   // Armar el HTML de la página
@@ -60,6 +63,12 @@ function renderDetalleCliente(clienteId) {
     ${_renderDetalleTipoStats(consultasDelCliente)}
     ${_renderDetalleMiniChart(cliente, consultasDelCliente)}
     ${_renderDetalleFiltroYTabla(cliente, consultasDelCliente)}
+    <div style="margin-top:32px;padding-top:20px;border-top:1px solid var(--border);text-align:right">
+      <button class="btn" style="background:#9b2215;color:#fff;border:none;padding:9px 20px;border-radius:8px;font-size:13px;cursor:pointer"
+        onclick="eliminarCliente('${cliente.id}')">
+        🗑 Eliminar cliente
+      </button>
+    </div>
   `;
 
   // Inicializar el mini chart después de que el DOM existe
@@ -350,9 +359,11 @@ function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro, tipoFiltro) {
     actualizaciones: 'Actualizaciones', fuera: 'Fuera del sistema'
   };
   const TIPO_BADGES = {
-    soporte:      '<span class="badge b-blue"  style="font-size:10px">🎧 Soporte</span>',
-    programacion: '<span class="badge b-red"   style="font-size:10px">🐛 Prog.</span>',
-    comercial:    '<span class="badge b-green" style="font-size:10px">💼 Comercial</span>',
+    soporte:              '<span class="badge b-blue"   style="font-size:10px">🎧 Soporte</span>',
+    programacion:         '<span class="badge b-red"    style="font-size:10px">🐛 Program.</span>',
+    comercial:            '<span class="badge b-green"  style="font-size:10px">💼 Comercial</span>',
+    programacion_interna: '<span class="badge b-amber"  style="font-size:10px">💻 Program.</span>',
+    implementacion:       '<span class="badge b-purple" style="font-size:10px">🚀 Implem.</span>',
   };
 
   let lista = consultasDelCliente;
@@ -378,7 +389,11 @@ function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro, tipoFiltro) {
     </div>`;
   }
 
-  return lista.map((c, i) => {
+  const total    = lista.length;
+  const visible  = lista.slice(0, _detalleHistorialLimit);
+  const restante = total - visible.length;
+
+  return visible.map((c, i) => {
     const fecha = new Date(c.timestamp).toLocaleDateString('es-AR', {
       day: '2-digit', month: '2-digit', year: '2-digit'
     });
@@ -424,7 +439,22 @@ function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro, tipoFiltro) {
         </div>
       </button>
     `;
-  }).join('');
+  }).join('') + (restante > 0 ? `
+    <div style="padding:12px 16px;border-top:1px solid var(--border);text-align:center">
+      <button onclick="verMasDetalleHistorial()"
+        style="background:none;border:1px solid var(--border2);color:var(--text2);font-size:12px;font-family:inherit;padding:6px 20px;border-radius:8px;cursor:pointer;transition:background .13s"
+        onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='none'">
+        Ver ${Math.min(restante, 5)} más (${restante} restantes)
+      </button>
+    </div>` : '');
+}
+
+function verMasDetalleHistorial() {
+  _detalleHistorialLimit += 5;
+  const res = _getConsultasDelClienteActual();
+  if (!res) return;
+  const tbody = document.getElementById('detalle-tabla-body');
+  if (tbody) tbody.innerHTML = _buildFilasTabla(res.cliente, res.lista, _detalleMesFiltro, _detalleTipoFiltro);
 }
 
 // ────────── Filtros interactivos ──────────
@@ -441,7 +471,8 @@ function _getConsultasDelClienteActual() {
 }
 
 function filtrarDetalleMes(valor) {
-  _detalleMesFiltro = valor || null;
+  _detalleMesFiltro      = valor || null;
+  _detalleHistorialLimit = 5;
   const res = _getConsultasDelClienteActual();
   if (!res) return;
   const tbody = document.getElementById('detalle-tabla-body');
@@ -449,7 +480,8 @@ function filtrarDetalleMes(valor) {
 }
 
 function filtrarDetalleTipo(valor) {
-  _detalleTipoFiltro = valor || null;
+  _detalleTipoFiltro     = valor || null;
+  _detalleHistorialLimit = 5;
   // Sincronizar el select si se llamó desde el panel de contadores (click en número)
   const sel = document.getElementById('detalle-tipo-filtro');
   if (sel) sel.value = valor || '';
@@ -538,42 +570,40 @@ function abrirDetalleConsulta(btn) {
 async function eliminarConsultaDesdeModal(id) {
   if (!id) return;
 
-  // Primera confirmación
-  const ok1 = confirm('¿Seguro que querés eliminar esta consulta? Esta acción no se puede deshacer.');
-  if (!ok1) return;
+  if (!confirm('¿Seguro que querés eliminar esta consulta? Esta acción no se puede deshacer.')) return;
 
-  // Segunda confirmación para evitar errores accidentales
-  const ok2 = confirm('Última confirmación: la consulta será eliminada permanentemente.');
-  if (!ok2) return;
-
-  try {
-    await dbDelete('consultas', id);
-
-    // Actualizar el array global
-    if (typeof consultas !== 'undefined') {
-      consultas = consultas.filter(c => c.id !== id);
+  // Si es un ID temporal (no guardado aún en DB), solo lo quitamos del array
+  if (!String(id).startsWith('_temp_')) {
+    try {
+      await dbDelete('consultas', id);
+    } catch (e) {
+      console.error('Error eliminando consulta', e);
+      toast('No se pudo eliminar la consulta: ' + (e.message || e));
+      return;
     }
-
-    // Cerrar modal
-    const modal = document.getElementById('modal-detalle-consulta');
-    if (modal) modal.style.display = 'none';
-
-    // Refrescar la vista del cliente
-    const clienteActual = typeof clientes !== 'undefined'
-      ? clientes.find(c => c.id === _detalleClienteId)
-      : null;
-    if (clienteActual) abrirDetalleCliente(clienteActual.id);
-
-    // Refrescar métricas generales si están visibles
-    if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
-    if (typeof refreshConsultasPage === 'function') refreshConsultasPage();
-    if (typeof renderClientes === 'function') renderClientes();
-
-    toast('Consulta eliminada.');
-  } catch (e) {
-    console.error('Error eliminando consulta', e);
-    toast('Error al eliminar la consulta. Intentá de nuevo.');
   }
+
+  // Quitar del array en memoria
+  if (typeof consultas !== 'undefined') {
+    consultas = consultas.filter(c => String(c.id) !== String(id));
+  }
+
+  // Cerrar modal
+  const modal = document.getElementById('modal-detalle-consulta');
+  if (modal) modal.style.display = 'none';
+
+  // Refrescar la vista del cliente
+  const clienteActual = typeof clientes !== 'undefined'
+    ? clientes.find(c => c.id === _detalleClienteId)
+    : null;
+  if (clienteActual) goClienteDetail(clienteActual.id);
+
+  // Refrescar métricas generales
+  if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
+  if (typeof refreshConsultasPage === 'function') refreshConsultasPage();
+  if (typeof renderClientes === 'function') renderClientes();
+
+  toast('Consulta eliminada.');
 }
 
 // ────────── Volver ──────────
@@ -584,37 +614,4 @@ function volverAClientes() {
   _detalleTipoFiltro = null;
   if (_detalleChartInstance) {
     _detalleChartInstance.destroy();
-    _detalleChartInstance = null;
-  }
-  const origen = _detalleOrigen || 'clientes';
-  _detalleOrigen = 'clientes'; // reset para la próxima vez
-
-  // Navegar a la página origen
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  const paginaDestino = document.getElementById(origen);
-  if (paginaDestino) paginaDestino.classList.add('active');
-
-  // Marcar nav item del sidebar si existe
-  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-  const navBtn = document.querySelector(`.nav-item[onclick*="${origen}"]`);
-  if (navBtn) navBtn.classList.add('active');
-
-  // Marcar mobile nav si existe
-  document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
-  const mobileBtn = document.querySelector(`.mobile-nav-item[onclick*="${origen}"]`);
-  if (mobileBtn) mobileBtn.classList.add('active');
-
-  window.scrollTo(0, 0);
-}
-
-// ────────── Helper: escape HTML ──────────
-
-function _escHtml(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+    _detalleChartInstance = null

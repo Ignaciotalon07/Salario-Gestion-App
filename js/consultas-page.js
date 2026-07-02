@@ -85,9 +85,13 @@ function _cpPeriodLabel(rango, offset) {
   return '';
 }
 
-// Filtra el array global según rango + offset
+// Filtra el array global según rango + offset.
+// Excluye registros internos (programacion_interna): la sección Consultas
+// es exclusivamente para consultas a clientes.
 function _cpFilterPeriod(rango, offset) {
-  const all = (typeof consultas !== 'undefined') ? consultas : [];
+  const all = (typeof consultas !== 'undefined')
+    ? consultas.filter(c => c.tipoConsulta !== 'programacion_interna' && c.tipo_consulta !== 'programacion_interna')
+    : [];
   if (rango === 'todo') return all;
   const { desde, hasta } = _cpPeriodRange(rango, offset);
   return all.filter(c => { const t = new Date(c.timestamp); return t >= desde && t < hasta; });
@@ -418,13 +422,17 @@ function _cpRenderRow(c) {
     tags.push(`<span style="background:var(--surface2);color:var(--text3);font-size:10px;padding:2px 6px;border-radius:4px">⏱ ${parseFloat(c.tiempo).toFixed(1)}h</span>`);
 
   return `
-    <div style="
+    <div onclick="_cpAbrirDetalle('${c.id}')" style="
       background:var(--surface2,rgba(255,255,255,0.03));
       border:1px solid var(--border2);
       border-radius:10px;
       padding:12px 14px;
       display:flex;gap:14px;
-    ">
+      cursor:pointer;
+      transition:border-color .15s, background .15s;
+    "
+    onmouseenter="this.style.borderColor='var(--accent)';this.style.background='var(--surface3,rgba(255,255,255,0.06))'"
+    onmouseleave="this.style.borderColor='var(--border2)';this.style.background='var(--surface2,rgba(255,255,255,0.03))'">
       <!-- Hora -->
       <div style="flex-shrink:0;width:38px;display:flex;align-items:center;justify-content:center">
         <span style="font-size:12px;color:var(--text3);font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap">${hora}</span>
@@ -445,7 +453,204 @@ function _cpRenderRow(c) {
           </div>` : ''}
         <div style="font-size:11px;color:var(--text3)">${_cpEsc(c.asesor || '—')}</div>
       </div>
+      <!-- Ícono indicador -->
+      <div style="flex-shrink:0;display:flex;align-items:center">
+        <span style="font-size:14px;color:var(--text3)">›</span>
+      </div>
     </div>`;
+}
+
+// ════════════════════════════════════════════════════════════════
+// MODAL DETALLE DE CONSULTA
+// ════════════════════════════════════════════════════════════════
+
+function _cpAbrirDetalle(id) {
+  const c = (typeof consultas !== 'undefined') ? consultas.find(x => x.id == id) : null;
+  if (!c) return;
+
+  // Buscar solución asociada si hay solucionId
+  let solTitulo = null;
+  let solPasos  = [];
+  if (c.solucionId && typeof soluciones !== 'undefined') {
+    const sol = soluciones.find(s => s.id === c.solucionId);
+    if (sol) {
+      solTitulo = sol.titulo;
+      solPasos  = Array.isArray(sol.pasos) ? sol.pasos : [];
+    }
+  }
+
+  const fecha = new Date(c.timestamp).toLocaleString('es-AR', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  });
+  const fechaCap = fecha.charAt(0).toUpperCase() + fecha.slice(1);
+
+  const cat = [c.categoria, c.subtema].filter(Boolean).join(' › ') || '—';
+
+  const tipoLabels = {
+    soporte: '🎧 Soporte',
+    programacion: '🐛 Programación',
+    comercial: '💼 Comercial',
+    programacion_interna: '💻 Programación interna',
+    implementacion: '🚀 Implementación',
+  };
+  const tipoLabel = tipoLabels[c.tipoConsulta] || c.tipoConsulta || '—';
+
+  // HTML del modal
+  const overlay = document.createElement('div');
+  overlay.id = 'cp-detalle-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:3000;
+    background:rgba(0,0,0,0.55);
+    display:flex;align-items:center;justify-content:center;
+    padding:16px;
+  `;
+
+  overlay.innerHTML = `
+    <div style="
+      background:var(--surface);
+      border:1px solid var(--border2);
+      border-radius:14px;
+      width:100%;max-width:520px;
+      max-height:90vh;overflow-y:auto;scrollbar-color:var(--border2) transparent;scrollbar-width:thin;
+      padding:24px;
+      position:relative;
+    ">
+      <!-- Header -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:12px">
+        <div>
+          <div style="font-size:17px;font-weight:700;margin-bottom:3px">${_cpEsc(c.cliente || '—')}</div>
+          <div style="font-size:12px;color:var(--text3)">${fechaCap}</div>
+        </div>
+        <button onclick="cerrarDetalleConsulta()" style="
+          background:transparent;border:none;cursor:pointer;
+          color:var(--text3);font-size:20px;padding:0 4px;line-height:1;
+          flex-shrink:0;margin-top:2px;
+        ">✕</button>
+      </div>
+
+      <!-- Campos -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Asesor</div>
+            <div style="font-size:13px">${_cpEsc(c.asesor || '—')}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Tipo</div>
+            <div style="font-size:13px">${_cpEsc(tipoLabel)}</div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Categoría</div>
+          <div style="font-size:13px;color:var(--accent)">${_cpEsc(cat)}</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Repetida</div>
+            <div style="font-size:13px">${c.repetida === 'si' ? '⚠️ Sí' : 'No'}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Remota</div>
+            <div style="font-size:13px">${c.remota ? '🖥 Sí' : 'No'}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Tiempo</div>
+            <div style="font-size:13px">${c.tiempo ? `⏱ ${parseFloat(c.tiempo).toFixed(1)}h` : '—'}</div>
+          </div>
+        </div>
+
+        ${c.descripcion ? `
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Detalle del problema</div>
+          <div style="
+            font-size:13px;color:var(--text2);line-height:1.6;
+            background:var(--surface2);border:1px solid var(--border2);
+            border-radius:8px;padding:10px 12px;
+          ">${_cpEsc(c.descripcion)}</div>
+        </div>` : ''}
+
+        ${solTitulo ? `
+        <div>
+          <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Solución utilizada</div>
+          <div style="
+            background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.25);
+            border-radius:8px;padding:12px 14px;
+          ">
+            ${solPasos.length ? `
+            <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px">
+              ${solPasos.map(p => `<li style="font-size:13px;color:var(--text2);line-height:1.5">${_cpEsc(p)}</li>`).join('')}
+            </ol>` : `<div style="font-size:13px;color:var(--text2)">✅ ${_cpEsc(solTitulo)}</div>`}
+          </div>
+        </div>` : ''}
+
+      </div>
+
+      <!-- Footer -->
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border2);display:flex;justify-content:flex-end">
+        <button id="cp-detalle-del-btn" onclick="eliminarConsultaDesdeDetalle('${c.id}')" style="
+          background:transparent;
+          border:1px solid var(--red,#c0392b);
+          color:var(--red,#c0392b);
+          font-size:13px;font-family:inherit;
+          padding:7px 16px;border-radius:8px;cursor:pointer;
+          transition:background .15s,color .15s;
+        "
+        onmouseenter="this.style.background='var(--red,#c0392b)';this.style.color='#fff'"
+        onmouseleave="this.style.background='transparent';this.style.color='var(--red,#c0392b)'">
+          🗑 Eliminar consulta
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // Cerrar con Escape
+  overlay._onKey = (e) => { if (e.key === 'Escape') cerrarDetalleConsulta(); };
+  document.addEventListener('keydown', overlay._onKey);
+}
+
+function cerrarDetalleConsulta() {
+  const overlay = document.getElementById('cp-detalle-overlay');
+  if (!overlay) return;
+  if (overlay._onKey) document.removeEventListener('keydown', overlay._onKey);
+  overlay.remove();
+}
+
+async function eliminarConsultaDesdeDetalle(id) {
+  if (!confirm('¿Seguro que querés eliminar esta consulta? Esta acción no se puede deshacer.')) return;
+  _cpConfirmarEliminacion(id);
+}
+
+async function _cpConfirmarEliminacion(id) {
+  const btn = document.getElementById('cp-detalle-del-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Eliminando...'; }
+
+  try {
+    await dbDelete('consultas', id);
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = '🗑 Eliminar consulta'; btn.onclick = () => eliminarConsultaDesdeDetalle(id); }
+    if (typeof toast === 'function') toast('No se pudo eliminar. Intentá de nuevo.');
+    return;
+  }
+
+  // Quitar del array global
+  if (typeof consultas !== 'undefined') {
+    consultas = consultas.filter(c => c.id != id);
+  }
+
+  cerrarDetalleConsulta();
+
+  // Refrescar vistas
+  if (typeof refreshPanelMetrics === 'function')    refreshPanelMetrics();
+  if (typeof renderClientes === 'function')         renderClientes();
+  if (typeof refreshConsultasPage === 'function')   refreshConsultasPage();
+
+  if (typeof toast === 'function') toast('Consulta eliminada');
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -548,21 +753,4 @@ function _cpEsc(str) {
     .cp-nav-btn:hover:not(:disabled) { background: var(--surface2); }
     .cp-nav-btn:disabled { opacity: 0.35; cursor: default; }
     .cp-period-label {
-      font-size: 12px; color: var(--text3); font-weight: 500; min-width: 120px; text-align: center;
-    }
-  `;
-  document.head.appendChild(s);
-})();
-
-// ════════════════════════════════════════════════════════════════
-// INIT
-// ════════════════════════════════════════════════════════════════
-
-window.addEventListener('app-ready', () => {
-  renderConsultasPage();
-});
-
-// Llamada desde consultas.js cuando cambia el array global `consultas`
-function refreshConsultasPage() {
-  renderConsultasPage();
-}
+      font-size: 12px; color: var(--text3); font-weight: 500; min-width: 120px; t

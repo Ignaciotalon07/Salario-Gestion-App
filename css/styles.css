@@ -124,6 +124,14 @@ body {
 
 /* Metric cards */
 .metrics-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+#dashboard .page-header { align-items: center; }
+#equipo .page-header { align-items: center; }
+#clientes .page-header { align-items: center; }
+#pendientes .page-header { align-items: center; }
+#consultas-page .page-header { align-items: center; }
+#dashboard .metrics-grid { grid-template-columns: repeat(5,1fr); }
+#dashboard .metrics-grid .metric-card { padding: 14px 14px; }
+#dashboard .metrics-grid .metric-value { font-size: 26px; }
 .metric-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-lg); padding: 16px 18px;
@@ -137,7 +145,9 @@ body {
 
 /* Grid layouts */
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.grid-2 > * { min-width: 0; }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.grid-3 > * { min-width: 0; }
 
 /* Badges */
 .badge { display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 11px; font-weight: 500; }
@@ -254,6 +264,24 @@ textarea::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3
 .kb-modal-overlay.kb-modal--open {
   display: flex;
 }
+.kb-modal {
+  background: var(--surface);
+  border-radius: 16px;
+  width: 100%;
+  overflow: hidden;
+  animation: mtm-fade-in 0.2s ease;
+}
+.kb-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text3);
+  line-height: 1;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color .15s, background .15s;
+}
+.kb-modal-close:hover { color: var(--text); background: var(--hover); }
 .kb-modal-sheet {
   background: var(--surface);
   border-radius: 16px;
@@ -288,6 +316,62 @@ textarea::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3
 /* Asesor row */
 .asesor-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--border); }
 .asesor-row:last-child { border-bottom: none; }
+.asesor-row--clickable { cursor: pointer; border-radius: 8px; padding-left: 6px; padding-right: 6px; transition: background .15s; }
+.asesor-row--clickable:hover { background: var(--hover); }
+
+/* Fila dentro del modal de asesor */
+.asesor-modal-row { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border); position: relative; overflow: hidden; cursor: default; }
+.asesor-modal-row:last-child { border-bottom: none; }
+.asesor-modal-row[onclick] { cursor: pointer; transition: background .15s; border-radius: 6px; margin: 0 -12px; padding-left: 12px; padding-right: 12px; }
+.asesor-modal-row[onclick]:hover { background: var(--accent-light); }
+
+/* Tachito de eliminar — se desliza desde la derecha */
+.asesor-row-trash {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 64px;
+  background: #dc2626;
+  border: none;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateX(100%);
+  transition: transform .2s ease;
+  border-radius: 0 6px 6px 0;
+}
+.asesor-modal-row--active .asesor-row-trash { transform: translateX(0); }
+.asesor-modal-row--active { background: var(--hover); border-radius: 6px; }
+
+/* Scroll del modal de asesor */
+.kb-modal {
+  scrollbar-color: var(--border2) transparent;
+  scrollbar-width: thin;
+}
+.kb-modal ::-webkit-scrollbar       { width: 5px; }
+.kb-modal ::-webkit-scrollbar-track { background: transparent; }
+.kb-modal ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* Botón "Ver más registros" */
+.btn-ver-mas {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  color: var(--text3);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.btn-ver-mas:hover { background: var(--hover); color: var(--text); }
 
 /* Toast */
 #toast {
@@ -295,7 +379,7 @@ textarea::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3
   background: #1a1a18; color: white; padding: 10px 20px;
   border-radius: 99px; font-size: 13px; font-weight: 500;
   transition: transform .25s ease, opacity .25s ease;
-  opacity: 0; z-index: 999; pointer-events: none; white-space: nowrap;
+  opacity: 0; z-index: 99999; pointer-events: none; white-space: nowrap;
 }
 #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 #toast.toast--error { background: #dc2626; }
@@ -903,8 +987,8 @@ html {
 }
 
 .kb-suggestions {
-  background: #fff8e8;
-  border: 1px solid #fde68a;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
   border-radius: var(--radius);
   padding: 10px 12px;
   margin-top: 8px;
@@ -913,7 +997,7 @@ html {
 
 .kb-sug-label {
   font-weight: 600;
-  color: #7c3a06;
+  color: var(--accent);
   margin-bottom: 6px;
   font-size: 11px;
   text-transform: uppercase;
@@ -921,7 +1005,7 @@ html {
 }
 
 .kb-sug-item {
-  background: white;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 7px 10px;
@@ -3571,9 +3655,7 @@ input[type=date]:focus {
 [data-theme="dark"] #app-root .nota,
 [data-theme="dark"] #app-root .nota-form,
 [data-theme="dark"] #app-root .info-pill,
-[data-theme="dark"] #app-root .historial-section,
-[data-theme="dark"] #app-root .kb-suggestions,
-[data-theme="dark"] #app-root .kb-sug-item {
+[data-theme="dark"] #app-root .historial-section {
   background: var(--surface2);
   border-color: var(--border);
 }
@@ -4296,7 +4378,7 @@ input[type=date]:focus {
 
   /* ── Clientes: header ── */
   #clientes .page-header { flex-direction: row; align-items: flex-start; justify-content: space-between; flex-wrap: nowrap; gap: 8px; margin-bottom: 16px; }
-  #clientes .page-header .btn-row .btn-primary { font-size: 12px; padding: 7px 12px; white-space: nowrap; margin-top: 6px; }
+  #clientes .page-header .btn-row .btn-primary { font-size: 12px; padding: 7px 12px; white-space: nowrap; }
 
   /* ── Clientes: filtros en grid ── */
   #clientes .filter-row {

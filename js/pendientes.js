@@ -12,7 +12,9 @@ let catFilter    = '';      // '' | 'liquidacion' | 'errores' | 'configuracion' 
 let searchText   = '';
 let vencidoFilter = false;  // true → mostrar solo los vencidos
 let groupByCliente = false;
-let pendientesCerradosMes = 0; // contador de pendientes cerrados este mes
+let pendientesCerradosMes        = 0; // contador de pendientes cerrados este mes
+let pendientesCerradosMesAnterior = 0; // contador del mes anterior (para comparar)
+let pendientesCerradosTotal      = 0; // contador histórico de pendientes cerrados
 
 const TEAM_ASESORES = ['Ignacio Talon', 'Matias Ferro', 'Daniel Colomer', 'Daniel Ferro', 'Renzo Moretti', 'Alfredo Cesar'];
 
@@ -111,6 +113,22 @@ async function initPendientes() {
       .eq('resuelto', true)
       .gte('resolved_at', inicioMes);
     pendientesCerradosMes = cerradosCount ?? 0;
+
+    const { count: totalCount } = await sb()
+      .from('pendientes')
+      .select('*', { count: 'exact', head: true })
+      .eq('resuelto', true);
+    pendientesCerradosTotal = totalCount ?? 0;
+
+    const inicioMesAnterior = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1).toISOString();
+    const finMesAnterior    = new Date(ahora.getFullYear(), ahora.getMonth(), 1).toISOString();
+    const { count: anteriorCount } = await sb()
+      .from('pendientes')
+      .select('*', { count: 'exact', head: true })
+      .eq('resuelto', true)
+      .gte('resolved_at', inicioMesAnterior)
+      .lt('resolved_at', finMesAnterior);
+    pendientesCerradosMesAnterior = anteriorCount ?? 0;
 
     // Cargar notas de los pendientes activos en una sola query
     const ids = pendientes.map(p => p.id);
@@ -441,8 +459,46 @@ async function agregarNota(pendienteId) {
 // ────────── Acciones existentes ──────────
 
 function showPendForm() {
-  const f = document.getElementById('pend-form');
-  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  const modal = document.getElementById('modal-pend-form');
+  if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+}
+
+function cerrarPendForm() {
+  const modal = document.getElementById('modal-pend-form');
+  if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+  _resetPendForm();
+}
+
+function _resetPendForm() {
+  // Textareas y texto
+  ['pf-desc','pf-intento','pf-prox','pf-cat-custom','pf-tipo-interno-custom'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  // Selects a su primera opción
+  ['pf-tipo','pf-cat','pf-prio','pf-tipo-interno'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.selectedIndex = 0;
+  });
+  // Buscador de cliente
+  const pfSearch = document.getElementById('pf-cliente-search');
+  if (pfSearch) pfSearch.value = '';
+  const pfDrop = document.getElementById('pf-cliente-dropdown');
+  if (pfDrop) pfDrop.style.display = 'none';
+  const pfSel = document.getElementById('pf-cliente');
+  if (pfSel) pfSel.value = '';
+  // Checkbox interno
+  const chk = document.getElementById('pf-interno');
+  if (chk) { chk.checked = false; toggleInternoForm(); }
+  // Chips de asesores
+  document.querySelectorAll('.pf-asesor-chip').forEach(c => c.classList.remove('selected'));
+  const todosChk = document.getElementById('pf-todos-check');
+  if (todosChk) todosChk.checked = false;
+  // Ocultar campos custom
+  const catCustom = document.getElementById('pf-cat-custom');
+  if (catCustom) catCustom.style.display = 'none';
+  const tipoCustom = document.getElementById('pf-tipo-interno-custom');
+  if (tipoCustom) tipoCustom.style.display = 'none';
 }
 
 // Muestra/oculta campos según si el pendiente es interno
@@ -465,6 +521,10 @@ function toggleInternoForm() {
   // Actualizar placeholder del textarea de descripción
   const lbl = document.getElementById('pf-desc-label');
   if (lbl) lbl.textContent = esInterno ? 'Descripción / detalle' : '¿Qué quedó pendiente? Describilo en detalle';
+
+  // Mostrar/ocultar mensaje informativo
+  const hint = document.getElementById('pf-interno-hint');
+  if (hint) hint.style.display = esInterno ? '' : 'none';
 
   // Limpiar chips al desactivar
   if (!esInterno) {
@@ -505,15 +565,32 @@ function togglePfCatCustom() {
   if (val !== 'otro') custom.value = '';
 }
 
+let _guardandoPendiente = false;
+
 async function guardarPendiente() {
+  if (_guardandoPendiente) return; // evitar doble-click
+  _guardandoPendiente = true;
+
+  const btn = document.querySelector('#modal-pend-form .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Guardando...'; }
+
+  try {
+    await _guardarPendienteImpl();
+  } finally {
+    _guardandoPendiente = false;
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar pendiente'; }
+  }
+}
+
+async function _guardarPendienteImpl() {
   const desc = document.getElementById('pf-desc').value.trim();
-  if (!desc) { alert('Describi que quedo pendiente.'); return; }
+  if (!desc) { toastError('Describí qué quedó pendiente.'); return; }
 
   const cliente = document.getElementById('pf-cliente').value;
   const asesor  = document.getElementById('pf-asesor').value;
   const prio    = document.getElementById('pf-prio').value;
-  const intento = document.getElementById('pf-intento').value.trim();
-  const prox    = document.getElementById('pf-prox').value.trim();
+  const intento = (document.getElementById('pf-intento') || {value:''}).value.trim();
+  const prox    = (document.getElementById('pf-prox') || {value:''}).value.trim();
   const catSelect  = document.getElementById('pf-cat').value;
   const catCustom  = ((document.getElementById('pf-cat-custom') || {}).value || '').trim();
   const cat        = catSelect === 'otro' ? catCustom : catSelect;
@@ -532,12 +609,12 @@ async function guardarPendiente() {
     asesoresDestino = Array.from(document.querySelectorAll('.pf-asesor-chip.selected:not(.pf-asesor-chip--todos)'))
       .map(c => c.dataset.asesor);
     if (asesoresDestino.length === 0) {
-      alert('Seleccioná al menos un asesor para el pendiente interno.');
+      toastError('Seleccioná al menos un asesor para el pendiente interno.');
       return;
     }
     const tipoInterno     = document.getElementById('pf-tipo-interno')?.value || 'reunion';
     const tipoCustom      = document.getElementById('pf-tipo-interno-custom')?.value.trim() || '';
-    const tipoInternoLabels = { reunion: 'Reunión', actualizacion: 'Actualización', revision: 'Revisión', otro: tipoCustom };
+    const tipoInternoLabels = { reunion: 'Reunión', actualizacion: 'Actualización', revision: 'Revisión', programacion: 'Programación', recordatorio: 'Recordatorio', otro: tipoCustom };
     categoriaFinal = tipoInterno === 'otro' ? (tipoCustom || 'Interno') : (tipoInternoLabels[tipoInterno] || 'Interno');
   } else {
     asesoresDestino = [asesor];
@@ -550,7 +627,7 @@ async function guardarPendiente() {
     descripcion:    desc,
     intento:        esInterno ? null : (intento || null),
     prox_paso:      prox || null,
-    tipo_pendiente: esInterno ? 'soporte' : tipoP,
+    tipo_pendiente: esInterno ? (document.getElementById('pf-tipo-interno')?.value || 'soporte') : tipoP,
     resuelto:       false,
     interno:        esInterno
   };
@@ -565,10 +642,12 @@ async function guardarPendiente() {
       logEvento(inserted.id, 'creado', `Asignado a ${a}, prioridad ${prio}`);
     }
 
-    document.getElementById('pend-form').style.display = 'none';
+    cerrarPendForm();
     document.getElementById('pf-desc').value = '';
-    document.getElementById('pf-intento').value = '';
-    document.getElementById('pf-prox').value = '';
+    const pfIntento = document.getElementById('pf-intento');
+    if (pfIntento) pfIntento.value = '';
+    const pfProx = document.getElementById('pf-prox');
+    if (pfProx) pfProx.value = '';
     // Limpiar buscador de cliente
     const pfSearch = document.getElementById('pf-cliente-search');
     if (pfSearch) pfSearch.value = '';
@@ -608,13 +687,30 @@ function cerrarPendiente(id, btn) {
     alert(`Solo ${p.asesor} puede marcar este pendiente como resuelto.`);
     return;
   }
-  // Interno: cierre directo sin modal ni métricas (tarea del equipo, no del cliente)
+  // Internos de programacion/actualizacion/revision: pedir horas antes de cerrar
   if (p.interno) {
+    const tiposConHoras = ['programacion', 'actualizacion', 'revision'];
+    // Registros nuevos: tipo_pendiente tiene el valor real
+    // Registros viejos: tipo_pendiente='soporte', pero categoriaLabel tiene el label
+    const catToTipo = { 'Programación': 'programacion', 'Actualización': 'actualizacion', 'Revisión': 'revision' };
+    const tipoEfectivo = tiposConHoras.includes(p.tipoPendiente)
+      ? p.tipoPendiente
+      : catToTipo[p.categoriaLabel];
+    if (tipoEfectivo) {
+      abrirModalCierreConHoras(p, btn, 'interno_' + tipoEfectivo);
+      return;
+    }
+    // Resto de internos: cierre directo sin modal ni métricas
     cerrarPendienteEjecutar(id, btn);
     return;
   }
-  // Implementacion / Repositorio: cierre directo sin modal ni métricas
-  if (p.tipoPendiente === 'implementacion' || p.tipoPendiente === 'repositorio') {
+  // Implementacion: pedir tiempo + detalle (impacta métricas de equipo)
+  if (p.tipoPendiente === 'implementacion') {
+    abrirModalCierreConHoras(p, btn, 'implementacion');
+    return;
+  }
+  // Repositorio: cierre directo sin modal ni métricas
+  if (p.tipoPendiente === 'repositorio') {
     cerrarPendienteEjecutar(id, btn);
     return;
   }
@@ -663,7 +759,7 @@ function abrirModalCierrePendiente(p, btn) {
           ⏱ Tiempo de ${esProg ? 'programación' : 'resolución'} (hs)
           <span style="color:var(--red);margin-left:2px">*</span>
         </label>
-        <input type="number" id="cierre-tiempo" placeholder="Ej: 1.5" step="0.5" min="0"
+        <input type="text" id="cierre-tiempo" placeholder="Ej: 0.30 = 30min · 1.45 = 1h 45min" min="0"
           style="font-size:15px;font-weight:600" />
         <div style="font-size:11px;color:var(--text3);margin-top:5px">
           Obligatorio. Nos permite medir cuánto consume cada cliente.
@@ -752,6 +848,187 @@ function cancelarCierrePendiente() {
   _cierreState = null;
 }
 
+// ── Modal genérico de cierre con horas + detalle ──
+// Usado por: pendientes internos de programación e implementación.
+// tipo: 'programacion_interna' | 'implementacion'
+
+let _cierreProgramacionState = null;
+
+function abrirModalCierreConHoras(p, btn, tipo) {
+  _cierreProgramacionState = { p, btn, tipo };
+
+  const anterior = document.getElementById('modal-cierre-prog-interna');
+  if (anterior) anterior.remove();
+
+  // Mapa de tipo → título e ícono
+  const tipoMeta = {
+    'implementacion':       { titulo: 'Implementación', icono: '🚀' },
+    'interno_programacion': { titulo: 'Programación',   icono: '💻' },
+    'interno_actualizacion':{ titulo: 'Actualización',  icono: '📢' },
+    'interno_revision':     { titulo: 'Revisión',       icono: '🔍' },
+  };
+  const { titulo, icono } = tipoMeta[tipo] || { titulo: 'Horas internas', icono: '⏱' };
+  const esInterno = tipo.startsWith('interno_');
+
+  // Para internos mostramos la descripción del pendiente como referencia (sin campo editable)
+  const descPreview = escapeHtmlPend(p.descripcion
+    ? p.descripcion.substring(0, 80) + (p.descripcion.length > 80 ? '…' : '')
+    : 'Sin descripción');
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'modal-cierre-prog-interna';
+  overlay.innerHTML = `
+    <div class="modal-dialog" style="max-width:440px">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">Marcar como resuelto</div>
+          <div class="modal-sub">${icono} ${titulo} · ${descPreview}</div>
+        </div>
+        <button class="btn-sm" onclick="cancelarCierreProgramacionInterna()" title="Cancelar">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom:18px">
+          <label class="fl">⏱ Horas trabajadas <span style="color:var(--red);margin-left:2px">*</span></label>
+          <input type="text" id="cierre-prog-horas" placeholder="Ej: 0.30 = 30min · 1.45 = 1h 45min"
+            style="font-size:15px;font-weight:600" />
+          <div style="font-size:11px;color:var(--text3);margin-top:5px">Obligatorio. Impacta en las métricas del equipo.</div>
+        </div>
+        <div class="form-group">
+          <label class="fl">📝 Detalle de lo realizado
+            ${esInterno
+              ? '<span style="font-size:11px;color:var(--text3);font-weight:400"> (opcional)</span>'
+              : '<span style="color:var(--red);margin-left:2px">*</span>'}
+          </label>
+          <textarea id="cierre-prog-detalle"
+            placeholder="${esInterno ? 'Si dejás vacío se usa la descripción del pendiente…' : 'Describí lo que se hizo…'}"
+            style="min-height:80px;font-size:13px;resize:vertical"></textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:12px;border-top:1px solid var(--border);flex-shrink:0">
+        <button class="btn-secondary" onclick="cancelarCierreProgramacionInterna()">Cancelar</button>
+        <button class="btn-primary" onclick="confirmarCierreProgramacionInterna()">✓ Marcar como resuelto</button>
+      </div>
+    </div>
+  `;
+
+  overlay.addEventListener('click', e => { if (e.target === overlay) cancelarCierreProgramacionInterna(); });
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('cierre-prog-horas')?.focus(), 80);
+}
+
+function abrirModalCierreProgramacionInterna(p, btn) {
+  abrirModalCierreConHoras(p, btn, 'programacion_interna');
+}
+
+function cancelarCierreProgramacionInterna() {
+  const m = document.getElementById('modal-cierre-prog-interna');
+  if (m) m.remove();
+  _cierreProgramacionState = null;
+}
+
+async function confirmarCierreProgramacionInterna() {
+  if (!_cierreProgramacionState) return;
+
+  const horasVal = document.getElementById('cierre-prog-horas')?.value;
+  const horas    = horasVal ? parsearHHMM(horasVal) : null;
+  if (!horasVal || !horas || horas <= 0) {
+    alert('Las horas son obligatorias. Ingresá cuánto llevó (ej: 0.30 = 30 min, 1.45 = 1h 45min).');
+    document.getElementById('cierre-prog-horas')?.focus();
+    return;
+  }
+
+  const { p, btn, tipo } = _cierreProgramacionState;
+  const esImpl    = tipo === 'implementacion';
+  const esInterno = tipo.startsWith('interno_');
+
+  // Para internos: usar el textarea si fue llenado, sino la descripción del pendiente
+  const detalleInput = (document.getElementById('cierre-prog-detalle')?.value || '').trim();
+  const detalle = esInterno
+    ? (detalleInput || p.descripcion || 'Sin descripción')
+    : detalleInput;
+
+  if (!esInterno && !detalle) {
+    alert('El detalle de lo realizado es obligatorio.');
+    document.getElementById('cierre-prog-detalle')?.focus();
+    return;
+  }
+
+  // Asesor: para internos usar el asesor del pendiente
+  const asesor = esInterno
+    ? (p.asesor || ((typeof currentMember !== 'undefined' && currentMember) ? currentMember.nombre : 'Equipo'))
+    : ((typeof currentMember !== 'undefined' && currentMember) ? currentMember.nombre : 'Equipo');
+
+  // Categoría según tipo
+  const catLabels = {
+    'implementacion':        'Implementación',
+    'interno_programacion':  'Programación',
+    'interno_actualizacion': 'Actualización',
+    'interno_revision':      'Revisión',
+  };
+  const catLabel     = catLabels[tipo] || 'Horas internas';
+  const tipoConsulta = esImpl ? 'implementacion' : 'programacion_interna';
+
+  // Para impl: usar el cliente del pendiente
+  const clienteObj = esImpl && p.cliente && typeof clientes !== 'undefined'
+    ? clientes.find(c => c.nombre === p.cliente) : null;
+
+  cancelarCierreProgramacionInterna();
+
+  // 1. Marcar el pendiente como resuelto
+  await cerrarPendienteEjecutar(p.id, btn);
+
+  // 2. Guardar las horas en consultas → impacta métricas de Equipo
+  try {
+    await dbInsert('consultas', {
+      cliente_id:        clienteObj ? clienteObj.id : null,
+      cliente_nombre:    esImpl ? p.cliente : null,
+      asesor,
+      categoria:         catLabel,
+      subtema:           detalle.length > 100 ? detalle.substring(0, 97) + '...' : detalle,
+      descripcion:       detalle,
+      repetida:          false,
+      solucion_id:       null,
+      tiempo_resolucion: horas,
+      material:          null,
+      conexion_remota:   false,
+      tipo_consulta:     tipoConsulta
+    });
+
+    // Actualizar array en memoria para métricas inmediatas
+    if (typeof consultas !== 'undefined') {
+      consultas.unshift({
+        id:           '_temp_pi_' + Date.now(),
+        cliente:      esImpl ? p.cliente : null,
+        asesor,
+        categoria:    catLabel,
+        subtema:      detalle,
+        repetida:     'no',
+        descripcion:  detalle,
+        solucionId:   null,
+        tiempo:       horas,
+        tipoConsulta: tipoConsulta,
+        timestamp:    new Date().toISOString()
+      });
+    }
+
+    if (typeof refreshPanelMetrics  === 'function') refreshPanelMetrics();
+    if (typeof refreshEquipoMetrics === 'function' && typeof consultas !== 'undefined') {
+      const ahora = new Date();
+      const mesActual = consultas.filter(c => {
+        const d = new Date(c.timestamp);
+        return d.getMonth() === ahora.getMonth() && d.getFullYear() === ahora.getFullYear();
+      });
+      refreshEquipoMetrics(mesActual);
+    }
+
+    toast('Pendiente resuelto · ' + horas + ' hs registradas en métricas de equipo');
+  } catch (e) {
+    console.error('Error guardando horas de programación', e);
+    toast('Pendiente resuelto (no se pudieron guardar las horas: ' + (e.message || e) + ')');
+  }
+}
+
 // Abre el selector de soluciones dentro del modal de cierre
 function elegirSolucionCierre() {
   if (!_cierreState) return;
@@ -809,9 +1086,9 @@ async function confirmarCierrePendiente() {
   if (!_cierreState) return;
 
   const tiempoVal = document.getElementById('cierre-tiempo')?.value;
-  const tiempo = parseFloat(tiempoVal);
-  if (!tiempoVal || isNaN(tiempo) || tiempo <= 0) {
-    alert('El tiempo de resolución es obligatorio. Ingresá cuántas horas te llevó (ej: 0.5, 1, 2.5).');
+  const tiempo = tiempoVal ? parsearHHMM(tiempoVal) : null;
+  if (!tiempoVal || !tiempo || tiempo <= 0) {
+    alert('El tiempo de resolución es obligatorio. Ingresá cuánto llevó (ej: 0.30 = 30 min, 1.45 = 1h 45min).');
     document.getElementById('cierre-tiempo')?.focus();
     return;
   }
@@ -989,6 +1266,7 @@ async function cerrarPendienteEjecutar(id, btn) {
     pendientes = pendientes.filter(p => p.id !== id);
     delete notasByPendiente[id];
     pendientesCerradosMes++;
+    pendientesCerradosTotal++;
     setTimeout(() => { renderPendientes(); }, 800);
     updatePendCount();
     toast('Pendiente cerrado correctamente');
@@ -1302,8 +1580,29 @@ function updatePendCount() {
   }
 
   // ── Cerrados este mes ──
-  const cerradosEl = document.getElementById('pend-cerrados-mes');
+  const cerradosEl    = document.getElementById('pend-cerrados-mes');
+  const cerradosSubEl = document.getElementById('pend-cerrados-mes-sub');
   if (cerradosEl) cerradosEl.textContent = pendientesCerradosMes;
+  if (cerradosSubEl) {
+    const diff = pendientesCerradosMes - pendientesCerradosMesAnterior;
+    if (pendientesCerradosMes === 0) {
+      cerradosSubEl.textContent = 'Sin cierres este mes';
+      cerradosSubEl.className = 'metric-sub';
+    } else if (diff > 0) {
+      cerradosSubEl.textContent = '+' + diff + ' vs mes anterior';
+      cerradosSubEl.className = 'metric-sub trend-up';
+    } else if (diff < 0) {
+      cerradosSubEl.textContent = diff + ' vs mes anterior';
+      cerradosSubEl.className = 'metric-sub trend-dn';
+    } else {
+      cerradosSubEl.textContent = 'Igual que el mes anterior';
+      cerradosSubEl.className = 'metric-sub';
+    }
+  }
+
+  // ── Cerrados históricos ──
+  const cerradosTotalEl = document.getElementById('pend-cerrados-total');
+  if (cerradosTotalEl) cerradosTotalEl.textContent = pendientesCerradosTotal;
 }
 
 
@@ -1566,12 +1865,15 @@ function findMatchingSolutions(query, limit) {
 }
 
 let _kbSugTimeout = null;
-function actualizarSugerenciasKB() {
+function actualizarSugerenciasKB(sourceId, targetId) {
+  sourceId = sourceId || 'pf-desc';
+  targetId = targetId || 'kb-suggestions';
   clearTimeout(_kbSugTimeout);
   _kbSugTimeout = setTimeout(() => {
-    const desc = document.getElementById('pf-desc').value;
-    const cont = document.getElementById('kb-suggestions');
-    if (!cont) return;
+    const srcEl = document.getElementById(sourceId);
+    const cont  = document.getElementById(targetId);
+    if (!srcEl || !cont) return;
+    const desc = srcEl.value;
 
     const matches = findMatchingSolutions(desc, 3);
     if (matches.length === 0) {
@@ -1580,104 +1882,4 @@ function actualizarSugerenciasKB() {
       return;
     }
 
-    cont.style.display = 'block';
-    const plural = matches.length > 1;
-    cont.innerHTML = `
-      <div class="kb-sug-label">${matches.length} solucion${plural ? 'es' : ''} de la base coincide${plural ? 'n' : ''}:</div>
-      ${matches.map(s => `
-        <details class="kb-sug-item">
-          <summary>${escapeHtml(s.titulo)} <span class="kb-sug-cat">${escapeHtml(s.sub || '')}</span></summary>
-          <ol class="kb-sug-steps">
-            ${(s.pasos || []).map(p => `<li>${escapeHtml(p)}</li>`).join('')}
-          </ol>
-          <div class="kb-sug-meta">
-            <span>${s.usos} usos &middot; ${escapeHtml(s.autor || '')}${s.mat && s.mat !== 'Sin material' ? ' &middot; ' + escapeHtml(s.mat) : ''}</span>
-          </div>
-        </details>
-      `).join('')}
-    `;
-  }, 250);
-}
-
-// Muestra u oculta las opciones Bug y Comercial del form de nuevo pendiente
-// según el usuario logueado:
-//   - Alfredo Cesar     → soporte + implementacion + bug
-//   - Daniel Ferro      → soporte + implementacion + comercial
-//   - Resto del equipo  → solo soporte + implementacion
-// Renderiza las opciones del select "Tipo de trabajo" del form de pendientes
-// según el usuario logueado. Se llama al init y cada vez que se abre el form.
-//   - Alfredo Cesar     → soporte + implementacion + bug
-//   - Daniel Ferro      → soporte + implementacion + comercial
-//   - Resto del equipo  → solo soporte + implementacion
-function filtrarOpcionesTipoPendiente() {
-  const sel = document.getElementById('pf-tipo');
-  if (!sel) return;
-  const email         = (window._currentAuthEmail || '').toLowerCase();
-  const esAlfredo     = email.includes('alfredo');
-  const esDanielFerro = email.includes('danielferro') || email.includes('daniel.ferro');
-
-  // Reconstruir las opciones para evitar problemas de display:none en Safari/Firefox
-  const valorActual = sel.value;
-  sel.innerHTML =
-    '<option value="soporte">Soporte</option>' +
-    '<option value="implementacion">Implementación</option>' +
-    (esAlfredo     ? '<option value="bug">Programación</option>' : '') +
-    (esDanielFerro ? '<option value="comercial">Comercial (Administración)</option>' : '');
-
-  // Restaurar el valor previo si todavía es válido para este usuario
-  if (sel.querySelector(`option[value="${valorActual}"]`)) {
-    sel.value = valorActual;
-  }
-}
-
-window.addEventListener('app-ready', initPendientes);
-
-// ────────── Buscador de clientes en form de nuevo pendiente ──────────
-
-function filtrarPfClienteSearch() {
-  const input    = document.getElementById('pf-cliente-search');
-  const dropdown = document.getElementById('pf-cliente-dropdown');
-  const select   = document.getElementById('pf-cliente');
-  if (!input || !dropdown || !select) return;
-
-  const q = input.value.trim().toLowerCase();
-
-  const opciones = Array.from(select.options)
-    .map(o => o.text)
-    .filter(t => t && t !== 'Cargando clientes...');
-
-  const filtradas = q
-    ? opciones.filter(n => n.toLowerCase().includes(q))
-    : opciones;
-
-  const bg = getComputedStyle(document.documentElement).getPropertyValue('--surface').trim() || '#1e1e2e';
-  dropdown.style.background = bg;
-
-  if (filtradas.length === 0) {
-    dropdown.innerHTML = `<div style="padding:10px 14px;color:var(--text3);font-size:13px">Sin resultados</div>`;
-  } else {
-    dropdown.innerHTML = filtradas.map(n => `
-      <div
-        class="cliente-search-opt"
-        onmousedown="elegirPfClienteSearch('${n.replace(/'/g, "\\'")}')"
-        style="padding:9px 14px;cursor:pointer;font-size:13px;border-radius:6px"
-      >${n}</div>`).join('');
-  }
-  dropdown.style.display = 'block';
-}
-
-function elegirPfClienteSearch(nombre) {
-  const input    = document.getElementById('pf-cliente-search');
-  const select   = document.getElementById('pf-cliente');
-  const dropdown = document.getElementById('pf-cliente-dropdown');
-  if (input)    input.value  = nombre;
-  if (select)   select.value = nombre;
-  if (dropdown) dropdown.style.display = 'none';
-}
-
-function cerrarPfClienteSearch() {
-  setTimeout(() => {
-    const dropdown = document.getElementById('pf-cliente-dropdown');
-    if (dropdown) dropdown.style.display = 'none';
-  }, 150);
-}
+    cont.style.display = '

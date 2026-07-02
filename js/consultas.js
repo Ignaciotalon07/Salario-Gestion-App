@@ -37,7 +37,7 @@ function dbRowToConsulta(row) {
 function abrirModalConsulta(clientePreseleccionado) {
   const modal = document.getElementById('modal-consulta');
   if (!modal) return;
-  modal.style.display = 'block';
+  modal.style.display = 'flex';
   document.body.style.overflow = 'hidden'; // evitar scroll del fondo
 
   // Inyectar categorías custom al desplegable
@@ -78,9 +78,9 @@ function irARegistrarConsulta(nombreCliente) {
 // Soporte: form completo con base de soluciones
 // Comercial: form sin base de soluciones
 function onTipoConsultaChange() {
-  const tipo = (document.getElementById('r-tipo-consulta') || {}).value || 'soporte';
-  const esProg = tipo === 'programacion';
-  const esSop  = tipo === 'soporte';
+  const tipo    = (document.getElementById('r-tipo-consulta') || {}).value || 'soporte';
+  const esProg  = tipo === 'programacion';
+  const esSop   = tipo === 'soporte';
 
   const show = (id, visible) => {
     const el = document.getElementById(id);
@@ -91,22 +91,31 @@ function onTipoConsultaChange() {
   show('r-row-cat',        !esProg);
   show('r-row-prog-sub',   esProg);
 
-  // Repetida ↔ oculta en programación
-  show('r-row-rep',        !esProg);
+  // Repetida: solo soporte/comercial
+  show('r-row-rep',         !esProg);
+
+  // Tiempo: solo visible en programación
   show('r-row-tiempo-solo', esProg);
 
   // Material + remota: solo soporte/comercial
-  show('r-row-material',   !esProg);
+  show('r-row-material',    !esProg);
 
-  // Programación realizada: solo programación
+  // Programación realizada: solo para programacion
   show('r-group-prog-realizada', esProg);
 
   // Base de soluciones: solo soporte
   show('r-group-soluciones', esSop);
 
-  // Label de descripción
-  const lbl = document.getElementById('r-desc-label');
-  if (lbl) lbl.textContent = esProg ? '¿Qué consultó el cliente?' : 'Descripción del problema';
+  // Label de descripción y placeholder
+  const lbl  = document.getElementById('r-desc-label');
+  const desc = document.getElementById('r-desc');
+  if (esProg) {
+    if (lbl)  lbl.textContent  = '¿Qué consultó el cliente?';
+    if (desc) desc.placeholder = 'Ej: El cliente no sabía liquidar las horas extras en feriado...';
+  } else {
+    if (lbl)  lbl.textContent  = 'Descripción del problema';
+    if (desc) desc.placeholder = 'Ej: El cliente no sabía liquidar las horas extras en feriado...';
+  }
 
   // Poblar datalist de subtemas previos de programación
   if (esProg) {
@@ -183,6 +192,16 @@ function suscribirConsultas() {
             if (typeof renderClientes === 'function') renderClientes();
             // Refrescar la página de Consultas
             if (typeof refreshConsultasPage === 'function') refreshConsultasPage();
+            // Si el detalle de un cliente está abierto, refrescarlo
+            if (typeof _detalleClienteId !== 'undefined' && _detalleClienteId &&
+                payload.new.cliente_nombre && typeof goClienteDetail === 'function') {
+              const clienteDetalle = typeof clientes !== 'undefined'
+                ? clientes.find(c => c.id === _detalleClienteId)
+                : null;
+              if (clienteDetalle && clienteDetalle.nombre === payload.new.cliente_nombre) {
+                goClienteDetail(_detalleClienteId);
+              }
+            }
           }
         })
     .subscribe();
@@ -190,12 +209,18 @@ function suscribirConsultas() {
 
 // ────────── Categorías y subtemas custom (persistidos en consultas) ──────────
 
-// Devuelve las categorías custom: las que aparecen en consultas pero no están en CATS
+// Devuelve las categorías custom: las que aparecen en consultas pero no están en CATS.
+// Se excluyen valores internos que no son categorías de clientes.
+const CATEGORIAS_EXCLUIDAS = new Set([
+  'programacion', 'programacion_interna', 'Programación interna',
+  'implementacion', 'Implementación'
+]);
+
 function getCategoriasCustom() {
   if (typeof consultas === 'undefined') return [];
   const conocidas = new Set(Object.keys(CATS));
   const todas = [...new Set(consultas.map(c => c.categoria).filter(Boolean))];
-  return todas.filter(c => !conocidas.has(c)).sort();
+  return todas.filter(c => !conocidas.has(c) && !CATEGORIAS_EXCLUIDAS.has(c)).sort();
 }
 
 // Devuelve los subtemas custom usados para una categoría (no están en CATS[cat].sub)
@@ -540,6 +565,17 @@ async function guardarConsulta(mantenerAbierto = false) {
     cerrarModalConsulta();
   }
 
+  // Si el detalle de ese cliente está abierto, refrescarlo inmediatamente
+  if (typeof _detalleClienteId !== 'undefined' && _detalleClienteId &&
+      typeof goClienteDetail === 'function') {
+    const clienteDetalle = typeof clientes !== 'undefined'
+      ? clientes.find(c => c.nombre === cliente)
+      : null;
+    if (clienteDetalle && clienteDetalle.id === _detalleClienteId) {
+      goClienteDetail(_detalleClienteId);
+    }
+  }
+
   toast(nuevaSolucionId ? 'Consulta guardada y nueva solución agregada a la base' : 'Consulta guardada correctamente');
 }
 
@@ -865,6 +901,7 @@ function resetFormConsulta() {
   // Asegurarse de que el grupo de solución quede visible
   const solGroup = document.getElementById('r-sol-group');
   if (solGroup) solGroup.style.display = '';
+
 }
 
 // ────────── Helpers ──────────
