@@ -17,6 +17,7 @@
   --radius: 10px; --radius-lg: 14px; --radius-xl: 20px;
   --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
   --transition: 0.15s ease;
+  --hover: rgba(0,0,0,0.045);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -316,8 +317,9 @@ textarea::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3
 /* Asesor row */
 .asesor-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--border); }
 .asesor-row:last-child { border-bottom: none; }
-.asesor-row--clickable { cursor: pointer; border-radius: 8px; padding-left: 6px; padding-right: 6px; transition: background .15s; }
-.asesor-row--clickable:hover { background: var(--hover); }
+.asesor-row--clickable { cursor: pointer; border-radius: 8px; padding-left: 6px; padding-right: 6px; transition: background .2s, box-shadow .25s ease, transform .2s; box-shadow: inset 0px 0 0 transparent; }
+.asesor-row--clickable:hover { background: var(--hover); box-shadow: inset 3px 0 0 #E65C00, 0 2px 8px rgba(0,0,0,0.08); transform: translateX(3px); }
+.asesor-row--clickable:active { transform: translateX(1px); }
 
 /* Fila dentro del modal de asesor */
 .asesor-modal-row { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border); position: relative; overflow: hidden; cursor: default; }
@@ -3399,6 +3401,7 @@ input[type=date]:focus {
   --blue-bg:   rgba(100, 181, 246, 0.14);
   --blue-text: #90caf9;
   --shadow: 0 1px 3px rgba(0,0,0,0.32), 0 1px 2px rgba(0,0,0,0.24);
+  --hover: rgba(255,255,255,0.07);
 }
 
 /* ==========================================================
