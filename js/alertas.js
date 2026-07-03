@@ -369,9 +369,9 @@ function refreshAlertas() {
     });
   }
 
-  // ── 8. CLIENTES MODELO (score >= 8, autonomía alta, < 15% repetición histórica, mínimo 3 consultas) ──
+  // ── 8. CLIENTES MODELO (score >= 9, autonomía alta, < 15% repetición histórica, mínimo 3 consultas) ──
   const clientesModelo = allClientes.filter(c => {
-    if (c.score < 8 || c.autonomia !== 'alta') return false;
+    if (c.score < 9 || c.autonomia !== 'alta') return false;
     const hist = allConsultas.filter(q => q.cliente === c.nombre);
     if (hist.length < 3) return false;
     const pctRep = hist.filter(q => q.repetida === 'si').length / hist.length;
