@@ -340,7 +340,7 @@ function refreshPanelMetrics() {
   const elRep = document.getElementById('metric-rep-pct');
   if (elRep) {
     elRep.textContent = pctRep + '%';
-    elRep.style.color = pctRep <= 20 ? 'var(--green)' : pctRep <= 30 ? 'var(--amber)' : 'var(--red)';
+    elRep.style.color = pctRep > 20 ? 'var(--red)' : '';
   }
 
   const elAnio = document.getElementById('metric-consultas-anio');

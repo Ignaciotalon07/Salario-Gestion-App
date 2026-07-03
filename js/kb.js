@@ -144,7 +144,7 @@ function actualizarMetricasKB() {
       return dias > 60 && (s.usos || 0) >= 1;
     });
     cards[2].textContent = paraRevisar.length;
-    cards[2].style.color = paraRevisar.length > 0 ? 'var(--amber)' : 'var(--green)';
+    cards[2].style.color = paraRevisar.length > 0 ? 'var(--amber)' : '';
   }
 
   // Agregadas este mes

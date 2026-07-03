@@ -638,11 +638,10 @@
             </div>
 
             <div class="metrics-grid">
-              <div class="metric-card">
-                <div class="metric-label">Clientes activos</div>
+              <div class="metric-card" style="border-top:3px solid var(--accent);padding-top:15px">
+                <div class="metric-label" style="color:var(--accent)">Clientes activos</div>
                 <div
                   class="metric-value"
-                  style="color: var(--accent)"
                   id="metric-clientes-activos"
                 >
                   0
@@ -651,34 +650,32 @@
                   0 en implementación
                 </div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label" id="metric-consultas-mes-label">Consultas este mes</div>
+              <div class="metric-card" style="border-top:3px solid var(--green);padding-top:15px">
+                <div class="metric-label" style="color:var(--green)" id="metric-consultas-mes-label">Consultas este mes</div>
                 <div class="metric-value" id="metric-consultas-mes">0</div>
                 <div class="metric-sub" id="metric-consultas-sub">
                   Sin consultas este mes
                 </div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">% consultas repetidas</div>
+              <div class="metric-card" style="border-top:3px solid var(--red);padding-top:15px">
+                <div class="metric-label" style="color:var(--red)">% consultas repetidas</div>
                 <div
                   class="metric-value"
-                  style="color: var(--red)"
                   id="metric-rep-pct"
                 >
                   0%
                 </div>
                 <div class="metric-sub">Meta: &lt; 20%</div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label" id="metric-hs-equipo-label">Hs equipo este mes</div>
-                <div class="metric-value" style="color: var(--amber)" id="metric-hs-equipo">—</div>
+              <div class="metric-card" style="border-top:3px solid #E65C00;padding-top:15px">
+                <div class="metric-label" style="color:#E65C00" id="metric-hs-equipo-label">Hs equipo este mes</div>
+                <div class="metric-value" id="metric-hs-equipo">—</div>
                 <div class="metric-sub" id="metric-hs-equipo-sub">Sin horas registradas</div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Consultas este año</div>
+              <div class="metric-card" style="border-top:3px solid var(--blue);padding-top:15px">
+                <div class="metric-label" style="color:var(--blue)">Consultas este año</div>
                 <div
                   class="metric-value"
-                  style="color: var(--blue)"
                   id="metric-consultas-anio"
                 >
                   0
@@ -938,23 +935,23 @@
 
             <!-- Métricas principales -->
             <div class="metrics-grid" style="margin-bottom:20px">
-              <div class="metric-card">
-                <div class="metric-label">Hoy</div>
+              <div class="metric-card" style="border-top:3px solid #E65C00;padding-top:15px">
+                <div class="metric-label" style="color:#E65C00">Hoy</div>
                 <div class="metric-value" id="cp-hoy">—</div>
                 <div class="metric-sub" id="cp-hoy-sub">consultas</div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Este mes</div>
+              <div class="metric-card" style="border-top:3px solid var(--green);padding-top:15px">
+                <div class="metric-label" style="color:var(--green)">Este mes</div>
                 <div class="metric-value" id="cp-mes">—</div>
                 <div class="metric-sub" id="cp-mes-sub">—</div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Top cliente del mes</div>
+              <div class="metric-card" style="border-top:3px solid var(--accent);padding-top:15px">
+                <div class="metric-label" style="color:var(--accent)">Top cliente del mes</div>
                 <div class="metric-value" id="cp-top-mes-nombre" style="font-size:16px;line-height:1.2">—</div>
                 <div class="metric-sub" id="cp-top-mes-sub">—</div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Prom. diario (mes)</div>
+              <div class="metric-card" style="border-top:3px solid var(--blue);padding-top:15px">
+                <div class="metric-label" style="color:var(--blue)">Prom. diario (mes)</div>
                 <div class="metric-value" id="cp-prom">—</div>
                 <div class="metric-sub">consultas por día</div>
               </div>
@@ -1267,47 +1264,23 @@
               class="metrics-grid"
               style="grid-template-columns: repeat(4, 1fr)"
             >
-              <div class="metric-card">
-                <div class="metric-label">Pendientes activos</div>
-                <div
-                  class="metric-value"
-                  style="color: var(--amber)"
-                  id="pend-count"
-                >
-                  0
-                </div>
+              <div class="metric-card" style="border-top:3px solid #E65C00;padding-top:15px">
+                <div class="metric-label" style="color:#E65C00">Pendientes activos</div>
+                <div class="metric-value" id="pend-count">0</div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Más antiguo</div>
-                <div
-                  class="metric-value"
-                  style="font-size: 16px; color: var(--red)"
-                  id="pend-mas-antiguo-val"
-                >
-                  2 días
-                </div>
+              <div class="metric-card" style="border-top:3px solid var(--red);padding-top:15px">
+                <div class="metric-label" style="color:var(--red)">Más antiguo</div>
+                <div class="metric-value" style="font-size:16px" id="pend-mas-antiguo-val">2 días</div>
                 <div class="metric-sub" id="pend-mas-antiguo-sub">—</div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Cerrados este mes</div>
-                <div
-                  class="metric-value"
-                  style="color: var(--green)"
-                  id="pend-cerrados-mes"
-                >
-                  0
-                </div>
+              <div class="metric-card" style="border-top:3px solid var(--green);padding-top:15px">
+                <div class="metric-label" style="color:var(--green)">Cerrados este mes</div>
+                <div class="metric-value" id="pend-cerrados-mes">0</div>
                 <div class="metric-sub" id="pend-cerrados-mes-sub">—</div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Cerrados históricos</div>
-                <div
-                  class="metric-value"
-                  style="color: var(--accent)"
-                  id="pend-cerrados-total"
-                >
-                  0
-                </div>
+              <div class="metric-card" style="border-top:3px solid var(--blue);padding-top:15px">
+                <div class="metric-label" style="color:var(--blue)">Cerrados históricos</div>
+                <div class="metric-value" id="pend-cerrados-total">0</div>
               </div>
             </div>
 
@@ -1508,49 +1481,23 @@
             </div>
 
             <div class="metrics-grid">
-              <div class="metric-card">
-                <div class="metric-label">En implementación</div>
-                <div
-                  class="metric-value"
-                  id="impl-m-total"
-                  style="color: var(--accent)"
-                >
-                  —
-                </div>
+              <div class="metric-card" style="border-top:3px solid var(--accent);padding-top:15px">
+                <div class="metric-label" style="color:var(--accent)">En implementación</div>
+                <div class="metric-value" id="impl-m-total">—</div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Tareas completadas</div>
-                <div
-                  class="metric-value"
-                  id="impl-m-completas"
-                  style="color: var(--green)"
-                >
-                  —
-                </div>
-                <div class="metric-sub" id="impl-m-completas-sub">
-                  de — totales
-                </div>
+              <div class="metric-card" style="border-top:3px solid var(--green);padding-top:15px">
+                <div class="metric-label" style="color:var(--green)">Tareas completadas</div>
+                <div class="metric-value" id="impl-m-completas">—</div>
+                <div class="metric-sub" id="impl-m-completas-sub">de — totales</div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Vencidas</div>
-                <div
-                  class="metric-value"
-                  id="impl-m-demoradas"
-                  style="color: var(--red)"
-                >
-                  —
-                </div>
+              <div class="metric-card" style="border-top:3px solid var(--red);padding-top:15px">
+                <div class="metric-label" style="color:var(--red)">Vencidas</div>
+                <div class="metric-value" id="impl-m-demoradas">—</div>
                 <div class="metric-sub">tareas con fecha vencida</div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Progreso promedio</div>
-                <div
-                  class="metric-value"
-                  id="impl-m-progreso"
-                  style="color: var(--amber)"
-                >
-                  —
-                </div>
+              <div class="metric-card" style="border-top:3px solid #E65C00;padding-top:15px">
+                <div class="metric-label" style="color:#E65C00">Progreso promedio</div>
+                <div class="metric-value" id="impl-m-progreso">—</div>
               </div>
             </div>
 
@@ -1733,24 +1680,24 @@
             </div>
 
             <div class="metrics-grid">
-              <div class="metric-card">
-                <div class="metric-label">Total asesores</div>
+              <div class="metric-card" style="border-top:3px solid var(--blue);padding-top:15px">
+                <div class="metric-label" style="color:var(--blue)">Total asesores</div>
                 <div class="metric-value">6</div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Clientes atendidos</div>
+              <div class="metric-card" style="border-top:3px solid var(--green);padding-top:15px">
+                <div class="metric-label" style="color:var(--green)">Clientes atendidos</div>
                 <div class="metric-value" id="eq-clientes-atendidos">—</div>
                 <div class="metric-sub" id="eq-clientes-atendidos-sub">
                   este mes
                 </div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Hs totales equipo</div>
+              <div class="metric-card" style="border-top:3px solid #E65C00;padding-top:15px">
+                <div class="metric-label" style="color:#E65C00">Hs totales equipo</div>
                 <div class="metric-value" id="eq-hs-totales">—</div>
                 <div class="metric-sub" id="eq-hs-sub">este mes</div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Más cargado</div>
+              <div class="metric-card" style="border-top:3px solid var(--red);padding-top:15px">
+                <div class="metric-label" style="color:var(--red)">Más cargado</div>
                 <div
                   class="metric-value"
                   id="eq-mas-cargado"
@@ -1913,33 +1860,25 @@
             </div>
 
             <div class="metrics-grid">
-              <div class="metric-card">
-                <div class="metric-label">Soluciones cargadas</div>
-                <div class="metric-value" style="color: var(--accent)">38</div>
-                <div class="metric-sub">en 5 categorías</div>
+              <div class="metric-card" style="border-top:3px solid var(--accent);padding-top:15px">
+                <div class="metric-label" style="color:var(--accent)">Soluciones cargadas</div>
+                <div class="metric-value" id="kb-m-total">38</div>
+                <div class="metric-sub" id="kb-m-total-sub">en 5 categorías</div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Más consultada</div>
-                <div
-                  class="metric-value"
-                  style="
-                    font-size: 15px;
-                    line-height: 1.3;
-                    margin-top: 4px;
-                    color: var(--blue);
-                  "
-                >
+              <div class="metric-card" style="border-top:3px solid var(--blue);padding-top:15px">
+                <div class="metric-label" style="color:var(--blue)">Más consultada</div>
+                <div class="metric-value" id="kb-m-top" style="font-size:15px;line-height:1.3;margin-top:4px">
                   Horas extras en feriado
                 </div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Para revisar</div>
-                <div class="metric-value" style="color: var(--amber)">3</div>
+              <div class="metric-card" style="border-top:3px solid #E65C00;padding-top:15px">
+                <div class="metric-label" style="color:#E65C00">Para revisar</div>
+                <div class="metric-value" id="kb-m-revisar">3</div>
                 <div class="metric-sub">pueden estar desactualizadas</div>
               </div>
-              <div class="metric-card">
-                <div class="metric-label">Agregadas este mes</div>
-                <div class="metric-value" style="color: var(--green)">5</div>
+              <div class="metric-card" style="border-top:3px solid var(--green);padding-top:15px">
+                <div class="metric-label" style="color:var(--green)">Agregadas este mes</div>
+                <div class="metric-value" id="kb-m-mes">5</div>
               </div>
             </div>
 
