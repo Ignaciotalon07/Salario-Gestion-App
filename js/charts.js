@@ -1193,14 +1193,23 @@ function _abrirDetalleRegistroAsesor(id) {
         </div>
         <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
           <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">
-            ${!esInterna ? 'Repetida / Remota' : 'Tiempo'}
+            ${!esInterna ? 'Repetida' : '⏱ Tiempo'}
           </div>
           <div style="font-size:13px;font-weight:500">
             ${!esInterna
-              ? `${c.repetida === 'si' || c.repetida === true ? 'Sí' : 'No'} / ${c.conexionRemota || c.conexion_remota ? 'Sí' : 'No'}`
+              ? (c.repetida === 'si' || c.repetida === true ? 'Sí' : 'No')
               : (c.tiempo ? fmtHHMM(c.tiempo) : '—')}
           </div>
         </div>
+        ${!esInterna ? `
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Remota</div>
+          <div style="font-size:13px;font-weight:500">${c.conexionRemota || c.conexion_remota ? 'Sí' : 'No'}</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">⏱ Tiempo</div>
+          <div style="font-size:13px;font-weight:500">${c.tiempo ? fmtHHMM(c.tiempo) : '—'}</div>
+        </div>` : ''}
       </div>
 
       <!-- Detalle -->
