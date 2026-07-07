@@ -60,10 +60,16 @@ async function initRepositorio() {
   suscribirRepositorio();
 }
 
-// Cuenta items nuevos (creados después del último acceso del usuario)
+// Cuenta items nuevos o editados después del último acceso del usuario
 function _repoNuevosCount() {
   if (!_repoUltimoVisto) return repoItems.length;
-  return repoItems.filter(i => new Date(i.created_at) > new Date(_repoUltimoVisto)).length;
+  const limite = new Date(_repoUltimoVisto);
+  return repoItems.filter(i => {
+    const creado    = i.created_at  ? new Date(i.created_at)  : null;
+    const editado   = i.updated_at  ? new Date(i.updated_at)  : null;
+    const masReciente = editado && editado > (creado || 0) ? editado : creado;
+    return masReciente && masReciente > limite;
+  }).length;
 }
 
 // Actualiza el badge naranja en el nav
@@ -132,10 +138,10 @@ function renderRepoCard(item) {
         </div>`).join('')
     : '<div style="font-size:12px;color:var(--text3)">Sin archivos adjuntos.</div>';
 
-  // Indicador de "nuevo" (creado después del último acceso del usuario)
-  const esNuevo = _repoUltimoVisto
-    ? new Date(item.created_at) > new Date(_repoUltimoVisto)
-    : true;
+  // Indicador de "nuevo" o "editado" (posterior al último acceso del usuario)
+  const limite   = _repoUltimoVisto ? new Date(_repoUltimoVisto) : null;
+  const esNuevo  = limite ? new Date(item.created_at) > limite : true;
+  const esEditado = !esNuevo && limite && item.updated_at && new Date(item.updated_at) > limite;
 
   return `
     <div class="repo-card" id="repo-card-${item.id}">
@@ -143,7 +149,8 @@ function renderRepoCard(item) {
         <span class="repo-cat-badge" style="background:${cat.bg};color:${cat.color}">
           ${cat.emoji} ${cat.label}
         </span>
-        ${esNuevo ? '<span style="font-size:11px;font-weight:600;color:#f59e0b;background:rgba(245,158,11,0.12);border-radius:4px;padding:2px 7px">Nuevo</span>' : ''}
+        ${esNuevo   ? '<span style="font-size:11px;font-weight:600;color:#f59e0b;background:rgba(245,158,11,0.12);border-radius:4px;padding:2px 7px">Nuevo</span>' : ''}
+        ${esEditado ? '<span style="font-size:11px;font-weight:600;color:#7575e8;background:rgba(117,117,232,0.12);border-radius:4px;padding:2px 7px">Editado</span>' : ''}
         <span class="repo-card-meta">${_escRepo(item.subido_por || 'Equipo')} · ${fecha}</span>
         <div class="repo-card-actions">
           <button class="btn-sm" onclick="editarItemRepo('${item.id}')">Editar</button>
@@ -243,8 +250,10 @@ async function guardarItemRepo() {
     }
     _repoArchivosStaged = [];
 
+    // Adelantar _repoUltimoVisto para que el editor no se notifique a sí mismo
+    _repoUltimoVisto = new Date().toISOString();
     cerrarFormRepo();
-    renderRepoList(); // ya actualizado por realtime o local
+    renderRepoList();
   } catch (e) {
     console.error('Error guardando item repo', e);
     alert('No se pudo guardar: ' + e.message);
