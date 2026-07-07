@@ -178,6 +178,14 @@ function verKBDetalle(id) {
   if (!s) return;
   const cat = CATS[s.cat] || { label: s.cat, bg: '#eee', text: '#444' };
   kbActiva = id;
+
+  // Primer cliente al que se le aplicó esta solución
+  const todasConsultas = typeof consultas !== 'undefined' ? consultas : [];
+  const primerUso = todasConsultas
+    .filter(c => (c.solucion_id || c.solucionId) === id)
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))[0];
+  const primerCliente = primerUso ? (primerUso.cliente || primerUso.cliente_nombre || null) : null;
+
   const overlay = document.getElementById('kb-detail-overlay');
   const box = document.getElementById('kb-detail');
   box.innerHTML = `
@@ -186,6 +194,7 @@ function verKBDetalle(id) {
         <span class="badge" style="background:${cat.bg};color:${cat.text};margin-bottom:6px;display:inline-block">${cat.label} &middot; ${escapeHtmlKB(s.sub)}</span>
         <div style="font-size:15px;font-weight:600;line-height:1.4;color:var(--accent-text)">${escapeHtmlKB(s.titulo)}</div>
         <div style="font-size:11px;color:var(--text3);margin-top:4px">Por ${escapeHtmlKB(s.autor)} &middot; Actualizado ${s.fecha} &middot; Usado ${s.usos} ${s.usos === 1 ? 'vez' : 'veces'} &middot; ${escapeHtmlKB(s.aplica)}</div>
+        ${primerCliente ? `<div style="font-size:11px;color:var(--text3);margin-top:3px">Solución aplicada a: <strong style="color:var(--text2)">${escapeHtmlKB(primerCliente)}</strong></div>` : ''}
       </div>
       <button onclick="cerrarKB()" style="background:none;border:none;font-size:22px;line-height:1;color:var(--text3);cursor:pointer;padding:2px 4px;border-radius:6px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">✕</button>
     </div>
