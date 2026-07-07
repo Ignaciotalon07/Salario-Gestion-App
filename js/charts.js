@@ -727,7 +727,7 @@ function refreshEquipoMetrics(mesActual) {
         const subDerecha = [hsTexto, promTexto ? 'prom ' + promTexto : null].filter(Boolean).join(' · ');
 
         return `
-          <div class="asesor-row asesor-row--clickable" onclick="abrirModalAsesor(this.dataset.nombre)" data-nombre="${escapeHtmlPanel(nombre)}">
+          <div class="asesor-row asesor-row--clickable" onclick="goAsesorDetail(this.dataset.nombre)" data-nombre="${escapeHtmlPanel(nombre)}">
             <div class="av" style="background:${color}22;color:${color};font-size:11px;font-weight:700;flex-shrink:0">
               ${escapeHtmlPanel(iniciales)}
             </div>
