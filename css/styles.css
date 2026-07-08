@@ -77,7 +77,7 @@ body {
 }
 .nav-badge.warn { background: var(--amber); }
 
-.main { margin-left: 220px; padding: 28px 32px; max-width: 1100px; min-height: 100vh; }
+.main { margin-left: 220px; padding: 28px 32px; min-height: 100vh; }
 
 .page { display: none; }
 .page.active { display: block; }
