@@ -300,8 +300,8 @@ function _renderAsesorChart() {
   return `
     <div class="card" style="padding:20px 24px 16px;margin-bottom:16px">
       <div class="card-title" style="margin-bottom:12px">Consultas por mes — últimos 6 meses</div>
-      <div style="position:relative;height:180px">
-        <canvas id="asesor-detalle-chart" role="img" aria-label="Consultas del asesor por mes"></canvas>
+      <div style="position:relative;height:180px;width:100%;overflow:hidden">
+        <canvas id="asesor-detalle-chart" role="img" aria-label="Consultas del asesor por mes" style="max-width:100%"></canvas>
       </div>
     </div>
   `;
@@ -651,7 +651,9 @@ function _calcularFilas(consultasCli, consultasInt) {
           </div>
           <div style="font-size:11px;color:var(--text3);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <span>${tipoLabel}</span>
-            ${!esInterna ? `<span>· ${_escAsesor(catLabel + subtema)}</span>` : ''}
+            ${!esInterna
+              ? `<span>· ${_escAsesor(catLabel + subtema)}</span>`
+              : (c.categoria && c.categoria !== '—' ? `<span>· ${_escAsesor(catLabel)}</span>` : '')}
             ${c.repetida === 'si' ? '<span style="color:var(--amber);font-weight:600">· Repetida</span>' : ''}
           </div>
         </div>
