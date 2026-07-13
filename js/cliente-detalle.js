@@ -206,10 +206,14 @@ function _renderDetalleTipoStats(consultasDelCliente) {
   const item = (tipo, emoji, label, count, color) => `
     <div onclick="filtrarDetalleTipo('${tipo}')" title="Filtrar por ${label}"
       style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px;
-             cursor:pointer;border-radius:8px;transition:background .15s"
+             cursor:pointer;border-radius:8px;transition:background .15s;min-width:0"
       onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
       <div style="font-size:22px;font-weight:700;color:${color}">${count}</div>
-      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${emoji} ${label}</div>
+      <div class="detalle-tipo-label">
+        ${emoji}
+        <span class="detalle-tipo-label__full">${label}</span>
+        <span class="detalle-tipo-label__short">${label.length > 10 ? label.substring(0, 7) + '.' : label}</span>
+      </div>
     </div>`;
 
   return `

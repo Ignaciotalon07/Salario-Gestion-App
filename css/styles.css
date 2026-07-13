@@ -4282,6 +4282,26 @@ input[type=date]:focus {
   gap: 6px;
 }
 
+/* Label de tipo en el bloque "Consultas por tipo" del detalle de asesor */
+.asesor-tipo-label {
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  text-align: center;
+}
+.asesor-tipo-label__short { display: none; }
+
+/* Label de tipo en el bloque "Consultas por tipo" del detalle de cliente */
+.detalle-tipo-label {
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  text-align: center;
+}
+.detalle-tipo-label__short { display: none; }
+
 /* Stats row */
 .detalle-stats {
   display: grid;
@@ -4436,15 +4456,9 @@ input[type=date]:focus {
   .score-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   #score-riesgo-tbody td, .score-table th { white-space: nowrap; }
 
-  /* ── Pendientes: métricas centradas ── */
+  /* ── Pendientes: métricas — 4 cards en 2×2 ── */
   #pendientes .metrics-grid {
     grid-template-columns: 1fr 1fr !important;
-  }
-  #pendientes .metrics-grid .metric-card {
-    text-align: center;
-  }
-  #pendientes .metrics-grid .metric-card:nth-child(3) {
-    grid-column: 1 / -1;
   }
 
   /* ── Pendientes: filtros — igual que clientes ── */
@@ -4609,6 +4623,40 @@ input[type=date]:focus {
   .btn-row .btn-sm { font-size: 12px; padding: 7px 12px; }
   .filter-row { flex-wrap: wrap; gap: 6px; }
   .filter-chip { font-size: 11px; padding: 5px 10px; }
+
+  /* ── Detalle cliente/asesor: label tipo compacto en mobile ── */
+  .detalle-tipo-label, .asesor-tipo-label { font-size: 10px; letter-spacing: 0; }
+  .detalle-tipo-label__full, .asesor-tipo-label__full   { display: none; }
+  .detalle-tipo-label__short, .asesor-tipo-label__short { display: inline; }
+
+  /* ── Panel general y Equipo: header ── */
+  #dashboard .page-header,
+  #equipo .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  /* El div derecho (botón + mes) pierde el min-width fijo */
+  #dashboard .page-header > div:last-child,
+  #equipo .page-header > div:last-child {
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  /* ── Equipo: gráfico contenido ── */
+  #equipo .card > div[style*="height: 220px"] {
+    overflow: hidden;
+    width: 100%;
+  }
+  #equipo canvas { max-width: 100%; }
+
+  /* ── Panel general: 5 métricas en 2 columnas, la 5ta ocupa todo el ancho ── */
+  #dashboard .metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  #dashboard .metrics-grid .metric-card:nth-child(5) {
+    grid-column: 1 / -1;
+  }
 
   /* ── Tabla score → filas limpias en mobile ── */
   #dashboard .tbl thead { display: none; }

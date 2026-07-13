@@ -255,23 +255,27 @@ const _TIPOS_POR_ASESOR = {
 
 // Definición visual + filtro de cada tipo
 const _TIPO_DEF = {
-  soporte:        { emoji: '🎧', label: 'Soporte',        color: 'var(--accent)', filtro: c => !c.tipoConsulta || c.tipoConsulta === 'soporte'        || c.tipo_consulta === 'soporte'        },
-  programacion:   { emoji: '🐛', label: 'Programación',   color: 'var(--red)',    filtro: c =>  c.tipoConsulta === 'programacion'                      || c.tipo_consulta === 'programacion'   },
-  comercial:      { emoji: '💼', label: 'Comercial',      color: 'var(--green)',  filtro: c =>  c.tipoConsulta === 'comercial'                         || c.tipo_consulta === 'comercial'      },
-  implementacion: { emoji: '📋', label: 'Implementación', color: 'var(--amber)',  filtro: c =>  c.tipoConsulta === 'implementacion'                    || c.tipo_consulta === 'implementacion' },
-  interna:        { emoji: '💻', label: 'Registros internos', color: 'var(--text2)', filtro: null  }, // usa consultasInt
+  soporte:        { emoji: '🎧', label: 'Soporte',            labelCorto: 'Soporte',    color: 'var(--accent)', filtro: c => !c.tipoConsulta || c.tipoConsulta === 'soporte'        || c.tipo_consulta === 'soporte'        },
+  programacion:   { emoji: '🐛', label: 'Programación',       labelCorto: 'Program.',   color: 'var(--red)',    filtro: c =>  c.tipoConsulta === 'programacion'                      || c.tipo_consulta === 'programacion'   },
+  comercial:      { emoji: '💼', label: 'Comercial',          labelCorto: 'Comercial',  color: 'var(--green)',  filtro: c =>  c.tipoConsulta === 'comercial'                         || c.tipo_consulta === 'comercial'      },
+  implementacion: { emoji: '📋', label: 'Implementación',     labelCorto: 'Impleme.',   color: 'var(--amber)',  filtro: c =>  c.tipoConsulta === 'implementacion'                    || c.tipo_consulta === 'implementacion' },
+  interna:        { emoji: '💻', label: 'Registros internos', labelCorto: 'Internos',   color: 'var(--text2)', filtro: null  }, // usa consultasInt
 };
 
 function _renderAsesorTipoStats(nombre, consultasCli, consultasInt) {
   const tiposActivos = _TIPOS_POR_ASESOR[nombre] || ['soporte', 'implementacion', 'interna'];
 
-  const item = (tipo, emoji, label, count, color) => `
+  const item = (tipo, emoji, label, labelCorto, count, color) => `
     <div onclick="filtrarAsesorDetalleTipo('${tipo}')" title="Filtrar por ${label}"
       style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 8px;
              cursor:pointer;border-radius:8px;transition:background .15s"
       onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
       <div style="font-size:24px;font-weight:700;color:${color}">${count}</div>
-      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">${emoji} ${label}</div>
+      <div class="asesor-tipo-label">
+        ${emoji}
+        <span class="asesor-tipo-label__full">${label}</span>
+        <span class="asesor-tipo-label__short">${labelCorto}</span>
+      </div>
     </div>`;
 
   const sep = `<div style="width:1px;background:var(--border);margin:8px 0"></div>`;
@@ -281,7 +285,7 @@ function _renderAsesorTipoStats(nombre, consultasCli, consultasInt) {
     const count = tipo === 'interna'
       ? consultasInt.length
       : consultasCli.filter(def.filtro).length;
-    return (idx > 0 ? sep : '') + item(tipo, def.emoji, def.label, count, def.color);
+    return (idx > 0 ? sep : '') + item(tipo, def.emoji, def.label, def.labelCorto || def.label, count, def.color);
   }).join('');
 
   return `
