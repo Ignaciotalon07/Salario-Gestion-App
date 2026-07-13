@@ -855,13 +855,15 @@ function abrirModalHoras() {
   const modal = document.getElementById('modal-horas');
   if (!modal) return;
   // Limpiar campos
+  const tipo    = document.getElementById('mh-tipo');
   const horas   = document.getElementById('mh-horas');
   const detalle = document.getElementById('mh-detalle');
+  if (tipo)   tipo.value   = '';
   if (horas)   horas.value   = '';
   if (detalle) detalle.value = '';
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
-  if (horas) horas.focus();
+  if (tipo) tipo.focus();
 }
 
 function cerrarModalHoras() {
@@ -870,10 +872,16 @@ function cerrarModalHoras() {
 }
 
 async function guardarHoras() {
+  const tipo     = ((document.getElementById('mh-tipo')    || {}).value || '').trim();
   const horasRaw = (document.getElementById('mh-horas') || {}).value || '';
   const horas    = horasRaw ? parsearHHMM(horasRaw) : null;
   const detalle  = ((document.getElementById('mh-detalle') || {}).value || '').trim();
 
+  if (!tipo) {
+    alert('Seleccioná el tipo de trabajo.');
+    document.getElementById('mh-tipo').focus();
+    return;
+  }
   if (!horas || isNaN(horas) || horas <= 0) {
     alert('Ingresá las horas trabajadas.');
     document.getElementById('mh-horas').focus();
@@ -894,7 +902,7 @@ async function guardarHoras() {
       cliente_id:        null,
       cliente_nombre:    null,
       asesor,
-      categoria:         'programacion_interna',
+      categoria:         tipo,           // actualizacion | programacion | revision
       subtema:           null,
       repetida:          false,
       descripcion:       detalle || null,
@@ -911,7 +919,7 @@ async function guardarHoras() {
         id:           '_temp_' + Date.now(),
         cliente:      null,
         asesor,
-        categoria:    'programacion_interna',
+        categoria:    tipo,
         subtema:      null,
         repetida:     'no',
         descripcion:  detalle || null,

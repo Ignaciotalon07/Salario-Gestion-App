@@ -571,7 +571,8 @@ function _renderAsesorHistorialHeader() {
 function _calcularFilas(consultasCli, consultasInt) {
   const CATS_LABELS = {
     liquidacion: 'Liquidación', errores: 'Errores', configuracion: 'Configuración',
-    actualizaciones: 'Actualizaciones', fuera: 'Fuera del sistema'
+    actualizaciones: 'Actualizaciones', fuera: 'Fuera del sistema',
+    actualizacion: 'Actualización', programacion: 'Programación', revision: 'Revisión'
   };
   const TIPO_LABELS = {
     soporte: '🎧 Soporte', programacion: '🐛 Programación',
