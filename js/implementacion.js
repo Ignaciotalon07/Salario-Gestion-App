@@ -2667,6 +2667,25 @@ async function agregarTareaCliente(clienteId, faseKey) {
     ? Math.max(...tareasEnFase.map(t => t.orden)) + 1
     : (tareasDelCliente.length > 0 ? Math.max(...tareasDelCliente.map(t => t.orden)) + 1 : 1);
 
+  // Predecesora automática: la última tarea de la misma fase.
+  // Si la fase está vacía (primera tarea de esa fase), usar la última tarea
+  // de la fase anterior para no dejar la tarea libre sin predecesor.
+  let ultimaTareaFase = null;
+  if (tareasEnFase.length > 0) {
+    // Hay tareas en la fase → tomar la de mayor orden
+    ultimaTareaFase = tareasEnFase.reduce((max, t) => t.orden > max.orden ? t : max);
+  } else {
+    // Fase vacía → buscar la última tarea de la fase anterior
+    const idxFaseActual = todasFases.findIndex(f => f.key === faseKey);
+    for (let i = idxFaseActual - 1; i >= 0; i--) {
+      const tareasFaseAnterior = tareasDelCliente.filter(t => (t.fase || 'relevamiento') === todasFases[i].key);
+      if (tareasFaseAnterior.length > 0) {
+        ultimaTareaFase = tareasFaseAnterior.reduce((max, t) => t.orden > max.orden ? t : max);
+        break;
+      }
+    }
+  }
+
   // Hacer espacio: desplazar +1 todas las tareas con orden >= ordenInsercion
   // (las de fases posteriores que pueden tener el mismo número)
   const tareasADesplazar = tareasDelCliente
@@ -2686,7 +2705,8 @@ async function agregarTareaCliente(clienteId, faseKey) {
       responsable_tipo: 'equipo',
       duracion_dias:    3,
       fase:             faseKey,
-      estado:           'pendiente'
+      estado:           'pendiente',
+      predecesoras_ids: ultimaTareaFase ? [ultimaTareaFase.id] : []
     });
     implTareas.push(dbRowToImplTarea(inserted));
     await recalcularGanttCliente(clienteId);

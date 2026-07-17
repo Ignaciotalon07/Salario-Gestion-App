@@ -985,7 +985,7 @@ async function confirmarCierreProgramacionInterna() {
       cliente_nombre:    esImpl ? p.cliente : null,
       asesor,
       categoria:         catLabel,
-      subtema:           detalle.length > 100 ? detalle.substring(0, 97) + '...' : detalle,
+      subtema:           null,   // el detalle va solo en descripcion, no en subtema
       descripcion:       detalle,
       repetida:          false,
       solucion_id:       null,
@@ -1002,7 +1002,7 @@ async function confirmarCierreProgramacionInterna() {
         cliente:      esImpl ? p.cliente : null,
         asesor,
         categoria:    catLabel,
-        subtema:      detalle,
+        subtema:      null,
         repetida:     'no',
         descripcion:  detalle,
         solucionId:   null,
