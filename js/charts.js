@@ -1240,6 +1240,9 @@ function _abrirDetalleRegistroAsesor(id) {
         </div>
       </div>` : ''}
 
+      <!-- Archivos adjuntos de la solución -->
+      ${solId && typeof _renderKbArchivosDetalle === 'function' ? _renderKbArchivosDetalle(solId) : ''}
+
       <!-- Footer -->
       <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border2);display:flex;justify-content:flex-end">
         ${puedeBorrar ? `

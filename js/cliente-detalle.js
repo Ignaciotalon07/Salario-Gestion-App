@@ -422,6 +422,7 @@ function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro, tipoFiltro) {
       descripcion: c.descripcion || '',
       solucionTitulo,
       solucionPasos,
+      solucionId: c.solucionId || null,
       tiempo: c.tiempo ?? null,
       tipo: c.tipoConsulta || 'soporte'
     }));
@@ -537,6 +538,9 @@ function abrirDetalleConsulta(btn) {
         <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--text3)">
           Sin solución registrada en la base.
         </div>`}
+        ${data.solucionId && typeof _renderKbArchivosDetalle === 'function'
+          ? _renderKbArchivosDetalle(data.solucionId)
+          : ''}
       </div>`;
 
     // Reusar el modal de consulta o crear uno temporal
