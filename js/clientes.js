@@ -6,7 +6,7 @@ let clientes = [];
 let areaFilter = '';
 let tipoFilter = '';
 let autFilter  = '';
-let sortBy     = 'score';
+let sortBy     = 'nombre';
 
 // ────────── Mapeo DB <-> UI ──────────
 
