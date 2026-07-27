@@ -2651,6 +2651,54 @@ async function eliminarFaseCliente(clienteId, faseId, event) {
   }
 }
 
+// ────────── Navegar a una tarea desde un pendiente ──────────
+// Llamado desde el botón "Ir a la tarea" en la sección Pendientes.
+// Navega a Implementación, expande el cliente y hace scroll hasta la tarea.
+function irATareaImpl(tareaId, clienteId) {
+  // 1. Limpiar filtros para garantizar que el cliente sea visible
+  implFiltroNombre = '';
+  implFiltroAsesor = '';
+  implFiltroEstado = '';
+  implFiltroResp   = '';
+  const searchInput = document.getElementById('impl-buscador');
+  if (searchInput) searchInput.value = '';
+  document.querySelectorAll('[data-impl-filter]').forEach(b => b.classList.remove('active'));
+
+  // 2. Expandir el cliente
+  if (!window._implClienteExpanded) window._implClienteExpanded = {};
+  window._implClienteExpanded[clienteId] = true;
+
+  // 3. Expandir la fase que contiene la tarea
+  const tarea = implTareas.find(t => t.id === tareaId);
+  if (tarea) {
+    const fasesCliente = getFasesParaCliente(clienteId);
+    const faseIdx = fasesCliente.findIndex(f => f.key === (tarea.fase || 'relevamiento'));
+    if (faseIdx !== -1) {
+      if (!window._implFaseExpanded) window._implFaseExpanded = {};
+      window._implFaseExpanded[`${clienteId}_${faseIdx}`] = true;
+    }
+  }
+
+  // 4. Navegar y re-renderizar
+  goTo(document.querySelector('.nav-item[onclick*="implementacion"]'), 'implementacion');
+  renderImplementacion();
+
+  // 5. Scroll a la tarea y resaltarla
+  setTimeout(() => {
+    const tareaEl   = document.querySelector(`[data-tarea-id="${tareaId}"]`);
+    const clienteEl = document.querySelector(`[data-cliente-id="${clienteId}"]`);
+    const objetivo  = tareaEl || clienteEl;
+    if (objetivo) {
+      objetivo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    if (tareaEl) {
+      tareaEl.style.transition = 'background 0.3s';
+      tareaEl.style.background  = 'rgba(245,158,11,0.25)';
+      setTimeout(() => { tareaEl.style.background = ''; }, 2000);
+    }
+  }, 400);
+}
+
 // ────────── Agregar / eliminar / reordenar tareas del cliente ──────────
 
 async function agregarTareaCliente(clienteId, faseKey) {

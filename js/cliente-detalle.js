@@ -103,6 +103,9 @@ function _renderDetalleHeader(cliente) {
   const cuitLine = cliente.cuit
     ? `<div style="font-size:12px;color:var(--text3);margin-top:1px">CUIT: ${_escHtml(cliente.cuit)}</div>`
     : '';
+  const idApiLine = cliente.idApi
+    ? `<div style="font-size:12px;color:var(--text3);margin-top:1px"><strong style="color:var(--text2)">ID CLIENTE: ${cliente.idApi}</strong></div>`
+    : '';
 
   return `
     <div class="detalle-header">
@@ -118,6 +121,7 @@ function _renderDetalleHeader(cliente) {
           <div class="detalle-header__nombre">${_escHtml(cliente.nombre)}</div>
           ${razonLine}
           ${cuitLine}
+          ${idApiLine}
           <div class="detalle-header__badges" style="margin-top:8px">
             ${areaBadge}
             ${autBadge}

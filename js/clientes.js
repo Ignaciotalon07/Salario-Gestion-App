@@ -24,6 +24,7 @@ function dbRowToCliente(row) {
     nota:                        row.nota,
     razon_social:                row.razon_social || null,
     cuit:                        row.cuit || null,
+    idApi:                       row.id_api || null,
     whaticket_url:               row.whaticket_url,
     fecha_inicio_implementacion: row.fecha_inicio_implementacion,
     fecha_fin_objetivo:          row.fecha_fin_objetivo

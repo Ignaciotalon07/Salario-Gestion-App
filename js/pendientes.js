@@ -312,6 +312,50 @@ function renderPendienteCard(p) {
   const venc        = vencimientoInfo(p.createdAt);
   // Si está vencido o vence hoy, forzar borde rojo
   const finalBorder = (!p.interno && venc && venc.urgente) ? '#ef4444' : borderColor;
+
+  // Para pendientes de implementación: buscar la tarea vinculada
+  let implTareaInfo = null;
+  if (p.tipoPendiente === 'implementacion' && typeof implTareas !== 'undefined') {
+    const tarea = implTareas.find(t => t.pendiente_id === p.id);
+    if (tarea) {
+      // Nombre de la fase (base o custom)
+      const FASES_BASE = { relevamiento: '🔍 Relevamiento', analisis: '📊 Análisis',
+        configuracion: '⚙️ Configuración', pruebas: '✅ Pruebas', golive: '🚀 Go-live' };
+      const faseLabel = FASES_BASE[tarea.fase] || tarea.fase || 'Sin fase';
+      // Días restantes hasta fecha_estimada (puede ser negativo si ya venció)
+      let diasRestantes = null;
+      if (tarea.fecha_estimada) {
+        const hoy    = new Date(); hoy.setHours(0,0,0,0);
+        const fin    = new Date(tarea.fecha_estimada + 'T00:00:00');
+        diasRestantes = Math.ceil((fin - hoy) / 86400000);
+      }
+      const fechaEstFmt = tarea.fecha_estimada
+        ? new Date(tarea.fecha_estimada + 'T00:00:00').toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit' })
+        : null;
+      // Calcular número secuencial global (igual que renderListaFases en implementacion.js)
+      let numSecuencial = tarea.orden; // fallback
+      if (typeof getFasesParaCliente === 'function') {
+        const fasesCliente  = getFasesParaCliente(tarea.cliente_id);
+        const tareasCliente = implTareas.filter(t => t.cliente_id === tarea.cliente_id);
+        let seq = 1;
+        for (const f of fasesCliente) {
+          const tareasDeFase = tareasCliente
+            .filter(t => (t.fase || 'relevamiento') === f.key)
+            .sort((a, b) => a.orden - b.orden);
+          for (const t of tareasDeFase) {
+            if (t.id === tarea.id) { numSecuencial = seq; }
+            seq++;
+          }
+        }
+      }
+      implTareaInfo = {
+        id: tarea.id, clienteId: tarea.cliente_id,
+        nombre: tarea.tarea, fase: faseLabel, orden: numSecuencial,
+        duracionDias: tarea.duracion_dias || null,
+        diasRestantes, fechaEstFmt
+      };
+    }
+  }
   const notas = notasByPendiente[p.id] || [];
   // Whaticket URL viene del cliente vinculado (CLIENTES_LOOKUP se llena en clientes.js)
   const whaticketUrl = (CLIENTES_LOOKUP[p.cliente] || {}).whaticket_url;
@@ -332,19 +376,54 @@ function renderPendienteCard(p) {
               ${!p.interno && tipoLabel ? `<span class="tipo-tag tipo-${p.tipo}">${tipoLabel}</span>` : ''}
               ${p.interno
                 ? (p.categoriaLabel ? `<span class="badge b-blue">${p.categoriaLabel}</span>` : '')
-                : (tipoPend ? `<span class="badge ${tipoPend.badge}" title="Tipo: ${tipoPend.label}">${tipoPend.emoji} ${tipoPend.label}</span>` : '')
+                : implTareaInfo
+                  ? `<span class="badge b-amber">${implTareaInfo.fase}</span>`
+                  : (tipoPend ? `<span class="badge ${tipoPend.badge}" title="Tipo: ${tipoPend.label}">${tipoPend.emoji} ${tipoPend.label}</span>` : '')
               }
               <span class="badge ${prioBadge}">${prioLabel}</span>
               ${venc ? `<span class="badge ${venc.badge}" title="Plazo de 5 dias">⏰ ${venc.label}</span>` : ''}
               <span class="text-meta-sm">${p.cuando} &middot; ${p.asesor}</span>
             </div>
-            <div class="pendiente-desc">${p.descripcion}</div>
+            ${implTareaInfo ? (() => {
+              const venceColor = implTareaInfo.diasRestantes !== null && implTareaInfo.diasRestantes < 0
+                ? 'var(--red)' : implTareaInfo.diasRestantes === 0 ? '#f59e0b' : 'var(--text2)';
+              const venceTxt = implTareaInfo.fechaEstFmt
+                ? implTareaInfo.fechaEstFmt + (implTareaInfo.diasRestantes !== null
+                    ? (implTareaInfo.diasRestantes < 0 ? ` (vencida hace ${Math.abs(implTareaInfo.diasRestantes)}d)`
+                      : implTareaInfo.diasRestantes === 0 ? ' (hoy)'
+                      : ` (en ${implTareaInfo.diasRestantes}d)`) : '')
+                : null;
+              return `
+              <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+                <!-- Tarea: número + nombre -->
+                <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+                  <span style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);flex-shrink:0">Tarea</span>
+                  <span style="background:#f59e0b;color:#000;font-size:10px;font-weight:800;border-radius:4px;padding:1px 6px;flex-shrink:0">${String(implTareaInfo.orden).padStart(2,'0')}</span>
+                  <span style="font-size:13px;font-weight:700;color:var(--text1);line-height:1.3">${escapeHtml(implTareaInfo.nombre)}</span>
+                </div>
+                <!-- Meta: fase · duración · vence -->
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                  <span style="font-size:11px;color:var(--text3)">Fase: <span style="color:var(--text2);font-weight:500">${implTareaInfo.fase}</span></span>
+                  ${implTareaInfo.duracionDias ? `<span style="color:var(--border2);font-size:11px">·</span><span style="font-size:11px;color:var(--text3)">Duración: <span style="color:var(--text2);font-weight:500">${implTareaInfo.duracionDias} día${implTareaInfo.duracionDias !== 1 ? 's' : ''}</span></span>` : ''}
+                  ${venceTxt ? `<span style="color:var(--border2);font-size:11px">·</span><span style="font-size:11px;color:var(--text3)">Vence el: <span style="color:${venceColor};font-weight:500">${venceTxt}</span></span>` : ''}
+                </div>
+              </div>`;
+            })() : `<div class="pendiente-desc">${p.descripcion}</div>`}
           </div>
         </div>
-        ${p.interno
-          ? `<span class="badge b-amber" style="flex-shrink:0">🔒 Interno</span>`
-          : `<span class="badge ${p.categoriaBadge || 'b-gray'}">${p.categoriaLabel || ''}</span>`
-        }
+        ${(() => {
+          // Badge top-right con el color del tipo de pendiente (igual que el borde izquierdo)
+          const TIPO_BADGE_LABEL = {
+            soporte:        '🎧 Soporte',
+            implementacion: '🚀 Implementación',
+            bug:            '🐛 Bug',
+            comercial:      '💼 Comercial',
+            interno:        '🔒 Interno',
+          };
+          const label = TIPO_BADGE_LABEL[tipoClave] || tipoClave;
+          const col   = tipoColor.border;
+          return `<span style="flex-shrink:0;font-size:11px;font-weight:600;color:${col};background:${tipoColor.bg};border:1px solid ${col}33;border-radius:6px;padding:3px 10px;white-space:nowrap">${label}</span>`;
+        })()}
       </div>
       ${p.intento  ? `<div class="info-pill"><div class="info-pill__label">Lo que se intento</div><div class="info-pill__body">${p.intento}</div></div>` : ''}
       ${p.proxPaso ? `<div class="info-pill info-pill--accent"><div class="info-pill__label">Proximo paso</div><div class="info-pill__body">${p.proxPaso}</div></div>` : ''}
@@ -371,6 +450,7 @@ function renderPendienteCard(p) {
         <button class="btn-secondary btn-secondary--sm" onclick="toggleNotaForm('${p.id}', true)">Agregar nota</button>
         ${puedoEditar ? `<button class="btn-sm" onclick="reasignarPendiente('${p.id}',this)">Reasignar</button>` : ''}
         ${whaticketUrl ? `<a class="btn-sm wt-btn" href="${escapeHtml(whaticketUrl)}" target="_blank" rel="noopener" title="Abrir chat en Whaticket">🎫 Whaticket</a>` : ''}
+        ${implTareaInfo ? `<button class="btn-sm" style="color:var(--amber,#f59e0b);border-color:rgba(245,158,11,0.35)" onclick="irATareaImpl('${implTareaInfo.id}','${implTareaInfo.clienteId}')">🔗 Ir a la tarea</button>` : ''}
         <button class="btn-sm" onclick="toggleHistorial('${p.id}')">${historialAbierto[p.id] ? 'Ocultar' : 'Ver'} historial</button>
         ${!puedoEditar ? `<span class="readonly-badge" title="Solo ${escapeHtml(p.asesor)} puede modificar este pendiente">🔒 Asignado a ${escapeHtml(p.asesor)}</span>` : ''}
       </div>

@@ -631,12 +631,14 @@ function _calcularFilas(consultasCli, consultasInt) {
     const catLabel  = (typeof CATS !== 'undefined' && CATS[c.categoria]?.label) || CATS_LABELS[c.categoria] || c.categoria || '—';
     const subtema   = c.subtema ? ` › ${c.subtema}` : '';
     const tipoLabel = TIPO_LABELS[c.tipoConsulta || c.tipo_consulta] || '🎧 Soporte';
-    const tiempoTxt = c.tiempo ? (() => {
-      const h   = parseFloat(c.tiempo);
-      const hs  = Math.floor(h);
-      const min = Math.round((h - hs) * 60);
-      return min > 0 ? `${hs}h ${min}min` : `${hs}h`;
-    })() : null;
+    // El sistema usa formato HHMM: 0.50 = 50 min, 1.30 = 1h 30min (NO fracciones decimales de hora)
+    const tiempoTxt = c.tiempo ? (typeof fmtHHMM === 'function' ? fmtHHMM(c.tiempo) : (() => {
+      const v = parseFloat(c.tiempo); const hs = Math.floor(v); const min = Math.round((v - hs) * 100);
+      const tot = hs * 60 + min;
+      if (hs === 0) return tot + ' min';
+      if (min === 0) return hs + ' hs';
+      return hs + 'h ' + String(min).padStart(2,'0') + 'min';
+    })()) : null;
 
     const clickAttr = c.id ? `onclick="_abrirDetalleRegistroAsesor('${c.id}')"` : '';
     const hoverAttr = c.id ? `onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''"` : '';
