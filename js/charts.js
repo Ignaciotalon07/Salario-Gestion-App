@@ -736,7 +736,7 @@ function refreshEquipoMetrics(mesActual) {
               <div style="font-size:11px;color:var(--text3)">${escapeHtmlPanel(subLinea)}</div>
             </div>
             <div style="text-align:right;flex-shrink:0">
-              <div style="font-size:13px;font-weight:600;color:${cargaColor}">${stats.consultas} consultas</div>
+              <div style="font-size:13px;font-weight:600;color:${cargaColor}">${stats.consultas} registros</div>
               <div style="font-size:11px;color:var(--text3)">${escapeHtmlPanel(subDerecha)}</div>
             </div>
           </div>`;
