@@ -79,6 +79,8 @@ function refrescarSelectsCliente(nombres) {
   selects.forEach(id => {
     const sel = document.getElementById(id);
     if (!sel) return;
+    // Guardar la selección actual para restaurarla después del rebuild
+    const valorPrevio = sel.value;
     // Limpiar opciones existentes y agregar todos los nombres
     const otroOpt = Array.from(sel.options).find(o => o.text === 'Otro cliente');
     sel.innerHTML = '';
@@ -92,6 +94,8 @@ function refrescarSelectsCliente(nombres) {
       opt.text = 'Otro cliente';
       sel.add(opt);
     }
+    // Restaurar la selección previa si todavía existe en la lista
+    if (valorPrevio) sel.value = valorPrevio;
   });
 }
 

@@ -395,7 +395,10 @@ function renderSolucionElegida() {
 // ────────── Guardar consulta ──────────
 
 async function guardarConsulta(mantenerAbierto = false) {
-  const cliente    = (document.getElementById('r-cliente') || {}).value || '';
+  // El select oculto puede perder su valor si Realtime reconstruye las opciones;
+  // usar el campo de búsqueda visible como fallback.
+  const cliente    = (document.getElementById('r-cliente') || {}).value
+                  || ((document.getElementById('r-cliente-search') || {}).value || '').trim();
 
   // Categoría y subtema: se calculan más abajo según el tipo de consulta
   const catSelect  = (document.getElementById('r-cat') || {}).value || '';
@@ -435,6 +438,14 @@ async function guardarConsulta(mantenerAbierto = false) {
     }
     cat = catSelect === 'otro' ? catCustom : catSelect;
     subtema = subSelect === 'otro' ? subCustom : subSelect;
+
+    // Descripción del problema: obligatoria para soporte y comercial
+    if (!desc) {
+      alert('Describí el problema o consulta del cliente.');
+      const el = document.getElementById('r-desc');
+      if (el) el.focus();
+      return;
+    }
   }
 
   // ── Lógica de solución (solo para SOPORTE) ──
@@ -443,43 +454,35 @@ async function guardarConsulta(mantenerAbierto = false) {
 
   if (!esProg && tipoConsulta !== 'comercial') {
     if (consultaSolucionId) {
+      // Solución elegida de la base → sumar uso
       if (typeof incrementarUsoSolucion === 'function') {
         try { await incrementarUsoSolucion(consultaSolucionId); }
         catch (e) { console.warn('No se pudo sumar uso a la solución', e); }
       }
-    } else {
-      if (!desc) {
-        alert('Como no elegiste solución de la base, escribí la descripción del problema (será el título de la nueva solución).');
-        const el = document.getElementById('r-desc'); if (el) el.focus();
-        return;
-      }
-      if (!solucion) {
-        alert('Como no elegiste solución de la base, completá el campo "Solución aplicada" — esos pasos se guardan en la base.');
-        const el = document.getElementById('r-sol'); if (el) el.focus();
-        return;
-      }
+    } else if (solucion) {
+      // El asesor escribió la solución manualmente → crear nueva entrada en KB
       const pasos = solucion.split('\n')
         .map(p => p.replace(/^\s*paso\s*\d+\s*[:\.\-]?\s*/i, '').trim())
         .filter(p => p.length > 0);
-      if (pasos.length === 0) {
-        alert('Escribí al menos un paso de la solución (uno por línea).');
-        const el = document.getElementById('r-sol'); if (el) el.focus();
-        return;
-      }
-      const autor          = (typeof currentMember !== 'undefined' && currentMember) ? currentMember.nombre : 'Equipo';
-      const tituloSolucion = desc.length > 200 ? desc.substring(0, 197) + '...' : desc;
-      try {
-        const inserted = await dbInsert('soluciones', {
-          titulo: tituloSolucion, cat, sub: subtema,
-          pasos, material: 'Sin material', aplica: 'Todos', autor, usos: 1
-        });
-        nuevaSolucionId = inserted.id;
-      } catch (e) {
-        console.error('Error creando solución', e);
-        alert('No se pudo guardar la solución en la base: ' + e.message + '\n\nLa consulta tampoco se guardó. Probá de nuevo.');
-        return;
+      if (pasos.length > 0) {
+        const autor          = (typeof currentMember !== 'undefined' && currentMember) ? currentMember.nombre : 'Equipo';
+        const tituloSolucion = desc
+          ? (desc.length > 200 ? desc.substring(0, 197) + '...' : desc)
+          : (subtema || cat || 'Sin título');
+        try {
+          const inserted = await dbInsert('soluciones', {
+            titulo: tituloSolucion, cat, sub: subtema,
+            pasos, material: 'Sin material', aplica: 'Todos', autor, usos: 1
+          });
+          nuevaSolucionId = inserted.id;
+        } catch (e) {
+          console.error('Error creando solución', e);
+          // No bloqueamos el guardado de la consulta si falla la KB
+          console.warn('La consulta se guardará sin vincular a la base de soluciones.');
+        }
       }
     }
+    // Si no hay solucionId ni texto de solución → se guarda la consulta sin vincular KB (opcional)
   }
 
   // Para programación: leer tiempo y descripción de sus campos específicos
