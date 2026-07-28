@@ -120,48 +120,69 @@ function renderRepoList() {
     return;
   }
 
-  container.innerHTML = visible.map(renderRepoCard).join('');
+  container.innerHTML = `<div class="repo-grid">${visible.map(renderRepoCard).join('')}</div>`;
 }
 
 function renderRepoCard(item) {
-  const cat     = REPO_CATS[item.categoria] || { label: item.categoria, emoji: '📁', color: '#666', bg: '#f5f5f5' };
+  const cat      = REPO_CATS[item.categoria] || { label: item.categoria, emoji: '📁', color: '#666', bg: '#f5f5f5' };
   const archivos = repoArchivos[item.id] || [];
-  const fecha   = _repoFecha(item.created_at);
+  const fecha    = _repoFecha(item.created_at);
 
-  const archivosHTML = archivos.length > 0
-    ? archivos.map(a => `
-        <div class="repo-archivo">
-          <span class="repo-archivo-icono">${_repoIcono(a.tipo_mime, a.nombre)}</span>
-          <span class="repo-archivo-nombre" title="${_escRepo(a.nombre)}">${_escRepo(a.nombre)}</span>
-          <span class="repo-archivo-meta">${_repoFmtBytes(a.tamano_bytes)}</span>
-          <button class="mtm-archivo-dl" onclick="descargarArchivoRepo('${a.id}','${_escRepo(a.storage_path)}')">⬇ Descargar</button>
-        </div>`).join('')
-    : '<div style="font-size:12px;color:var(--text3)">Sin archivos adjuntos.</div>';
-
-  // Indicador de "nuevo" o "editado" (posterior al último acceso del usuario)
-  const limite   = _repoUltimoVisto ? new Date(_repoUltimoVisto) : null;
-  const esNuevo  = limite ? new Date(item.created_at) > limite : true;
+  const limite    = _repoUltimoVisto ? new Date(_repoUltimoVisto) : null;
+  const esNuevo   = limite ? new Date(item.created_at) > limite : true;
   const esEditado = !esNuevo && limite && item.updated_at && new Date(item.updated_at) > limite;
+
+  // Archivos como pills compactas
+  const archivosHTML = archivos.length > 0
+    ? `<div class="repo-files-pills">
+        ${archivos.map(a => `
+          <button class="repo-file-pill" onclick="descargarArchivoRepo('${a.id}','${_escRepo(a.storage_path)}')" title="Descargar ${_escRepo(a.nombre)}">
+            <span class="repo-file-pill__icon">${_repoIcono(a.tipo_mime, a.nombre)}</span>
+            <span class="repo-file-pill__name">${_escRepo(a.nombre)}</span>
+            <span class="repo-file-pill__size">${_repoFmtBytes(a.tamano_bytes)}</span>
+            <span class="repo-file-pill__dl">↓</span>
+          </button>`).join('')}
+      </div>`
+    : '';
 
   return `
     <div class="repo-card" id="repo-card-${item.id}">
-      <div class="repo-card-header">
-        <span class="repo-cat-badge" style="background:${cat.bg};color:${cat.color}">
-          ${cat.emoji} ${cat.label}
-        </span>
-        ${esNuevo   ? '<span style="font-size:11px;font-weight:600;color:#f59e0b;background:rgba(245,158,11,0.12);border-radius:4px;padding:2px 7px">Nuevo</span>' : ''}
-        ${esEditado ? '<span style="font-size:11px;font-weight:600;color:#7575e8;background:rgba(117,117,232,0.12);border-radius:4px;padding:2px 7px">Editado</span>' : ''}
-        <span class="repo-card-meta">${_escRepo(item.subido_por || 'Equipo')} · ${fecha}</span>
-        <div class="repo-card-actions">
-          <button class="btn-sm" onclick="editarItemRepo('${item.id}')">Editar</button>
-          <button class="btn-sm repo-asignar-btn" onclick="abrirModalAsignarRepo('${item.id}')">📤 Asignar</button>
-          <button class="btn-sm" style="color:var(--red)" onclick="eliminarItemRepo('${item.id}')">Eliminar</button>
+      <!-- Top: categoría + badges nuevo/editado -->
+      <div class="repo-card__top">
+        <span class="repo-cat-badge" style="background:${cat.bg};color:${cat.color}">${cat.emoji} ${cat.label}</span>
+        <div style="display:flex;gap:5px;align-items:center">
+          ${esNuevo   ? '<span class="repo-badge-nuevo">Nuevo</span>'   : ''}
+          ${esEditado ? '<span class="repo-badge-editado">Editado</span>' : ''}
         </div>
       </div>
-      <div class="repo-card-titulo">${_escRepo(item.titulo)}</div>
-      ${item.descripcion ? `<div class="repo-card-desc">${_escRepo(item.descripcion)}</div>` : ''}
-      <div class="repo-archivos-lista">${archivosHTML}</div>
+
+      <!-- Título + descripción -->
+      <div class="repo-card__body">
+        <div class="repo-card__titulo">${_escRepo(item.titulo)}</div>
+        ${item.descripcion ? `<div class="repo-card__desc">${_escRepo(item.descripcion)}</div>` : ''}
+      </div>
+
+      <!-- Archivos -->
+      ${archivosHTML}
+
+      <!-- Footer: meta + acciones -->
+      <div class="repo-card__footer">
+        <span class="repo-card__meta">👤 ${_escRepo(item.subido_por || 'Equipo')} · ${fecha}</span>
+        <div class="repo-card__actions">
+          <button class="repo-action-btn" onclick="editarItemRepo('${item.id}')">✏️ Editar</button>
+          <button class="repo-action-btn repo-action-btn--danger" onclick="eliminarItemRepo('${item.id}')">Eliminar</button>
+        </div>
+      </div>
     </div>`;
+}
+
+// ── Toggle descripción larga ──────────────────────────────────────────────────
+function toggleRepoDesc(itemId) {
+  const desc   = document.getElementById(`repo-desc-${itemId}`);
+  const btn    = document.getElementById(`repo-toggle-${itemId}`);
+  if (!desc || !btn) return;
+  const expandido = desc.classList.toggle('repo-card__desc--expanded');
+  btn.textContent  = expandido ? 'Ver menos ▴' : 'Ver más ▾';
 }
 
 // ── Filtro ────────────────────────────────────────────────────────────────────
