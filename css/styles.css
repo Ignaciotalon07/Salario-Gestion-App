@@ -1075,6 +1075,37 @@ html {
   padding: 4px 10px !important;
 }
 
+/* Item seleccionable (contexto form de consultas) */
+.kb-sug-item--selectable {
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.kb-sug-item--selectable:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+.kb-sug-item--selectable .kb-sug-item__titulo {
+  font-weight: 500;
+  color: var(--text);
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+.kb-sug-usar-btn {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.kb-sug-item--selectable:hover .kb-sug-usar-btn {
+  opacity: 1;
+}
+
 
 /* Modal generico (usado por "¿Que solucion usaste?" al cerrar pendiente) */
 .modal-overlay {

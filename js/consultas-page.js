@@ -419,7 +419,7 @@ function _cpRenderRow(c) {
   if (c.remota)
     tags.push(`<span style="background:var(--surface2);color:var(--text3);font-size:10px;padding:2px 6px;border-radius:4px">Remota</span>`);
   if (c.tiempo)
-    tags.push(`<span style="background:var(--surface2);color:var(--text3);font-size:10px;padding:2px 6px;border-radius:4px">⏱ ${parseFloat(c.tiempo).toFixed(1)}h</span>`);
+    tags.push(`<span style="background:var(--surface2);color:var(--text3);font-size:10px;padding:2px 6px;border-radius:4px">⏱ ${typeof fmtHHMM === 'function' ? fmtHHMM(c.tiempo) : parseFloat(c.tiempo).toFixed(2) + 'h'}</span>`);
 
   return `
     <div onclick="_cpAbrirDetalle('${c.id}')" style="
@@ -559,7 +559,7 @@ function _cpAbrirDetalle(id) {
           </div>
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Tiempo</div>
-            <div style="font-size:13px">${c.tiempo ? `⏱ ${parseFloat(c.tiempo).toFixed(1)}h` : '—'}</div>
+            <div style="font-size:13px">${c.tiempo ? `⏱ ${typeof fmtHHMM === 'function' ? fmtHHMM(c.tiempo) : parseFloat(c.tiempo).toFixed(2) + 'h'}` : '—'}</div>
           </div>
         </div>
 

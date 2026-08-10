@@ -345,6 +345,15 @@ function elegirSolucionConsulta() {
   });
 }
 
+// Elegir una solución directamente desde las sugerencias automáticas del form
+function elegirSolucionDesdeSugerencia(solucionId) {
+  consultaSolucionId = solucionId;
+  renderSolucionElegida();
+  // Ocultar el bloque de sugerencias
+  const cont = document.getElementById('r-kb-suggestions');
+  if (cont) { cont.style.display = 'none'; cont.innerHTML = ''; }
+}
+
 function quitarSolucionConsulta() {
   consultaSolucionId = null;
   renderSolucionElegida();

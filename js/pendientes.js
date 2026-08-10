@@ -1964,9 +1964,21 @@ function actualizarSugerenciasKB(sourceId, targetId) {
 
     cont.style.display = 'block';
     const plural = matches.length > 1;
+    // En el contexto del form de consultas, cada item es clickeable para elegirlo directamente
+    const esConsultaCtx = targetId === 'r-kb-suggestions';
     cont.innerHTML = `
-      <div class="kb-sug-label">${matches.length} solucion${plural ? 'es' : ''} de la base coincide${plural ? 'n' : ''}:</div>
-      ${matches.map(s => `
+      <div class="kb-sug-label">${matches.length} solucion${plural ? 'es' : ''} de la base coincide${plural ? 'n' : ''}:${esConsultaCtx ? ' <span style="font-weight:400;color:var(--text3)">Hacé clic en una para usarla.</span>' : ''}</div>
+      ${matches.map(s => esConsultaCtx ? `
+        <div class="kb-sug-item kb-sug-item--selectable" onclick="elegirSolucionDesdeSugerencia('${s.id}')" title="Usar esta solución">
+          <div class="kb-sug-meta" style="display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div class="kb-sug-item__titulo">${escapeHtml(s.titulo)} <span class="kb-sug-cat">${escapeHtml(s.sub || '')}</span></div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px">${s.usos} uso${s.usos === 1 ? '' : 's'}</div>
+            </div>
+            <span class="kb-sug-usar-btn">✓ Usar esta</span>
+          </div>
+        </div>
+      ` : `
         <details class="kb-sug-item">
           <summary>${escapeHtml(s.titulo)} <span class="kb-sug-cat">${escapeHtml(s.sub || '')}</span></summary>
           <ol class="kb-sug-steps">
