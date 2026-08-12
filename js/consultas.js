@@ -81,6 +81,7 @@ function onTipoConsultaChange() {
   const tipo    = (document.getElementById('r-tipo-consulta') || {}).value || 'soporte';
   const esProg  = tipo === 'programacion';
   const esSop   = tipo === 'soporte';
+  const esImpl  = tipo === 'implementacion';
 
   const show = (id, visible) => {
     const el = document.getElementById(id);
@@ -103,7 +104,7 @@ function onTipoConsultaChange() {
   // Programación realizada: solo para programacion
   show('r-group-prog-realizada', esProg);
 
-  // Base de soluciones: solo soporte
+  // Base de soluciones: solo soporte (no impl, no programacion, no comercial)
   show('r-group-soluciones', esSop);
 
   // Label de descripción y placeholder
@@ -112,6 +113,9 @@ function onTipoConsultaChange() {
   if (esProg) {
     if (lbl)  lbl.textContent  = '¿Qué consultó el cliente?';
     if (desc) desc.placeholder = 'Ej: El cliente no sabía liquidar las horas extras en feriado...';
+  } else if (esImpl) {
+    if (lbl)  lbl.textContent  = 'Detalle del trabajo realizado';
+    if (desc) desc.placeholder = 'Ej: Se configuró el módulo de liquidación, se cargaron los empleados...';
   } else {
     if (lbl)  lbl.textContent  = 'Descripción del problema';
     if (desc) desc.placeholder = 'Ej: El cliente no sabía liquidar las horas extras en feriado...';
@@ -424,6 +428,7 @@ async function guardarConsulta(mantenerAbierto = false) {
   const remota        = (document.getElementById('r-remota')        || {}).value || 'no';
   const tipoConsulta  = (document.getElementById('r-tipo-consulta') || {}).value || 'soporte';
   const esProg        = tipoConsulta === 'programacion';
+  const esImpl        = tipoConsulta === 'implementacion';
 
   // ── Para programación: leer campos específicos ──
   let cat, subtema;
@@ -458,10 +463,10 @@ async function guardarConsulta(mantenerAbierto = false) {
   }
 
   // ── Lógica de solución (solo para SOPORTE) ──
-  // Programación y Comercial NO alimentan la base de soluciones.
+  // Programación, Comercial e Implementación NO alimentan la base de soluciones.
   let nuevaSolucionId = null;
 
-  if (!esProg && tipoConsulta !== 'comercial') {
+  if (!esProg && !esImpl && tipoConsulta !== 'comercial') {
     if (consultaSolucionId) {
       // Solución elegida de la base → sumar uso
       if (typeof incrementarUsoSolucion === 'function') {
@@ -851,6 +856,39 @@ function elegirClienteSearch(nombre) {
   if (input)    input.value  = nombre;
   if (select)   select.value = nombre;
   if (dropdown) dropdown.style.display = 'none';
+  // Ajustar opciones de tipo según el área del cliente seleccionado
+  actualizarTipoSegunCliente(nombre);
+}
+
+// Filtra las opciones de r-tipo-consulta según el área del cliente:
+// - área 'implementacion' → solo muestra 'implementacion'
+// - cualquier otra área   → muestra las opciones del rol del usuario (sin 'implementacion')
+function actualizarTipoSegunCliente(nombreCliente) {
+  const sel = document.getElementById('r-tipo-consulta');
+  if (!sel) return;
+
+  const clienteObj = (typeof clientes !== 'undefined')
+    ? clientes.find(c => c.nombre === nombreCliente)
+    : null;
+  const area = clienteObj ? (clienteObj.area || 'soporte') : 'soporte';
+
+  if (area === 'impl') {
+    // Solo implementacion
+    sel.innerHTML = '<option value="implementacion">Implementación</option>';
+    sel.value = 'implementacion';
+  } else {
+    // Reconstruir opciones según rol del usuario (sin implementacion)
+    const email         = (window._currentAuthEmail || '').toLowerCase();
+    const esAlfredo     = email.includes('alfredo');
+    const esDanielFerro = email.includes('danielferro') || email.includes('daniel.ferro');
+    const valorActual   = sel.value === 'implementacion' ? 'soporte' : sel.value;
+    sel.innerHTML = '<option value="soporte">Soporte</option>';
+    if (esAlfredo)     sel.innerHTML += '<option value="programacion">Programación</option>';
+    if (esDanielFerro) sel.innerHTML += '<option value="comercial">Comercial</option>';
+    if (sel.querySelector('option[value="' + valorActual + '"]')) sel.value = valorActual;
+  }
+  // Actualizar visibilidad de campos según el tipo resultante
+  onTipoConsultaChange();
 }
 
 function cerrarClienteSearch() {
@@ -914,6 +952,9 @@ function resetFormConsulta() {
   const solGroup = document.getElementById('r-sol-group');
   if (solGroup) solGroup.style.display = '';
 
+  // Restaurar las opciones de tipo según el rol del usuario (sin cliente seleccionado)
+  initTipoConsulta();
+  onTipoConsultaChange();
 }
 
 // ────────── Helpers ──────────

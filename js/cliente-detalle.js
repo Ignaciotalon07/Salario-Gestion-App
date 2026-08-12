@@ -203,9 +203,9 @@ function _renderDetalleStats(cliente, consultasDelCliente) {
 // ────────── Panel de tipos de consulta ──────────
 
 function _renderDetalleTipoStats(consultasDelCliente) {
-  const soporte      = consultasDelCliente.filter(c => !c.tipoConsulta || c.tipoConsulta === 'soporte').length;
-  const programacion = consultasDelCliente.filter(c => c.tipoConsulta === 'programacion').length;
-  const comercial    = consultasDelCliente.filter(c => c.tipoConsulta === 'comercial').length;
+  const soporte        = consultasDelCliente.filter(c => !c.tipoConsulta || c.tipoConsulta === 'soporte').length;
+  const programacion   = consultasDelCliente.filter(c => c.tipoConsulta === 'programacion').length;
+  const implementacion = consultasDelCliente.filter(c => c.tipoConsulta === 'implementacion').length;
 
   const item = (tipo, emoji, label, count, color) => `
     <div onclick="filtrarDetalleTipo('${tipo}')" title="Filtrar por ${label}"
@@ -226,11 +226,11 @@ function _renderDetalleTipoStats(consultasDelCliente) {
         Consultas por tipo
       </div>
       <div style="display:flex;gap:0">
-        ${item('soporte',      '🎧', 'Soporte',      soporte,      'var(--accent)')}
+        ${item('soporte',        '🎧', 'Soporte',         soporte,        'var(--accent)')}
         <div style="width:1px;background:var(--border);margin:8px 0"></div>
-        ${item('programacion', '🐛', 'Programación', programacion, 'var(--red)')}
+        ${item('programacion',   '🐛', 'Programación',    programacion,   'var(--red)')}
         <div style="width:1px;background:var(--border);margin:8px 0"></div>
-        ${item('comercial',    '💼', 'Comercial',    comercial,    'var(--green)')}
+        ${item('implementacion', '🚀', 'Implementación',  implementacion, 'var(--purple,#a78bfa)')}
       </div>
     </div>
   `;
@@ -346,7 +346,7 @@ function _renderDetalleFiltroYTabla(cliente, consultasDelCliente) {
             <option value="">Todos los tipos</option>
             <option value="soporte">🎧 Soporte</option>
             <option value="programacion">🐛 Programación</option>
-            <option value="comercial">💼 Comercial</option>
+            <option value="implementacion">🚀 Implementación</option>
           </select>
           <select id="detalle-mes-filtro" style="margin-bottom:0;font-size:11px;padding:4px 8px;height:28px;border-radius:6px" onchange="filtrarDetalleMes(this.value)">
             <option value="">Todos los meses</option>
@@ -505,7 +505,7 @@ function filtrarDetalleTipo(valor) {
 function abrirDetalleConsulta(btn) {
   try {
     const data = JSON.parse(btn.dataset.consulta);
-    const TIPO_LABELS = { soporte: '🎧 Soporte', programacion: '🐛 Programación', comercial: '💼 Comercial' };
+    const TIPO_LABELS = { soporte: '🎧 Soporte', programacion: '🐛 Programación', comercial: '💼 Comercial', implementacion: '🚀 Implementación' };
 
     const html = `
       <div style="display:flex;flex-direction:column;gap:12px">
