@@ -12,13 +12,25 @@ let _repoArchivosStaged = []; // File[] para subir al guardar
 let _repoUltimoVisto = null; // timestamptz del último acceso del usuario actual
 
 // ── Config categorías ─────────────────────────────────────────────────────────
+// Nota: los IDs 'bug' y 'manual' quedaron legacy en algunos items históricos.
+// La UI los remapea al vuelo (ver getRepoCatConfig más abajo) para que sigan
+// mostrándose sin romper hasta que se corra la migración de renombrado.
 const REPO_CATS = {
   actualizacion: { label: 'Actualización',     emoji: '📦', color: '#6366f1', bg: '#eef2ff' },
   modulo:        { label: 'Nuevo módulo',       emoji: '🧩', color: '#0891b2', bg: '#ecfeff' },
-  bug:           { label: 'Solución de bug',    emoji: '🐛', color: '#dc2626', bg: '#fef2f2' },
-  manual:        { label: 'Manual / Docs',      emoji: '📄', color: '#7c3aed', bg: '#f5f3ff' },
+  convenios:     { label: 'Convenios',          emoji: '📋', color: '#7c3aed', bg: '#f5f3ff' },
+  errores:       { label: 'Errores de Salario', emoji: '🐛', color: '#dc2626', bg: '#fef2f2' },
   clientes:      { label: 'Para clientes',      emoji: '📢', color: '#d97706', bg: '#fffbeb' },
 };
+
+// Helper defensivo: devuelve la config de una categoría, con fallback para IDs
+// legacy ('bug' se muestra como actualizacion, 'manual' se muestra como convenios).
+function getRepoCatConfig(cat) {
+  if (REPO_CATS[cat]) return REPO_CATS[cat];
+  if (cat === 'bug')    return REPO_CATS.actualizacion; // legacy fallback
+  if (cat === 'manual') return REPO_CATS.convenios;      // legacy fallback (mismo id nuevo)
+  return { label: cat || 'Sin categoría', emoji: '📁', color: '#64748b', bg: '#f1f5f9' };
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('app-ready', () => {
@@ -124,7 +136,7 @@ function renderRepoList() {
 }
 
 function renderRepoCard(item) {
-  const cat      = REPO_CATS[item.categoria] || { label: item.categoria, emoji: '📁', color: '#666', bg: '#f5f5f5' };
+  const cat      = getRepoCatConfig(item.categoria);
   const archivos = repoArchivos[item.id] || [];
   const fecha    = _repoFecha(item.created_at);
 
@@ -392,7 +404,7 @@ async function confirmarAsignarRepo() {
   if (seleccionados.length === 0) { alert('Elegí al menos un asesor.'); return; }
 
   const prioridad = document.getElementById('repo-asignar-prioridad').value;
-  const cat = REPO_CATS[item.categoria] || { emoji: '📁', label: item.categoria };
+  const cat = getRepoCatConfig(item.categoria);
   const descripcion = `${cat.emoji} [Repositorio] ${item.titulo}${item.descripcion ? '\n\n' + item.descripcion : ''}`;
 
   const btn = document.querySelector('#repo-asignar-overlay .btn-primary');
