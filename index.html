@@ -1219,15 +1219,6 @@
                 style="width: 200px; margin-bottom: 0"
                 oninput="filterClientes(this.value)"
               />
-              <button class="filter-chip active" onclick="filtAct(this, '')">
-                Todos
-              </button>
-              <button class="filter-chip" onclick="filtAct(this, 'soporte')">
-                Soporte
-              </button>
-              <button class="filter-chip" onclick="filtAct(this, 'impl')">
-                Implementación
-              </button>
               <select
                 style="width: 145px; margin-bottom: 0"
                 onchange="filtTipo(this.value)"
@@ -1255,6 +1246,18 @@
                 <option value="nombre" selected>Nombre</option>
                 <option value="consultas">Consultas</option>
               </select>
+            </div>
+
+            <div class="chip-tabs">
+              <button class="filter-chip active" onclick="filtAct(this, '')">
+                Todos <span class="filter-chip__count" id="cli-area-count-todos">0</span>
+              </button>
+              <button class="filter-chip" onclick="filtAct(this, 'soporte')">
+                Soporte <span class="filter-chip__count" id="cli-area-count-soporte">0</span>
+              </button>
+              <button class="filter-chip" onclick="filtAct(this, 'impl')">
+                Implementación <span class="filter-chip__count" id="cli-area-count-impl">0</span>
+              </button>
             </div>
 
             <div id="client-cards">
@@ -1309,6 +1312,32 @@
             </div>
 
             <div class="filter-row" style="margin-bottom: 10px">
+              <input
+                type="text"
+                placeholder="Buscar (cliente, descripcion, asesor)..."
+                style="flex: 1; min-width: 200px; margin-bottom: 0"
+                oninput="setSearchText(this.value)"
+              />
+              <button
+                id="group-by-cliente-btn"
+                class="filter-chip"
+                onclick="toggleGroupByCliente()"
+                title="Agrupar pendientes por cliente"
+              >
+                Agrupar por cliente
+              </button>
+              <button
+                id="pend-vencido-btn"
+                class="filter-chip"
+                onclick="toggleVencidoFilter(this)"
+                title="Mostrar solo pendientes vencidos (más de 5 días)"
+              >
+                🔴 Vencidos
+                <span id="pend-vencido-count" class="filter-count">0</span>
+              </button>
+            </div>
+
+            <div class="chip-tabs chip-tabs--compact">
               <button
                 class="filter-chip pend-filter active"
                 data-mode="mis"
@@ -1325,77 +1354,50 @@
                 Todos del equipo
                 <span id="pend-equipo-count" class="filter-count">0</span>
               </button>
-              <input
-                type="text"
-                placeholder="Buscar (cliente, descripcion, asesor)..."
-                style="flex: 1; min-width: 200px; margin-bottom: 0"
-                oninput="setSearchText(this.value)"
-              />
-              <button
-                id="group-by-cliente-btn"
-                class="filter-chip"
-                onclick="toggleGroupByCliente()"
-                title="Agrupar pendientes por cliente"
-              >
-                Agrupar por cliente
-              </button>
             </div>
 
-            <div class="filter-row" style="margin-bottom: 14px; gap: 6px">
-              <span class="text-meta-sm" style="margin-right: 4px"
-                >Categoria:</span
-              >
+            <div class="chip-tabs">
               <button
-                class="filter-chip pend-cat pend-cat--sm active"
+                class="filter-chip pend-cat active"
                 onclick="setCatFilter('', this)"
               >
-                Todas
+                Todas <span class="filter-chip__count" id="pend-cat-count-todas">0</span>
               </button>
               <button
-                class="filter-chip pend-cat pend-cat--sm"
+                class="filter-chip pend-cat"
                 onclick="setCatFilter('liquidac', this)"
               >
-                Liquidacion
+                Liquidacion <span class="filter-chip__count" id="pend-cat-count-liquidac">0</span>
               </button>
               <button
-                class="filter-chip pend-cat pend-cat--sm"
+                class="filter-chip pend-cat"
                 onclick="setCatFilter('error', this)"
               >
-                Errores
+                Errores <span class="filter-chip__count" id="pend-cat-count-error">0</span>
               </button>
               <button
-                class="filter-chip pend-cat pend-cat--sm"
+                class="filter-chip pend-cat"
                 onclick="setCatFilter('config', this)"
               >
-                Configuracion
+                Configuracion <span class="filter-chip__count" id="pend-cat-count-config">0</span>
               </button>
               <button
-                class="filter-chip pend-cat pend-cat--sm"
+                class="filter-chip pend-cat"
                 onclick="setCatFilter('actualiz', this)"
               >
-                Actualizaciones
+                Actualizaciones <span class="filter-chip__count" id="pend-cat-count-actualiz">0</span>
               </button>
               <button
-                class="filter-chip pend-cat pend-cat--sm"
+                class="filter-chip pend-cat"
                 onclick="setCatFilter('fuera', this)"
               >
-                Fuera del sistema
+                Fuera del sistema <span class="filter-chip__count" id="pend-cat-count-fuera">0</span>
               </button>
               <button
-                class="filter-chip pend-cat pend-cat--sm"
+                class="filter-chip pend-cat"
                 onclick="setCatFilter('__interno__', this)"
-                style="border-color: var(--amber); color: var(--amber-text)"
               >
-                🔒 Internos
-              </button>
-              <button
-                id="pend-vencido-btn"
-                class="filter-chip pend-cat--sm"
-                onclick="toggleVencidoFilter(this)"
-                title="Mostrar solo pendientes vencidos (más de 5 días)"
-              >
-                🔴 Vencidos
-                <span id="pend-vencido-count" class="filter-count">0</span>
+                🔒 Internos <span class="filter-chip__count" id="pend-cat-count-interno">0</span>
               </button>
             </div>
 
@@ -1550,7 +1552,7 @@
               <!-- Filtro Asesor inline con el buscador -->
               <div class="impl-asesor-inline">
                 <span class="impl-filter-group__label" style="width:auto;margin-right:8px">Asesor</span>
-                <div class="impl-filter-segmented">
+                <div class="impl-filter-segmented impl-tab-style">
                   <button class="filter-chip active" data-impl-filter="asesor" data-value=""    onclick="setImplFiltroAsesor(this, '')">Todos</button>
                   <button class="filter-chip"        data-impl-filter="asesor" data-value="mis" onclick="setImplFiltroAsesor(this, 'mis')">Mis tareas</button>
                 </div>
@@ -1593,7 +1595,7 @@
 
               <div class="impl-filter-group">
                 <span class="impl-filter-group__label">Esperando a</span>
-                <div class="impl-filter-segmented">
+                <div class="impl-filter-segmented impl-tab-style">
                   <button
                     class="filter-chip active"
                     data-impl-filter="resp"
@@ -1935,29 +1937,26 @@
                 style="flex: 1; min-width: 180px; margin-bottom: 0"
                 oninput="buscarKB(this.value)"
               />
+            </div>
+
+            <div class="chip-tabs">
               <button class="filter-chip active" onclick="filtKB(this, '')">
-                Todas
+                Todas <span class="filter-chip__count" id="kb-cat-count-todas">0</span>
               </button>
               <button class="filter-chip" onclick="filtKB(this, 'liquidacion')">
-                Liquidación
+                Liquidación <span class="filter-chip__count" id="kb-cat-count-liquidacion">0</span>
               </button>
               <button class="filter-chip" onclick="filtKB(this, 'errores')">
-                Errores
+                Errores <span class="filter-chip__count" id="kb-cat-count-errores">0</span>
               </button>
-              <button
-                class="filter-chip"
-                onclick="filtKB(this, 'configuracion')"
-              >
-                Configuración
+              <button class="filter-chip" onclick="filtKB(this, 'configuracion')">
+                Configuración <span class="filter-chip__count" id="kb-cat-count-configuracion">0</span>
               </button>
-              <button
-                class="filter-chip"
-                onclick="filtKB(this, 'actualizaciones')"
-              >
-                Actualizaciones
+              <button class="filter-chip" onclick="filtKB(this, 'actualizaciones')">
+                Actualizaciones <span class="filter-chip__count" id="kb-cat-count-actualizaciones">0</span>
               </button>
               <button class="filter-chip" onclick="filtKB(this, 'fuera')">
-                Fuera del sistema
+                Fuera del sistema <span class="filter-chip__count" id="kb-cat-count-fuera">0</span>
               </button>
             </div>
 
@@ -2037,7 +2036,7 @@
             </div>
 
             <!-- Chips de categoría (dinámicos con contador) -->
-            <div id="repo-chips" class="repo-chips"></div>
+            <div id="repo-chips" class="chip-tabs"></div>
 
             <div id="repo-list"></div>
           </div>

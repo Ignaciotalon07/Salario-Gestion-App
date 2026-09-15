@@ -1492,6 +1492,34 @@ input[type=date]:focus {
   .impl-asesor-inline { display: none !important; }
 }
 
+/* Estilo "tab" (mismo lenguaje visual que Repositorio/Clientes/Pendientes:
+   subrayado en vez de píldora rellena) para los toggles de Asesor y
+   "Esperando a". Estado se deja con su estilo píldora original — ya tiene su
+   propio select de respaldo en mobile y es un caso más denso (5 opciones). */
+.impl-filter-segmented.impl-tab-style {
+  border-bottom: 1px solid var(--border);
+  gap: 2px;
+}
+.impl-filter-segmented.impl-tab-style .filter-chip {
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text3);
+  font-weight: 600;
+}
+.impl-filter-segmented.impl-tab-style .filter-chip:hover:not(.active) {
+  color: var(--text);
+  background: var(--hover);
+}
+#app-root .impl-filter-segmented.impl-tab-style .filter-chip.active {
+  color: var(--text);
+  background: transparent;
+  border-color: transparent;
+  border-bottom-color: #f97316;
+  font-weight: 700;
+}
+
 /* ── Filtros mobile: card tipo settings con selects nativos ── */
 .impl-filters-mobile { display: none; }
 
@@ -4457,8 +4485,8 @@ input[type=date]:focus {
     width: 100% !important;
     box-sizing: border-box;
   }
-  /* chips Todos/Soporte/Impl en la segunda fila (3 columnas) */
-  #clientes .filter-row > .filter-chip { font-size: 11px; padding: 5px 8px; text-align: center; }
+  /* Tabs de área (Todos/Soporte/Implementación) ya se acomodan solas — achicamos tipografía */
+  #clientes .chip-tabs .filter-chip { font-size: 11px; padding: 9px 8px; }
   /* selects chicos */
   #clientes .filter-row > select {
     font-size: 11px !important;
@@ -4502,8 +4530,8 @@ input[type=date]:focus {
     grid-template-columns: 1fr 1fr !important;
   }
 
-  /* ── Pendientes: filtros — igual que clientes ── */
-  /* Fila 1: Mis/Todos + buscador + Agrupar */
+  /* ── Pendientes: filtros ── */
+  /* Fila 1: buscador + Agrupar + Vencidos */
   #pendientes .filter-row[style*="margin-bottom: 10px"] {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
@@ -4514,29 +4542,17 @@ input[type=date]:focus {
     min-width: 0 !important;
     width: 100% !important;
   }
-  #pendientes .filter-row[style*="margin-bottom: 10px"] .pend-filter {
+  #pendientes .filter-row[style*="margin-bottom: 10px"] .filter-chip {
     text-align: center;
     font-size: 12px;
     padding: 6px 8px;
   }
-  #pendientes #group-by-cliente-btn {
-    grid-column: 1 / -1;
-    font-size: 12px;
-    width: 100%;
-  }
 
-  /* Fila 2: categorías */
-  #pendientes .filter-row[style*="margin-bottom: 14px"] {
-    flex-wrap: wrap !important;
-    gap: 6px !important;
-  }
-  #pendientes .filter-row[style*="margin-bottom: 14px"] .filter-chip {
+  /* Fila 2 (Mis/Equipo) y fila 3 (categorías): las tabs ya se acomodan solas
+     con flex-wrap — solo achicamos un poco la tipografía en mobile. */
+  #pendientes .chip-tabs .filter-chip {
     font-size: 11px;
-    padding: 5px 10px;
-  }
-  #pendientes .filter-row[style*="margin-bottom: 14px"] .text-meta-sm {
-    width: 100%;
-    margin: 0 !important;
+    padding: 9px 8px;
   }
 
   /* ── Modal cierre pendiente en mobile ── */
@@ -5027,10 +5043,10 @@ input[type=date]:focus {
     min-width: 0 !important;
     box-sizing: border-box;
   }
-  #biblioteca .filter-row > .filter-chip {
+  /* Tabs de categoría ya se acomodan solas con flex-wrap — achicamos tipografía */
+  #biblioteca .chip-tabs .filter-chip {
     font-size: 11px;
-    padding: 5px 8px;
-    text-align: center;
+    padding: 9px 8px;
   }
 
   /* ── Alertas ── */
@@ -5400,10 +5416,13 @@ input[type=date]:focus {
   .repo-select { max-width: none; }
 }
 
-/* Tabs de categoría: ocupan todo el ancho, en fila(s) parejas, con subrayado activo.
-   Con flex-wrap, cada fila reparte su propio espacio sobrante entre sus tabs —
-   si no entran todas en una fila, las que sobran bajan solas y ordenadas a la siguiente. */
-.repo-chips {
+/* ═══════════════ Chip-tabs: diseño reutilizable de tabs por categoría ═══════════════
+   Nace en Repositorio, se reusa en Clientes / Pendientes / Base de Soluciones y en
+   los toggles chicos (Mis pendientes/Equipo, Asesor, Esperando a). Ocupan todo el
+   ancho, en fila(s) parejas, con subrayado activo. Con flex-wrap, cada fila reparte
+   su propio espacio sobrante entre sus tabs — si no entran todas en una fila, las
+   que sobran bajan solas y ordenadas a la siguiente. */
+.chip-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
@@ -5411,7 +5430,7 @@ input[type=date]:focus {
   margin-bottom: 20px;
   border-bottom: 1px solid var(--border);
 }
-.repo-chips .filter-chip {
+.chip-tabs .filter-chip {
   flex: 1 1 140px;
   display: flex;
   align-items: center;
@@ -5429,16 +5448,30 @@ input[type=date]:focus {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: inherit;
+  cursor: pointer;
 }
-.repo-chips .filter-chip:hover:not(.active) {
+.chip-tabs .filter-chip:hover:not(.active) {
   color: var(--text);
   background: var(--hover);
 }
-.repo-chips .filter-chip.active {
-  color: var(--accent);
+/* #app-root reforzado a propósito: hay una regla con ID,
+   "[data-theme=dark] #app-root .filter-chip.active", que rellena el chip
+   entero de color y le gana en especificidad a una regla de solo clases. */
+#app-root .chip-tabs.chip-tabs .filter-chip.active {
+  color: var(--text);
   background: transparent;
-  border-bottom-color: var(--accent);
+  border-color: transparent;
+  border-bottom-color: #f97316;
   font-weight: 700;
+}
+/* Variante compacta: para grupos chicos (2-3 tabs) que no necesitan estirarse
+   tanto — Mis pendientes/Equipo, Asesor, Esperando a. */
+.chip-tabs--compact {
+  margin-bottom: 14px;
+}
+.chip-tabs--compact .filter-chip {
+  flex: 1 1 160px;
 }
 .filter-chip__count {
   display: inline-flex;
@@ -5455,9 +5488,33 @@ input[type=date]:focus {
   flex-shrink: 0;
 }
 [data-theme="dark"] .filter-chip__count { background: rgba(255,255,255,0.1); }
-.repo-chips .filter-chip.active .filter-chip__count {
-  background: rgba(45,45,142,0.14);
-  color: var(--accent);
+.chip-tabs .filter-chip.active .filter-chip__count {
+  background: rgba(249,115,22,0.14);
+  color: #f97316;
+}
+/* .filter-count (contadores fuera de chip-tabs, ej. el chip "Vencidos" que se
+   queda con el estilo píldora clásico) se pisa acá SOLO para los que quedan
+   dentro de un .chip-tabs — para no romper el estilo blanco-sobre-color que
+   ya usan los chips píldora comunes. */
+.chip-tabs .filter-chip .filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(0,0,0,0.08);
+  color: inherit;
+  border-radius: 10px;
+  line-height: 1.5;
+  flex-shrink: 0;
+  margin-left: 0;
+}
+[data-theme="dark"] .chip-tabs .filter-chip .filter-count { background: rgba(255,255,255,0.1); }
+.chip-tabs .filter-chip.active .filter-count {
+  background: rgba(249,115,22,0.14);
+  color: #f97316;
 }
 
 /* ═══════════════ Grid + Card ═══════════════ */

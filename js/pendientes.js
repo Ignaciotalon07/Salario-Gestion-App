@@ -1632,6 +1632,26 @@ function updatePendCount() {
     vencidoCount.textContent = nVenc;
   }
 
+  // Contadores de las tabs de categoría — sobre el set del modo de vista actual
+  // (Mis pendientes / Todo el equipo), sin importar el buscador ni "Vencidos".
+  const baseCat = viewMode === 'mis'
+    ? (me ? pendientes.filter(p => p.asesor === me) : [])
+    : (me ? pendientes.filter(p => p.asesor !== me) : pendientes);
+  const catMatch = (sub) => baseCat.filter(p => (p.categoriaLabel || '').toLowerCase().includes(sub)).length;
+  const catCounts = {
+    todas:    baseCat.length,
+    liquidac: catMatch('liquidac'),
+    error:    catMatch('error'),
+    config:   catMatch('config'),
+    actualiz: catMatch('actualiz'),
+    fuera:    catMatch('fuera'),
+    interno:  baseCat.filter(p => p.interno).length,
+  };
+  Object.keys(catCounts).forEach(key => {
+    const el = document.getElementById('pend-cat-count-' + key);
+    if (el) el.textContent = catCounts[key];
+  });
+
   // ── Más antiguo (sobre TODOS los pendientes activos, no solo los del filtro) ──
   const valEl = document.getElementById('pend-mas-antiguo-val');
   const subEl = document.getElementById('pend-mas-antiguo-sub');

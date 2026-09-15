@@ -121,6 +121,20 @@ function renderKBList() {
       <td><button class="btn-sm" onclick="event.stopPropagation();verKBDetalle('${s.id}')">Ver</button></td>
     </tr>`;
   }).join('');
+
+  _actualizarKBCatCounts();
+}
+
+// Contadores de las tabs de categoría — siempre sobre el total de soluciones,
+// sin importar el buscador (mismo criterio que en Repositorio).
+function _actualizarKBCatCounts() {
+  const todas = document.getElementById('kb-cat-count-todas');
+  if (!todas) return;
+  todas.textContent = soluciones.length;
+  Object.keys(CATS).forEach(key => {
+    const el = document.getElementById('kb-cat-count-' + key);
+    if (el) el.textContent = soluciones.filter(s => s.cat === key).length;
+  });
 }
 
 function actualizarMetricasKB() {

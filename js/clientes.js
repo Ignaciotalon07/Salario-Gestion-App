@@ -174,6 +174,20 @@ function renderClientes() {
   cont.innerHTML = visible.map(renderClienteCard).join('');
   // Re-render también cuando llegan nuevas consultas (para actualizar stats)
   if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
+
+  _updateClientesAreaCounts();
+}
+
+// Contadores de las tabs de área (Todos/Soporte/Implementación) — siempre sobre
+// el total de clientes, sin importar los demás filtros (tipo/autonomía/orden).
+function _updateClientesAreaCounts() {
+  const elTodos    = document.getElementById('cli-area-count-todos');
+  const elSoporte  = document.getElementById('cli-area-count-soporte');
+  const elImpl     = document.getElementById('cli-area-count-impl');
+  if (!elTodos && !elSoporte && !elImpl) return;
+  if (elTodos)   elTodos.textContent   = clientes.length;
+  if (elSoporte) elSoporte.textContent = clientes.filter(c => c.area === 'soporte').length;
+  if (elImpl)    elImpl.textContent    = clientes.filter(c => c.area === 'impl').length;
 }
 
 function renderClienteCard(c) {
