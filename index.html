@@ -2004,23 +2004,40 @@
               <button class="btn-primary" onclick="abrirFormRepo()">+ Nuevo item</button>
             </div>
 
-            <!-- Filtros + buscador -->
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px">
-              <input
-                type="text"
-                id="repo-search"
-                class="form-input"
-                placeholder="Buscar..."
-                oninput="buscarRepo(this.value)"
-                style="max-width:350px;margin-right:8px"
-              />
-              <button class="filter-chip active" onclick="filtRepo(this,'')">Todos</button>
-              <button class="filter-chip" onclick="filtRepo(this,'actualizacion')">📦 Actualizaciones</button>
-              <button class="filter-chip" onclick="filtRepo(this,'modulo')">🧩 Módulos</button>
-              <button class="filter-chip" onclick="filtRepo(this,'convenios')">📋 Convenios</button>
-              <button class="filter-chip" onclick="filtRepo(this,'errores')">🐛 Errores de Salario</button>
-              <button class="filter-chip" onclick="filtRepo(this,'clientes')">📢 Para clientes</button>
+            <!-- Métricas: línea liviana de texto, sin caja -->
+            <div id="repo-metrics" class="repo-stats-line"></div>
+
+            <!-- Tarjeta de herramientas: buscador + filtros -->
+            <div class="repo-toolbar-card">
+              <label class="repo-search">
+                <span class="repo-search__icon">
+                  <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="9" cy="9" r="6"/>
+                    <line x1="17" y1="17" x2="13.2" y2="13.2"/>
+                  </svg>
+                </span>
+                <input
+                  type="text"
+                  id="repo-search"
+                  placeholder="Buscar por título o descripción..."
+                  oninput="buscarRepo(this.value)"
+                />
+              </label>
+              <div class="repo-select-group">
+                <select id="repo-orden" class="repo-select" onchange="ordenarRepo(this.value)">
+                  <option value="recientes">Más recientes</option>
+                  <option value="viejos">Más viejos</option>
+                  <option value="az">A – Z</option>
+                  <option value="descargas">Más descargados</option>
+                </select>
+                <select id="repo-autor" class="repo-select" onchange="filtrarPorAutorRepo(this.value)">
+                  <option value="">Todos los autores</option>
+                </select>
+              </div>
             </div>
+
+            <!-- Chips de categoría (dinámicos con contador) -->
+            <div id="repo-chips" class="repo-chips"></div>
 
             <div id="repo-list"></div>
           </div>
@@ -2566,7 +2583,7 @@
           <label class="fl">Categoría</label>
           <select id="repo-cat">
             <option value="actualizacion">📦 Actualización</option>
-            <option value="modulo">🧩 Nuevo módulo</option>
+            <option value="modulo">🧩 Módulo</option>
             <option value="convenios">📋 Convenios</option>
             <option value="errores">🐛 Errores de Salario</option>
             <option value="clientes">📢 Para clientes</option>
@@ -2574,8 +2591,12 @@
         </div>
       </div>
       <div class="form-group">
-        <label class="fl">Descripción / notas</label>
+        <label class="fl">Descripción / notas <span style="font-weight:400;color:var(--text3);font-size:11px">(soportado: **negrita**, *itálica*, `código`, [texto](url))</span></label>
         <textarea id="repo-desc" style="min-height:80px" placeholder="¿Qué incluye? ¿Para qué sirve? ¿Alguna instrucción especial?..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="fl">Link externo <span style="font-weight:400;color:var(--text3);font-size:11px">(opcional — Google Drive / WeTransfer para archivos &gt; 50 MB)</span></label>
+        <input type="url" id="repo-url" placeholder="https://drive.google.com/..." />
       </div>
       <div class="form-group">
         <label class="fl">Archivos adjuntos</label>

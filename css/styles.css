@@ -5255,6 +5255,213 @@ input[type=date]:focus {
    ═══════════════════════════════════════════ */
 
 /* Layout masonry: 2 columnas independientes, cada card ocupa su altura natural */
+/* ═══════════════ Repositorio — Métricas (línea liviana) ═══════════════ */
+
+.repo-stats-line {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: 2px 0 16px;
+}
+.repo-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--text3);
+}
+.repo-metric__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--dot-color, var(--accent));
+}
+.repo-metric__num {
+  font-weight: 800;
+  color: var(--text);
+  font-size: 13.5px;
+}
+
+/* ═══════════════ Repositorio — Tarjeta de herramientas (buscador + filtros) ═══════════════ */
+
+.repo-toolbar-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  padding: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+/* Buscador: ícono + input como hermanos en flex → nunca se pueden superponer */
+.repo-search {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1 1 260px;
+  max-width: 380px;
+  min-width: 200px;
+  height: 40px;
+  padding: 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  cursor: text;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.repo-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(45,45,142,.08);
+}
+.repo-search__icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  color: var(--text3);
+  opacity: 0.75;
+}
+.repo-search:focus-within .repo-search__icon { color: var(--accent); opacity: 1; }
+/* Especificidad reforzada con #app-root a propósito: hay reglas globales
+   "input[type=text] { padding:9px 12px }" y, en tema oscuro,
+   "[data-theme=dark] #app-root input { background: var(--surface2) }"
+   (esta última usa un ID → gana casi cualquier otra regla). Igualamos el
+   prefijo #app-root para poder ganarle en especificidad y que el input
+   quede realmente transparente dentro de su contenedor. */
+#app-root .repo-search input[type="text"] {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  box-shadow: none;
+  appearance: none;
+  -webkit-appearance: none;
+}
+#app-root .repo-search input[type="text"]:focus {
+  background: transparent;
+}
+.repo-search input[type="text"]::placeholder { color: var(--text3); }
+
+/* Selects de orden / autor */
+.repo-select-group {
+  display: flex;
+  gap: 8px;
+  flex: 1 1 300px;
+  flex-wrap: wrap;
+}
+/* Especificidad reforzada por el mismo motivo que el buscador: la regla
+   "[data-theme=dark] #app-root select { background: var(--surface2) }" usa
+   un ID y la propiedad "background" en forma abreviada, que además de pisar
+   el color BORRA el background-image (la flechita) → por eso no parecía un
+   desplegable. Igualamos con #app-root + una clase extra para ganarle. */
+#app-root .repo-toolbar-card select.repo-select {
+  flex: 1 1 160px;
+  min-width: 140px;
+  height: 40px;
+  padding: 0 30px 0 14px;
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  background-color: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='5 8 10 13 15 8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#app-root .repo-toolbar-card select.repo-select:focus {
+  background-color: var(--surface);
+}
+.repo-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(45,45,142,.08);
+}
+
+@media (max-width: 640px) {
+  .repo-search { max-width: none; flex-basis: 100%; }
+  .repo-select { max-width: none; }
+}
+
+/* Tabs de categoría: ocupan todo el ancho, en fila(s) parejas, con subrayado activo.
+   Con flex-wrap, cada fila reparte su propio espacio sobrante entre sus tabs —
+   si no entran todas en una fila, las que sobran bajan solas y ordenadas a la siguiente. */
+.repo-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  width: 100%;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+.repo-chips .filter-chip {
+  flex: 1 1 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 100px;
+  padding: 11px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text3);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.repo-chips .filter-chip:hover:not(.active) {
+  color: var(--text);
+  background: var(--hover);
+}
+.repo-chips .filter-chip.active {
+  color: var(--accent);
+  background: transparent;
+  border-bottom-color: var(--accent);
+  font-weight: 700;
+}
+.filter-chip__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(0,0,0,0.08);
+  color: inherit;
+  border-radius: 10px;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+[data-theme="dark"] .filter-chip__count { background: rgba(255,255,255,0.1); }
+.repo-chips .filter-chip.active .filter-chip__count {
+  background: rgba(45,45,142,0.14);
+  color: var(--accent);
+}
+
+/* ═══════════════ Grid + Card ═══════════════ */
+
 .repo-grid {
   column-count: 2;
   column-gap: 14px;
@@ -5265,29 +5472,68 @@ input[type=date]:focus {
 }
 @media (max-width: 900px) { .repo-grid { column-count: 1; } }
 
-/* Card */
 .repo-card {
+  position: relative;
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 16px;
+  padding: 16px 16px 14px 22px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  overflow: hidden;
+  transition: transform 0.18s cubic-bezier(.2,.9,.3,1),
+              border-color 0.18s,
+              box-shadow 0.18s;
 }
 .repo-card:hover {
-  border-color: var(--border2);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  transform: translateY(-3px);
+  border-color: var(--cat-color, var(--border2));
+  box-shadow: 0 10px 28px rgba(0,0,0,0.13);
+}
+/* Franja lateral de color por categoría */
+.repo-card__strip {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 5px;
+  border-top-left-radius: 14px;
+  border-bottom-left-radius: 14px;
+}
+/* Thumbnail si el item tiene una imagen */
+.repo-card__thumb {
+  height: 130px;
+  margin: -16px -16px 6px -22px;
+  background-size: cover;
+  background-position: center;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.repo-card__thumb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.18) 100%);
+}
+/* Highlight cuando llegás por deep-link */
+.repo-card--highlight {
+  animation: repo-flash 3s ease-out;
+}
+@keyframes repo-flash {
+  0%   { background-color: rgba(249, 115, 22, 0.38); box-shadow: 0 0 0 3px #f97316; }
+  65%  { background-color: rgba(249, 115, 22, 0.38); box-shadow: 0 0 0 3px #f97316; }
+  100% { background-color: rgba(249, 115, 22, 0);    box-shadow: 0 0 0 0 transparent; }
 }
 
-/* Top row: categoría + nuevo/editado */
+/* Top row */
 .repo-card__top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  position: relative;
+  z-index: 1;
 }
+.repo-card__top-badges { display: flex; gap: 5px; align-items: center; }
 .repo-cat-badge {
   font-size: 11px;
   font-weight: 700;
@@ -5314,8 +5560,8 @@ input[type=date]:focus {
   padding: 2px 7px;
 }
 
-/* Cuerpo: título + descripción */
-.repo-card__body { display: flex; flex-direction: column; gap: 4px; }
+/* Cuerpo */
+.repo-card__body { display: flex; flex-direction: column; gap: 4px; position: relative; z-index: 1; }
 .repo-card__titulo {
   font-size: 14px;
   font-weight: 700;
@@ -5326,14 +5572,41 @@ input[type=date]:focus {
   font-size: 12px;
   color: var(--text3);
   line-height: 1.5;
-  white-space: pre-wrap;
+  word-wrap: break-word;
 }
+.repo-card__desc strong { color: var(--text2); font-weight: 700; }
+.repo-card__desc em { font-style: italic; }
+.repo-desc-code {
+  font-family: 'Consolas', monospace;
+  font-size: 11px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--accent);
+}
+.repo-desc-link {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--accent);
+}
+.repo-desc-link:hover { border-bottom-style: solid; }
 
-/* Archivos como pills */
-.repo-files-pills {
+/* Contenedor de archivos (pills + link) */
+.repo-card__files {
   display: flex;
   flex-direction: column;
   gap: 5px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Archivos como pills */
+.repo-files-pills { display: flex; flex-direction: column; gap: 5px; }
+.repo-file-pill-wrap {
+  display: flex;
+  gap: 5px;
+  align-items: stretch;
 }
 .repo-file-pill {
   display: flex;
@@ -5345,13 +5618,16 @@ input[type=date]:focus {
   border-radius: 8px;
   cursor: pointer;
   text-align: left;
-  transition: background 0.13s, border-color 0.13s;
-  width: 100%;
+  transition: background 0.13s, border-color 0.13s, transform 0.1s;
+  flex: 1;
+  min-width: 0;
 }
 .repo-file-pill:hover {
   background: var(--hover);
-  border-color: var(--accent);
+  border-color: var(--cat-color, var(--accent));
 }
+.repo-file-pill:active { transform: scale(0.98); }
+.repo-file-pill--link { border-style: dashed; }
 .repo-file-pill__icon { font-size: 15px; flex-shrink: 0; }
 .repo-file-pill__name {
   flex: 1;
@@ -5361,16 +5637,33 @@ input[type=date]:focus {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
 }
 .repo-file-pill__size { font-size: 11px; color: var(--text3); white-space: nowrap; }
 .repo-file-pill__dl {
   font-size: 12px;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--cat-color, var(--accent));
   flex-shrink: 0;
 }
+.repo-file-preview {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text2);
+  transition: background 0.13s, border-color 0.13s, color 0.13s;
+  flex-shrink: 0;
+}
+.repo-file-preview:hover {
+  background: var(--hover);
+  border-color: var(--cat-color, var(--accent));
+  color: var(--cat-color, var(--accent));
+}
 
-/* Footer: meta + acciones */
+/* Footer */
 .repo-card__footer {
   display: flex;
   align-items: center;
@@ -5379,31 +5672,132 @@ input[type=date]:focus {
   padding-top: 8px;
   border-top: 1px solid var(--border);
   margin-top: auto;
+  position: relative;
+  z-index: 1;
 }
 .repo-card__meta { font-size: 11px; color: var(--text3); }
-.repo-card__actions { display: flex; gap: 6px; }
+.repo-card__actions { display: flex; gap: 4px; }
 .repo-action-btn {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 4px 10px;
+  padding: 5px 10px;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text2);
   cursor: pointer;
-  transition: background 0.13s, border-color 0.13s;
+  transition: background 0.13s, border-color 0.13s, color 0.13s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
 }
-.repo-action-btn:hover { background: var(--hover); border-color: var(--border2); }
+.repo-action-btn:hover { background: var(--hover); border-color: var(--border2); color: var(--text); }
 .repo-action-btn--danger { color: var(--red); }
-.repo-action-btn--danger:hover { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); }
+.repo-action-btn--danger:hover { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); color: var(--red); }
 
-.repo-asignar-opcion {
+/* ═══════════════ Empty state ═══════════════ */
+.repo-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text3);
+}
+.repo-empty__icon {
+  color: var(--border2);
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: center;
+}
+.repo-empty__msg {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 4px;
+}
+.repo-empty__sub { font-size: 12px; color: var(--text3); }
+
+/* ═══════════════ Drop zone del form ═══════════════ */
+.repo-form-drop {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 10px;
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  transition: background 0.15s, border-color 0.15s;
+  min-height: 60px;
+}
+.repo-form-drop--over {
+  background: rgba(99,102,241,0.06);
+  border-color: var(--accent);
+}
+.repo-form-drop__hint {
+  text-align: center;
+  padding: 12px;
+  font-size: 12px;
+  color: var(--text3);
+}
+
+/* ═══════════════ Preview modal ═══════════════ */
+.repo-preview-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text);
-  cursor: pointer;
-  padding: 4px 0;
+  justify-content: center;
+  z-index: 10000;
+  padding: 30px;
+  animation: repo-fade-in 0.15s ease-out;
 }
-.repo-asignar-opcion input { cursor: pointer; width: 15px; height: 15px; }
+@keyframes repo-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.repo-preview-sheet {
+  background: var(--surface);
+  border-radius: 14px;
+  width: min(1100px, 100%);
+  height: min(85vh, 900px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+.repo-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+.repo-preview-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.repo-preview-actions { display: flex; gap: 8px; }
+.repo-preview-body {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1a1a;
+}
+.repo-preview-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.repo-preview-iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
