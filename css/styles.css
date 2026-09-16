@@ -3945,12 +3945,6 @@ input[type=date]:focus {
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
-.saludo-greet__icon {
-  flex: none;
-  font-size: 34px;
-  line-height: 1;
-  filter: drop-shadow(0 3px 8px rgba(249,115,22,0.35));
-}
 .saludo-greet__frase {
   font-size: 17px;
   color: var(--text2);
@@ -4056,7 +4050,6 @@ input[type=date]:focus {
 
 @media (max-width: 640px) {
   .saludo-greet__texto { font-size: 26px; }
-  .saludo-greet__icon { font-size: 24px; }
   .saludo-greet__frase { font-size: 15px; }
   .saludo-tile { flex-wrap: wrap; }
   .saludo-tile__cta { margin-left: 42px; }

@@ -10,13 +10,6 @@ window.addEventListener('app-ready', () => {
   setTimeout(() => { if (typeof renderSaludoPanel === 'function') renderSaludoPanel(); }, 900);
 });
 
-function _saludoEmojiMomento(h) {
-  if (h < 6)  return '🌙';
-  if (h < 13) return '☀️';
-  if (h < 20) return '🌤️';
-  return '🌙';
-}
-
 // Varias formas de saludar según el momento del día — para que no suene
 // siempre igual, cada entrada elige una al azar entre las que le calzan.
 function _saludoOpcionesSaludo(h) {
@@ -42,9 +35,32 @@ function _saludoOpcionesSaludo(h) {
   ];
 }
 
+// El saludo se re-renderiza seguido (cada evento de realtime, cada vez que
+// entrás al Panel general), así que si eligiéramos una frase al azar en
+// cada llamada, cambiaría cada pocos segundos. Para que dure un buen rato
+// (horas, no segundos), la elegimos UNA sola vez por franja horaria y la
+// cacheamos — solo se vuelve a sortear cuando cambia la franja (mañana,
+// tarde, noche) o el nombre del usuario logueado.
+let _saludoCacheFranja = null;
+let _saludoCacheNombre = null;
+let _saludoCacheTexto  = null;
+
+function _saludoFranja(h) {
+  if (h < 6)  return 'noche1';
+  if (h < 13) return 'manana';
+  if (h < 20) return 'tarde';
+  return 'noche2';
+}
+
 function _saludoTextoSaludo(h, nombre) {
-  const opciones = _saludoOpcionesSaludo(h);
-  return opciones[Math.floor(Math.random() * opciones.length)](nombre);
+  const franja = _saludoFranja(h);
+  if (_saludoCacheFranja !== franja || _saludoCacheNombre !== nombre) {
+    const opciones = _saludoOpcionesSaludo(h);
+    _saludoCacheTexto  = opciones[Math.floor(Math.random() * opciones.length)](nombre);
+    _saludoCacheFranja = franja;
+    _saludoCacheNombre = nombre;
+  }
+  return _saludoCacheTexto;
 }
 
 function _saludoEsHoy(ts) {
@@ -351,7 +367,6 @@ function renderSaludoPanel() {
 
   const primerNombre = me.split(' ')[0];
   const horaActual = new Date().getHours();
-  const saludoEmoji = _saludoEmojiMomento(horaActual);
   const saludoCompleto = _saludoTextoSaludo(horaActual, escapeHtmlSaludo(primerNombre));
 
   // ── Actividad: consultas cargadas + clientes atendidos, hoy y ayer ──
@@ -454,7 +469,6 @@ function renderSaludoPanel() {
     <div class="saludo-greet">
       <div class="saludo-greet__titulo">
         <span class="saludo-greet__texto">${saludoCompleto}</span>
-        <span class="saludo-greet__icon">${saludoEmoji}</span>
       </div>
     </div>
     <div class="alert alert-${mensaje.tono} saludo-cartelito">
