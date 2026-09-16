@@ -2313,6 +2313,8 @@ function handleImplChange(payload) {
   }
   // Recalcular alertas cuando cambia alguna tarea de implementación
   if (typeof refreshAlertas === 'function') refreshAlertas();
+  // Refrescar el cartelito del Panel general (tareas vencidas/por vencer)
+  if (typeof renderSaludoPanel === 'function') renderSaludoPanel();
 }
 
 function handleImplNotaChange(payload) {

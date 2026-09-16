@@ -1883,6 +1883,8 @@ function handlePendienteChange(payload) {
   }
   // Recalcular alertas cada vez que cambia un pendiente
   if (typeof refreshAlertas === 'function') refreshAlertas();
+  // Refrescar el cartelito del Panel general (recordatorios/prioridad dependen de esto)
+  if (typeof renderSaludoPanel === 'function') renderSaludoPanel();
 }
 
 function handleNotaChange(payload) {

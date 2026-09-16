@@ -196,6 +196,8 @@ function suscribirConsultas() {
             if (typeof renderClientes === 'function') renderClientes();
             // Refrescar la página de Consultas
             if (typeof refreshConsultasPage === 'function') refreshConsultasPage();
+            // Refrescar el cartelito del Panel general (actividad de hoy, racha, etc.)
+            if (typeof renderSaludoPanel === 'function') renderSaludoPanel();
             // Si el detalle de un cliente está abierto, refrescarlo
             if (typeof _detalleClienteId !== 'undefined' && _detalleClienteId &&
                 payload.new.cliente_nombre && typeof goClienteDetail === 'function') {

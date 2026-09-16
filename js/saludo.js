@@ -152,6 +152,18 @@ function _saludoElegirMensaje(ctx) {
     return { tono: 'amber', texto: `🔔 Se acerca el fin del turno y todavía no cargaste ninguna consulta hoy. ¿Te olvidaste de alguna?` };
   }
 
+  // 1b) Última hora del turno y sí cargó algo hoy — recordatorio de dejar
+  // pendiente lo que haya quedado sin terminar, o algo para hacerle
+  // seguimiento en los próximos días (mismo horario que el de arriba,
+  // pero la condición contraria: uno u otro se muestra, no los dos).
+  if (h >= SALUDO_HORA_FIN - 1 && consultasHoyCount > 0) {
+    return {
+      tono: 'amber',
+      texto: `📌 Antes de cerrar el día: si algo quedó sin terminar, o tenés algo para seguir los próximos días, cargalo como pendiente para no perderlo de vista.`,
+      cta: { label: 'Cargar pendiente →', accion: '_saludoIrACargarPendiente()' },
+    };
+  }
+
   // 2) Tareas de implementación propias que vencen en las próximas 48hs (preventivo, aún no vencidas).
   const porVencer = implArr.filter(t => {
     if (t.asesor !== me || t.estado === 'completada' || !t.fecha_estimada) return false;
@@ -475,6 +487,16 @@ function _saludoIrAPendientes() {
   goTo(_saludoNavBtn('pendientes'), 'pendientes');
   setTimeout(() => {
     if (typeof setViewMode === 'function') setViewMode('mis');
+  }, 50);
+}
+
+// Va a Pendientes y abre directo el formulario de "Nuevo pendiente"
+// (recordatorio de fin de turno para cargar lo que quedó sin terminar).
+function _saludoIrACargarPendiente() {
+  goTo(_saludoNavBtn('pendientes'), 'pendientes');
+  setTimeout(() => {
+    if (typeof setViewMode === 'function') setViewMode('mis');
+    if (typeof showPendForm === 'function') showPendForm();
   }, 50);
 }
 

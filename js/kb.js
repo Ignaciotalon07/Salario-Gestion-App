@@ -394,7 +394,14 @@ async function eliminarSolucion(id) {
   if (!confirm(`Eliminar la solución "${s.titulo}"?\n\nEsto la borra para todo el equipo. La accion no se puede deshacer.`)) return;
   try {
     await dbDelete('soluciones', id);
+    // Update optimista: la sacamos del array local ya mismo en vez de
+    // esperar al evento de realtime (que a veces tarda o no llega con
+    // todos los datos) — así desaparece de la lista al instante.
+    soluciones = soluciones.filter(x => x.id !== id);
+    delete kbArchivos[id];
     cerrarKB();
+    renderKBList();
+    actualizarMetricasKB();
     toast('Solución eliminada');
   } catch (e) {
     console.error('Error eliminando solucion', e);

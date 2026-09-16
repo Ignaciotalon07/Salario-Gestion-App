@@ -567,20 +567,24 @@ textarea::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3
   background: rgba(10,8,18,0.75);
   backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
   border-right: 1px solid rgba(255,255,255,0.07);
-  display: flex; flex-direction: column; justify-content: center;
+  display: flex; flex-direction: column;
   padding: 52px 64px;
   box-shadow: 4px 0 40px rgba(0,0,0,0.4);
 }
-.login-card__logo { display: flex; justify-content: center; margin-bottom: 40px; }
-.login-card__header { margin-bottom: 28px; text-align: left; }
+/* Agrupa logo + encabezado + form: ocupa el espacio libre (menos lo que
+   usa el pie) y centra su contenido ahí — así el pie no le come espacio
+   al centrado y el bloque no queda desbalanceado hacia arriba. */
+.login-card__main { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+.login-card__logo { display: flex; justify-content: center; margin-bottom: 44px; }
+.login-card__header { margin-bottom: 34px; text-align: left; }
 .login-form-eyebrow { display: block; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #FF9A45; margin-bottom: 8px; }
 .login-form-title { font-size: 26px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px; line-height: 1.2; margin-bottom: 6px; }
 .login-form-subtitle { font-size: 13px; color: rgba(255,255,255,0.4); line-height: 1.5; }
 .login-card__body { flex: none; }
-.login-field { margin-bottom: 10px; }
+.login-field { margin-bottom: 18px; }
 .login-field label { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.5); letter-spacing: 0.2px; display: block; margin-bottom: 4px; }
 .login-form input {
-  width: 100%; box-sizing: border-box; padding: 12px 14px;
+  width: 100%; box-sizing: border-box; padding: 14px 16px;
   background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
   border-radius: 8px; color: #ffffff; font-size: 14px; font-family: inherit;
   outline: none; transition: border-color 0.15s, background 0.15s;
@@ -595,13 +599,20 @@ textarea::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3
   background: rgba(255,255,255,0.08); color: #ffffff; border: 1px solid rgba(255,255,255,0.12);
 }
 .login-btn:hover { background: rgba(255,255,255,0.13); transform: translateY(-1px); }
-.login-btn--primary { background: linear-gradient(135deg, #FF8C00, #E65C00); border-color: transparent; font-weight: 600; box-shadow: 0 4px 20px rgba(230,92,0,0.4); margin-top: 4px; }
+.login-btn--primary { background: linear-gradient(135deg, #FF8C00, #E65C00); border-color: transparent; font-weight: 600; box-shadow: 0 4px 20px rgba(230,92,0,0.4); margin-top: 10px; }
 .login-btn--primary:hover { background: linear-gradient(135deg, #FFA020, #F06000); box-shadow: 0 6px 28px rgba(230,92,0,0.5); border-color: transparent; }
-.login-divider { display: flex; align-items: center; gap: 10px; margin: 16px 0; font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: rgba(255,255,255,0.2); }
+.login-divider { display: flex; align-items: center; gap: 10px; margin: 26px 0; font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; color: rgba(255,255,255,0.2); }
 .login-divider span { white-space: nowrap; }
 .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
 .login-error { background: rgba(220,38,38,0.14); color: #ff7070; border: 1px solid rgba(220,38,38,0.25); border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 10px; }
-.login-foot { font-size: 11px; color: rgba(255,255,255,0.2); margin-top: 32px; text-align: center; line-height: 1.6; }
+/* En el flujo normal, después de ".login-card__main" — como ese wrapper
+   ocupa el espacio libre y centra su propio contenido, el pie queda
+   cerca del fondo del card sin desbalancear el centrado hacia arriba. */
+.login-foot {
+  margin-top: 40px;
+  font-size: 11px; color: rgba(255,255,255,0.2);
+  text-align: center; line-height: 1.6;
+}
 
 /* Panel visual derecho */
 .login-visual-panel { position: relative; z-index: 1; flex: 1; display: flex; align-items: center; justify-content: flex-start; padding: 60px 60px 60px 80px; overflow: hidden; }
@@ -652,13 +663,15 @@ textarea::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3
     background: transparent;
     backdrop-filter: none;
     box-shadow: none;
-    padding: 0 28px;
+    padding: 24px 28px 64px;
     justify-content: center;  /* centra contenido verticalmente */
     align-items: stretch;
     overflow: hidden;
   }
   /* Resetear flex:1 del desktop para que el centrado funcione */
   .login-card__body { flex: 0 0 auto; }
+  /* .login-card__main mantiene flex:1 (igual que desktop) para que el
+     pie quede pegado abajo también en mobile, no centrado con el resto. */
 
   .login-card__logo { display: none; }
   .login-card__header { text-align: center; margin-bottom: 22px; }
@@ -672,10 +685,10 @@ textarea::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3
   .login-mobile-brand-name__sub  { font-size:52px; font-weight:200; color:rgba(255,255,255,0.35); }
 
   .login-form input { font-size: 16px !important; }
-  .login-foot { margin-top: 24px; padding-top: 0; text-align: center; }
+  .login-foot { position: static; margin-top: 32px; padding-top: 0; text-align: center; }
 }
 @media (max-width: 380px) {
-  .login-card { padding: 0 20px; }
+  .login-card { padding: 20px 20px 56px; }
   .login-mobile-brand-name__main { font-size: 42px; }
   .login-mobile-brand-name__sub  { font-size: 42px; }
   .login-form-title { font-size: 20px; }

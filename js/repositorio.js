@@ -790,6 +790,8 @@ function suscribirRepositorio() {
       renderRepoAll();
       _updateRepoBadge();
       _cargarThumbnails();
+      // Refrescar el cartelito del Panel general (aviso de item nuevo)
+      if (typeof renderSaludoPanel === 'function') renderSaludoPanel();
     }).subscribe();
 
   sb().channel('repositorio-archivos-changes')
