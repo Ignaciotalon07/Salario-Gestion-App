@@ -22,6 +22,10 @@ function goTo(btn, id) {
   if (id === 'repositorio' && typeof marcarRepositorioVisto === 'function') {
     marcarRepositorioVisto();
   }
+  // Refrescar el saludo + "Tu día" cada vez que se entra al Panel general
+  if (id === 'dashboard' && typeof renderSaludoPanel === 'function') {
+    renderSaludoPanel();
+  }
   // Forzar resize de charts de equipo al navegar (se inicializan con display:none)
   if (id === 'equipo') {
     setTimeout(() => {

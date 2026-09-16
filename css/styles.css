@@ -94,8 +94,25 @@ body {
 
 /* Page header */
 .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 12px; }
-.page-title { font-size: 22px; font-weight: 600; letter-spacing: -0.4px; }
+.page-title {
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+}
 .page-sub { font-size: 13px; color: var(--text2); margin-top: 2px; }
+
+/* Eyebrow: usado en Panel general, donde el saludo (js/saludo.js) pasa a
+   ser el título principal de la página — "Panel general" queda como
+   etiqueta de sección chica arriba, para no competir visualmente. */
+.page-title.page-title--eyebrow {
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+}
 
 /* Buttons */
 .btn-primary {
@@ -135,7 +152,7 @@ body {
 
 /* Metric cards */
 .metrics-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
-#dashboard .page-header { align-items: center; }
+#dashboard .page-header { align-items: center; margin-bottom: 10px; }
 #equipo .page-header { align-items: center; }
 #clientes .page-header { align-items: center; }
 #pendientes .page-header { align-items: center; }
@@ -3827,6 +3844,7 @@ input[type=date]:focus {
 .hoy-chip--red   { background: var(--red-bg);   color: var(--red);   }
 .hoy-chip--amber { background: var(--amber-bg);  color: var(--amber); }
 .hoy-chip--blue  { background: var(--blue-bg);   color: var(--blue);  }
+.hoy-chip--green { background: var(--green-bg);  color: var(--green); }
 
 .hoy-chevron { font-size: 10px; color: var(--text3); }
 
@@ -3886,6 +3904,149 @@ input[type=date]:focus {
 @media (max-width: 700px) {
   .hoy-body { grid-template-columns: 1fr; }
   .hoy-seccion { border-right: none; border-bottom: 1px solid var(--border); }
+}
+
+/* ════════════════════════════════════
+   SALUDO PERSONALIZADO + "TU DÍA" (Panel General)
+   Nada de tarjeta/degradé propios — se apoya en la tipografía de
+   page-header y en el mismo estilo de metric-card que ya usa el resto
+   del Panel General, para que se sienta parte de la misma página.
+════════════════════════════════════ */
+
+.saludo-greet {
+  margin: 2px 0 20px;
+}
+.saludo-greet__titulo {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+.saludo-greet__texto {
+  font-size: 38px;
+  font-weight: 700;
+  letter-spacing: -1.2px;
+  line-height: 1.1;
+  background: linear-gradient(120deg, var(--text) 30%, var(--accent) 110%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.saludo-greet__icon {
+  flex: none;
+  font-size: 34px;
+  line-height: 1;
+  filter: drop-shadow(0 3px 8px rgba(249,115,22,0.35));
+}
+.saludo-greet__frase {
+  font-size: 17px;
+  color: var(--text2);
+  margin-top: 4px;
+}
+.saludo-cartelito {
+  margin-bottom: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+.saludo-cartelito strong {
+  display: inline;
+  font-weight: 800;
+  margin-bottom: 0;
+}
+.saludo-cartelito__texto {
+  /* Ojo: NO usar flex-basis en px acá. En mobile ".alert" pasa a
+     flex-direction:column, y un flex-basis fijo se interpreta como alto
+     (no ancho) en ese eje — generaba un cartel gigante con espacio vacío.
+     "flex:1 1 auto" se adapta bien a los dos ejes. */
+  flex: 1 1 auto;
+  min-width: 160px;
+  line-height: 1.45;
+}
+.saludo-cartelito__cta {
+  flex: none;
+  background: none;
+  border: none;
+  font: inherit;
+  font-weight: 700;
+  font-size: 12.5px;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+}
+.saludo-cartelito__cta:hover {
+  opacity: 0.7;
+}
+
+/* Tiles de "Tu día" — mensajes en tono de asistente ("Tenés X...", "Hay
+   X..."). Diseño de fila de acción (ícono en pastilla + texto + CTA),
+   deliberadamente distinto de .metric-card para no confundirse con las
+   métricas del panel. */
+.saludo-tiles {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.saludo-tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: color-mix(in srgb, var(--tile-color, var(--accent)) 7%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--tile-color, var(--accent)) 18%, var(--border));
+  border-left: 4px solid var(--tile-color, var(--accent));
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.15s;
+}
+.saludo-tile:hover {
+  background: color-mix(in srgb, var(--tile-color, var(--accent)) 14%, var(--surface));
+  transform: translateX(3px);
+}
+.saludo-tile__icon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  background: var(--tile-color, var(--accent));
+  color: #fff;
+}
+.saludo-tile__msg {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.4;
+}
+.saludo-tile__msg strong {
+  color: var(--tile-color, var(--accent));
+  font-weight: 800;
+}
+.saludo-tile__cta {
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--tile-color, var(--accent));
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .saludo-greet__texto { font-size: 26px; }
+  .saludo-greet__icon { font-size: 24px; }
+  .saludo-greet__frase { font-size: 15px; }
+  .saludo-tile { flex-wrap: wrap; }
+  .saludo-tile__cta { margin-left: 42px; }
 }
 
 /* ════════════════════════════════════
@@ -5053,7 +5214,7 @@ input[type=date]:focus {
   .alert { flex-direction: column; gap: 6px; }
 
   /* ── Page sub / títulos ── */
-  .page-title { font-size: 22px; }
+  .page-title { font-size: 16px; }
   .page-sub   { font-size: 12px; }
 
   /* ── Sección equipo: ocultar gráfico, priorizar lista ── */

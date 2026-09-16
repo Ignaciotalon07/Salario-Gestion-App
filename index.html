@@ -636,7 +636,7 @@
           <div id="dashboard" class="page active">
             <div class="page-header">
               <div>
-                <div class="page-title">Panel general</div>
+                <div class="page-title page-title--eyebrow">Panel general</div>
                 <div class="page-sub" id="panel-page-sub"></div>
               </div>
               <!-- Columna derecha: botón + filtro de mes apilados -->
@@ -650,7 +650,7 @@
                     onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='none'"
                     title="Mes anterior">◀</button>
                   <span id="panel-mes-label"
-                    style="font-size:12px;font-weight:600;color:var(--text);flex:1;text-align:center">
+                    style="font-size:12px;font-weight:600;color:var(--text);flex:1;text-align:center;padding:0 8px">
                     Cargando...
                   </span>
                   <button id="panel-mes-next" onclick="navPanelMes(1)" disabled
@@ -660,6 +660,9 @@
                 </div>
               </div>
             </div>
+
+            <!-- Saludo personalizado + "Tu día" — renderizado por js/saludo.js -->
+            <div id="panel-saludo"></div>
 
             <div class="metrics-grid">
               <div class="metric-card" style="border-top:3px solid var(--accent);padding-top:15px">
@@ -2245,6 +2248,7 @@
     <script src="js/alertas.js"></script>
     <script src="js/consultas-page.js"></script>
     <script src="js/repositorio.js"></script>
+    <script src="js/saludo.js"></script>
 
     <!-- ════════════════════════════════════
        MODAL — Registrar consulta
