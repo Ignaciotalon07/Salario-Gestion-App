@@ -567,7 +567,7 @@ textarea::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3
   background: rgba(10,8,18,0.75);
   backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
   border-right: 1px solid rgba(255,255,255,0.07);
-  display: flex; flex-direction: column;
+  display: flex; flex-direction: column; justify-content: center;
   padding: 52px 64px;
   box-shadow: 4px 0 40px rgba(0,0,0,0.4);
 }
@@ -576,7 +576,7 @@ textarea::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3
 .login-form-eyebrow { display: block; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #FF9A45; margin-bottom: 8px; }
 .login-form-title { font-size: 26px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px; line-height: 1.2; margin-bottom: 6px; }
 .login-form-subtitle { font-size: 13px; color: rgba(255,255,255,0.4); line-height: 1.5; }
-.login-card__body { flex: 1; }
+.login-card__body { flex: none; }
 .login-field { margin-bottom: 10px; }
 .login-field label { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.5); letter-spacing: 0.2px; display: block; margin-bottom: 4px; }
 .login-form input {
@@ -601,7 +601,7 @@ textarea::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3
 .login-divider span { white-space: nowrap; }
 .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
 .login-error { background: rgba(220,38,38,0.14); color: #ff7070; border: 1px solid rgba(220,38,38,0.25); border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-bottom: 10px; }
-.login-foot { font-size: 11px; color: rgba(255,255,255,0.2); margin-top: auto; padding-top: 32px; text-align: center; line-height: 1.6; }
+.login-foot { font-size: 11px; color: rgba(255,255,255,0.2); margin-top: 32px; text-align: center; line-height: 1.6; }
 
 /* Panel visual derecho */
 .login-visual-panel { position: relative; z-index: 1; flex: 1; display: flex; align-items: center; justify-content: flex-start; padding: 60px 60px 60px 80px; overflow: hidden; }
