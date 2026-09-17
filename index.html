@@ -655,30 +655,22 @@
                 <div class="page-title page-title--eyebrow">Panel general</div>
                 <div class="page-sub" id="panel-page-sub"></div>
               </div>
-              <!-- Columna derecha: botón + filtro de mes apilados -->
-              <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch;min-width:180px">
-                <button class="btn-primary" onclick="abrirModalConsulta()" style="height:42px;width:100%">
+              <div class="panel-header-right">
+                <button id="btn-registrar-consulta-panel" class="btn-primary" onclick="abrirModalConsulta()">
                   + Registrar consulta
                 </button>
-                <div style="display:flex;align-items:center;gap:0;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;overflow:hidden;height:32px">
-                  <button id="panel-mes-prev" onclick="navPanelMes(-1)"
-                    style="background:none;border:none;border-right:1px solid var(--border2);color:var(--text2);font-size:12px;cursor:pointer;padding:0 10px;height:100%;display:flex;align-items:center;transition:background .13s"
-                    onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='none'"
-                    title="Mes anterior">◀</button>
-                  <span id="panel-mes-label"
-                    style="font-size:12px;font-weight:600;color:var(--text);flex:1;text-align:center;padding:0 8px">
-                    Cargando...
-                  </span>
-                  <button id="panel-mes-next" onclick="navPanelMes(1)" disabled
-                    style="background:none;border:none;border-left:1px solid var(--border2);color:var(--text2);font-size:12px;cursor:pointer;padding:0 10px;height:100%;display:flex;align-items:center;opacity:0.35;transition:background .13s"
-                    onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='none'"
-                    title="Mes siguiente">▶</button>
-                </div>
               </div>
             </div>
 
             <!-- Saludo personalizado + "Tu día" — renderizado por js/saludo.js -->
             <div id="panel-saludo"></div>
+
+            <!-- Selector de mes: full-width, prolijo y minimalista -->
+            <div id="panel-mes-nav" class="panel-mes-nav">
+              <button id="panel-mes-prev" class="panel-mes-nav__btn" onclick="navPanelMes(-1)" title="Mes anterior">◀</button>
+              <span id="panel-mes-label" class="panel-mes-nav__label">Cargando...</span>
+              <button id="panel-mes-next" class="panel-mes-nav__btn" onclick="navPanelMes(1)" disabled title="Mes siguiente">▶</button>
+            </div>
 
             <div class="metrics-grid">
               <div class="metric-card" style="border-top:3px solid var(--accent);padding-top:15px">

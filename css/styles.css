@@ -103,6 +103,32 @@ body {
 }
 .page-sub { font-size: 13px; color: var(--text2); margin-top: 2px; }
 
+.panel-header-right { display: flex; align-items: flex-start; }
+.panel-header-right .btn-primary { height: 42px; }
+
+/* Selector de mes del Panel general: full-width, debajo del saludo/mensajes
+   y arriba de las métricas. Barra fina con separadores arriba/abajo en vez
+   de una caja con fondo — prolijo y minimalista, funciona igual en desktop
+   y mobile. */
+.panel-mes-nav {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  width: 100%;
+  padding: 10px 0;
+  margin-bottom: 20px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.panel-mes-nav__btn {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; color: var(--text2);
+  font-size: 12px; cursor: pointer;
+  transition: background .13s, color .13s;
+}
+.panel-mes-nav__btn:hover:not(:disabled) { background: var(--surface2); color: var(--text); }
+.panel-mes-nav__btn:disabled { opacity: .35; cursor: default; }
+.panel-mes-nav__label { font-size: 13.5px; font-weight: 700; color: var(--text); min-width: 150px; text-align: center; }
+
 /* Eyebrow: usado en Panel general, donde el saludo (js/saludo.js) pasa a
    ser el título principal de la página — "Panel general" queda como
    etiqueta de sección chica arriba, para no competir visualmente. */
@@ -4065,6 +4091,11 @@ input[type=date]:focus {
   gap: 8px;
   margin-bottom: 22px;
 }
+
+/* Botón "resumen colapsado" — oculto en desktop (ahí las tiles se ven
+   siempre expandidas, como antes). Solo se activa en mobile, ver media
+   query más abajo. */
+.saludo-tiles-toggle { display: none; }
 .saludo-tile {
   display: flex;
   align-items: center;
@@ -4122,7 +4153,15 @@ input[type=date]:focus {
 }
 
 @media (max-width: 640px) {
-  .saludo-greet__texto { font-size: 26px; }
+  .saludo-greet__titulo { min-width: 0; justify-content: center; text-align: center; }
+  .saludo-greet__texto {
+    font-size: 24px;
+    letter-spacing: -0.6px;
+    min-width: 0;
+    overflow-wrap: break-word;
+    display: inline-block;
+    max-width: 100%;
+  }
   .saludo-greet__frase { font-size: 15px; }
 
   /* En mobile pasamos de flex-row a grid: 2 columnas fijas (ícono | contenido)
@@ -4156,7 +4195,45 @@ input[type=date]:focus {
     grid-column: 2;
     grid-row: 2;
   }
-  .saludo-cartelito__texto { font-size: 13.5px; }
+  .saludo-cartelito {
+    padding: 11px 13px;
+  }
+  .saludo-cartelito__texto { font-size: 13px; line-height: 1.42; min-width: 0; }
+  .saludo-cartelito__cta { font-size: 12px; }
+
+  /* Resumen colapsado de "Tu día": en vez de las 4 tarjetas siempre
+     visibles, mostramos un cartel chico tipo alerta ("⚠️ Tenés N cosas para
+     revisar hoy") y las tiles quedan ocultas hasta que se despliega. */
+  .saludo-tiles-toggle {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 11px 14px;
+    margin-bottom: 10px;
+    background: var(--amber-bg);
+    color: var(--amber-text);
+    border: 1px solid color-mix(in srgb, var(--amber) 25%, var(--border));
+    border-radius: var(--radius);
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+  }
+  .saludo-tiles-toggle__icon { flex: none; font-size: 14px; }
+  .saludo-tiles-toggle__text { flex: 1; }
+  .saludo-tiles-toggle__text strong { font-weight: 800; }
+  .saludo-tiles-toggle__chev { flex: none; font-size: 10px; opacity: 0.75; }
+
+  .saludo-tiles { display: none; }
+  .saludo-tiles.saludo-tiles--open { display: flex; }
+}
+
+/* Teléfonos chicos (iPhone SE y similares, ~375px o menos): el saludo
+   todavía puede quedar apretado a 20px con nombres largos. */
+@media (max-width: 380px) {
+  .saludo-greet__texto { font-size: 21px; letter-spacing: -0.4px; }
 }
 
 /* ════════════════════════════════════
@@ -4711,6 +4788,12 @@ input[type=date]:focus {
   #mobile-nav {
     display: flex !important;
   }
+
+  /* El botón "+ Registrar consulta" del Panel general es redundante en mobile:
+     ya está el mismo acceso en la bottom nav. */
+  #btn-registrar-consulta-panel { display: none !important; }
+
+  #dashboard #panel-page-sub { font-size: 11px; }
 
   /* ── Page header ── */
   .page-header {

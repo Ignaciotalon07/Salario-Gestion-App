@@ -45,6 +45,19 @@ let _saludoCacheFranja = null;
 let _saludoCacheNombre = null;
 let _saludoCacheTexto  = null;
 
+// Estado del resumen colapsado de "Tu día" en mobile (persiste entre
+// re-renders — si el usuario lo desplegó, no queremos que se vuelva a
+// cerrar solo porque llegó un cambio por realtime).
+let _saludoTilesExpanded = false;
+
+function toggleSaludoTiles() {
+  _saludoTilesExpanded = !_saludoTilesExpanded;
+  const list = document.getElementById('saludo-tiles-list');
+  const chev = document.getElementById('saludo-tiles-chev');
+  if (list) list.classList.toggle('saludo-tiles--open', _saludoTilesExpanded);
+  if (chev) chev.textContent = _saludoTilesExpanded ? '▲' : '▼';
+}
+
 function _saludoFranja(h) {
   if (h < 6)  return 'noche1';
   if (h < 13) return 'manana';
@@ -448,8 +461,19 @@ function renderSaludoPanel() {
   // cartelito de arriba (_saludoElegirMensaje) ya cubre ese caso con un
   // mensaje positivo propio (ver disparador 8, "Día liviano"), así
   // evitamos mostrar dos carteles verdes diciendo básicamente lo mismo.
+  //
+  // En mobile las 4 tarjetas apiladas se sentían "grandes" y desconectadas
+  // del resto — se reemplazan por un resumen colapsado ("⚠️ Tenés N cosas
+  // para revisar hoy") que se puede desplegar. En desktop este botón queda
+  // oculto por CSS y las tiles se ven expandidas como siempre.
   const tilesHTML = tiles.length > 0
-    ? `<div class="saludo-tiles">${tiles.map(t => `
+    ? `
+      <button class="saludo-tiles-toggle" onclick="toggleSaludoTiles()">
+        <span class="saludo-tiles-toggle__icon">⚠️</span>
+        <span class="saludo-tiles-toggle__text">Tenés <strong>${tiles.length}</strong> cosa${tiles.length !== 1 ? 's' : ''} para revisar hoy</span>
+        <span class="saludo-tiles-toggle__chev" id="saludo-tiles-chev">${_saludoTilesExpanded ? '▲' : '▼'}</span>
+      </button>
+      <div class="saludo-tiles${_saludoTilesExpanded ? ' saludo-tiles--open' : ''}" id="saludo-tiles-list">${tiles.map(t => `
         <button class="saludo-tile" style="--tile-color:${t.color}" onclick="${t.accion}">
           <span class="saludo-tile__icon">${t.icon}</span>
           <div class="saludo-tile__msg">${t.msg}</div>
