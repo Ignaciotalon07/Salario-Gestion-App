@@ -19,6 +19,16 @@ const _cpState = {
 let _cpHist     = { periodo: 'todo', offset: 0 };
 let _cpHistPage = 5; // cuántas consultas mostrar actualmente
 
+// Selector de mes de las métricas de arriba (Este mes / Top cliente / Promedio).
+// "Hoy" no se ve afectado por esto — siempre es el día de hoy.
+let _cpMesOffset = 0; // 0 = mes actual, -1 = mes anterior, etc.
+
+// Gráfico "Volumen de consultas": Semana (últimos 7 días) / Mes (sigue a
+// _cpMesOffset) / Año (año en curso).
+let _cpVolPeriodo = 'mes';
+let _cpChartVolumen    = null;
+let _cpChartSparkline  = null;
+
 // ════════════════════════════════════════════════════════════════
 // HELPERS DE PERÍODO
 // ════════════════════════════════════════════════════════════════
@@ -176,7 +186,11 @@ function renderCpRanking(targetId) {
   }
 
   // ────────────────────────────────────────────────
-  // cp-top-rep: consulta más repetida (repetida = 'si')
+  // cp-top-rep: consulta más repetida (repetida = 'si') — lista tipo tabla
+  // (Categoría / Veces) en vez de barras. Cuando las categorías top empatan
+  // en la misma cantidad, una barra no aporta información (todas iguales)
+  // así que se lo decimos explícitamente en vez de mostrar barras vacías
+  // de significado.
   // ────────────────────────────────────────────────
   if (targetId === 'cp-top-rep') {
     const soloRep = datos.filter(c => c.repetida === 'si');
@@ -196,45 +210,105 @@ function renderCpRanking(targetId) {
       el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Sin consultas repetidas en este período</div>';
       return;
     }
-    const max = sorted[0][1].total;
-    el.innerHTML = sorted.map(([cat, { total, clientes }], i) => {
-      const pct      = Math.round((total / max) * 100);
-      const pctTotal = soloRep.length > 0 ? Math.round((total / soloRep.length) * 100) : 0;
-      const medal    = i === 0 ? '🔁' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
 
-      // Cliente que más repite esta consulta específica
-      const topCli = Object.entries(clientes).sort((a, b) => b[1] - a[1])[0];
-      const topCliLabel = topCli
-        ? `<span style="font-size:11px;color:var(--text3);margin-top:2px;display:block">
-             👤 ${_cpEsc(topCli[0])} · ${topCli[1]}x
-           </span>`
-        : '';
+    const PERIODO_FRASE = { dia: 'hoy', semana: 'esta semana', mes: 'este mes', anio: 'este año', todo: 'en total' };
+    const periodoFrase  = PERIODO_FRASE[rango] || 'en este período';
 
-      return `<div style="margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px;gap:8px">
-          <span style="font-size:13px;font-weight:${i===0?'600':'400'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${medal} ${_cpEsc(cat)}</span>
-          <span style="font-size:13px;font-weight:600;color:var(--red,#c0392b);white-space:nowrap">
-            ${total} <span style="font-size:11px;color:var(--text3);font-weight:400">(${pctTotal}%)</span>
-          </span>
-        </div>
-        ${topCliLabel}
-        <div style="height:5px;background:var(--border);border-radius:3px;margin-top:4px">
-          <div style="height:5px;background:var(--red,#c0392b);border-radius:3px;width:${pct}%"></div>
-        </div>
+    const counts   = sorted.map(([, g]) => g.total);
+    const allTied  = counts.length > 1 && counts.every(c => c === counts[0]);
+    const noteHTML = allTied
+      ? `<div style="font-size:12.5px;color:var(--text3);line-height:1.5;margin-bottom:14px">
+           Las ${sorted.length} categorías repetidas ${periodoFrase} empatan en ${counts[0]} repetición${counts[0] !== 1 ? 'es' : ''}.
+         </div>`
+      : '';
+
+    const headerHTML = `
+      <div style="display:flex;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid var(--border2);margin-bottom:2px">
+        <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Categoría</span>
+        <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Veces</span>
       </div>`;
+
+    const rowsHTML = sorted.map(([cat, { total, clientes }], i) => {
+      const pctTotal = soloRep.length > 0 ? Math.round((total / soloRep.length) * 100) : 0;
+      const topCli   = Object.entries(clientes).sort((a, b) => b[1] - a[1])[0];
+      const isLast   = i === sorted.length - 1;
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:12px 0;${isLast ? '' : 'border-bottom:1px solid var(--border2)'}">
+          <div style="min-width:0">
+            <div style="font-size:13.5px;font-weight:600;color:var(--text);line-height:1.35">${_cpEsc(cat)}</div>
+            ${topCli ? `<div style="font-size:12px;color:var(--accent);margin-top:3px">${_cpEsc(topCli[0])}</div>` : ''}
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:14px;font-weight:700;color:var(--text)">${total}×</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:1px">${pctTotal}%</div>
+          </div>
+        </div>`;
     }).join('');
+
+    el.innerHTML = noteHTML + headerHTML + rowsHTML;
+    return;
+  }
+
+  // ────────────────────────────────────────────────
+  // cp-top-cat: categoría/subtema más frecuente — barra segmentada +
+  // leyenda con color, en vez de la lista de barras genérica.
+  // ────────────────────────────────────────────────
+  if (targetId === 'cp-top-cat') {
+    const conteoCat = {};
+    datos.forEach(c => {
+      const k = [c.categoria, c.subtema].filter(Boolean).join(' › ') || 'Sin categoría';
+      conteoCat[k] = (conteoCat[k] || 0) + 1;
+    });
+    const sortedCat = Object.entries(conteoCat).sort((a, b) => b[1] - a[1]);
+    const total = datos.length;
+
+    if (sortedCat.length === 0 || total === 0) {
+      el.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:8px 0">Sin datos para este período</div>';
+      return;
+    }
+
+    const TOP_N   = 4;
+    const top     = sortedCat.slice(0, TOP_N);
+    const resto   = sortedCat.slice(TOP_N);
+    const restoCant = resto.reduce((s, [, c]) => s + c, 0);
+    const COLORS  = ['#2d6fd6', '#e0522f', '#2d9e5c', '#d19a1c']; // azul, rojo-naranja, verde, ámbar
+    const GRIS    = '#6b7280';
+
+    const segmentos = top.map(([nombre, cant], i) => ({
+      nombre, cant, color: COLORS[i % COLORS.length],
+      pct: Math.round((cant / total) * 100)
+    }));
+    if (restoCant > 0) {
+      segmentos.push({
+        nombre: 'Otras categorías', cant: restoCant, color: GRIS,
+        pct: Math.round((restoCant / total) * 100)
+      });
+    }
+
+    const barHTML = segmentos.map(s => `
+      <div style="flex:${Math.max(s.pct, 1)} 1 0%;background:${s.color};display:flex;align-items:center;justify-content:center">
+        ${s.pct >= 6 ? `<span style="font-size:11px;font-weight:700;color:#fff">${s.nombre === 'Otras categorías' ? 'Otras' : s.pct + '%'}</span>` : ''}
+      </div>`).join('');
+
+    const legendHTML = segmentos.map(s => `
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0">
+        <span style="width:8px;height:8px;border-radius:50%;background:${s.color};flex:none"></span>
+        <span style="font-size:13px;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_cpEsc(s.nombre)}</span>
+        <span style="font-size:12px;color:var(--text3);white-space:nowrap">${s.cant} · ${s.pct}%</span>
+      </div>`).join('');
+
+    el.innerHTML = `
+      <div style="display:flex;height:26px;border-radius:6px;overflow:hidden;margin-bottom:14px">${barHTML}</div>
+      <div>${legendHTML}</div>`;
     return;
   }
 
   // ────────────────────────────────────────────────
   // cp-top-cli: cliente con más consultas
-  // cp-top-cat: categoría/subtema más frecuente (total, no solo repetidas)
   // ────────────────────────────────────────────────
   const conteo = {};
   datos.forEach(c => {
-    const k = targetId === 'cp-top-cli'
-      ? (c.cliente || null)
-      : ([c.categoria, c.subtema].filter(Boolean).join(' › ') || 'Sin categoría');
+    const k = c.cliente || null;
     if (!k) return;
     conteo[k] = (conteo[k] || 0) + 1;
   });
@@ -245,23 +319,18 @@ function renderCpRanking(targetId) {
     return;
   }
 
-  const max      = sorted[0][1];
-  const isTopCli = (targetId === 'cp-top-cli');
+  const max = sorted[0][1];
 
   el.innerHTML = sorted.map(([nombre, cant], i) => {
-    const pct      = Math.round((cant / max) * 100);
-    const pctTotal = datos.length > 0 ? Math.round((cant / datos.length) * 100) : 0;
-    const medal    = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-    const barColor = isTopCli ? 'var(--accent)' : (i === 0 ? 'var(--red,#c0392b)' : 'var(--accent)');
+    const pct   = Math.round((cant / max) * 100);
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
     return `<div style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;margin-bottom:3px;gap:8px">
         <span style="font-size:13px;font-weight:${i===0?'600':'400'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${medal} ${_cpEsc(nombre)}</span>
-        <span style="font-size:13px;font-weight:600;color:var(--accent);white-space:nowrap">
-          ${cant}${isTopCli ? '' : ` <span style="font-size:11px;color:var(--text3);font-weight:400">(${pctTotal}%)</span>`}
-        </span>
+        <span style="font-size:13px;font-weight:600;color:var(--accent);white-space:nowrap">${cant}</span>
       </div>
       <div style="height:5px;background:var(--border);border-radius:3px">
-        <div style="height:5px;background:${barColor};border-radius:3px;width:${pct}%"></div>
+        <div style="height:5px;background:var(--accent);border-radius:3px;width:${pct}%"></div>
       </div>
     </div>`;
   }).join('');
@@ -664,14 +733,19 @@ function _cpRefreshMetricas() {
   const man   = new Date(hoy);   man.setDate(man.getDate() + 1);
 
   const deHoy  = all.filter(c => { const t = new Date(c.timestamp); return t >= hoy && t < man; });
-  const desMes = _cpFilterPeriod('mes', 0);
+  const desMes = _cpFilterPeriod('mes', _cpMesOffset);
 
-  const diasTranscurridos = ahora.getDate();
-  const promDia = diasTranscurridos > 0 ? (desMes.length / diasTranscurridos).toFixed(1) : '0';
+  // Días para el promedio: si es el mes actual, los transcurridos hasta hoy;
+  // si es un mes pasado (ya cerrado), el total de días de ese mes.
+  const totalMesesSel = ahora.getFullYear() * 12 + ahora.getMonth() + _cpMesOffset;
+  const yearSel  = Math.floor(totalMesesSel / 12);
+  const monthSel = ((totalMesesSel % 12) + 12) % 12;
+  const diasDelMes = _cpMesOffset === 0 ? ahora.getDate() : new Date(yearSel, monthSel + 1, 0).getDate();
+  const promDia = diasDelMes > 0 ? (desMes.length / diasDelMes).toFixed(1) : '0';
   const repMes  = desMes.filter(c => c.repetida === 'si').length;
   const pctRep  = desMes.length > 0 ? Math.round(repMes / desMes.length * 100) : 0;
 
-  // Top cliente del mes: cliente con más consultas en el mes actual
+  // Top cliente del mes seleccionado
   const conteoCli = {};
   desMes.forEach(c => { if (c.cliente) conteoCli[c.cliente] = (conteoCli[c.cliente] || 0) + 1; });
   const topCliEntries = Object.entries(conteoCli).sort((a, b) => b[1] - a[1]);
@@ -692,12 +766,259 @@ function _cpRefreshMetricas() {
   const elSub    = document.getElementById('cp-top-mes-sub');
   if (elNombre) elNombre.textContent = topCliNombre || '—';
   if (elSub) {
+    const mesTexto = _cpMesOffset === 0 ? 'este mes' : 'ese mes';
     elSub.textContent = topCliNombre
-      ? `${topCliCant} consulta${topCliCant !== 1 ? 's' : ''} este mes`
+      ? `${topCliCant} consulta${topCliCant !== 1 ? 's' : ''} ${mesTexto}`
       : 'sin datos aún';
   }
   set('cp-prom', promDia);
   // cp-sub es texto fijo definido en el HTML, no se sobreescribe
+
+  // Etiquetas dinámicas: "Este mes" / "Top cliente del mes" / "Prom. diario (mes)"
+  // pasan a nombrar el mes elegido cuando no es el actual.
+  const labelMesRaw = _cpPeriodLabel('mes', _cpMesOffset);
+  const labelMes = labelMesRaw.charAt(0).toUpperCase() + labelMesRaw.slice(1);
+  const esMesActual = _cpMesOffset === 0;
+  const elLblMes  = document.getElementById('cp-mes-label');
+  const elLblTop  = document.getElementById('cp-top-mes-label');
+  const elLblProm = document.getElementById('cp-prom-label');
+  if (elLblMes)  elLblMes.textContent  = esMesActual ? 'Este mes' : labelMes;
+  if (elLblTop)  elLblTop.textContent  = esMesActual ? 'Top cliente del mes' : 'Top cliente — ' + labelMes;
+  if (elLblProm) elLblProm.textContent = esMesActual ? 'Prom. diario (mes)' : 'Prom. diario — ' + labelMes;
+}
+
+// ────────── Selector de mes (Este mes / Top cliente / Promedio) ──────────
+
+function navCpMes(dir) {
+  const nuevo = _cpMesOffset + dir;
+  if (nuevo > 0) return; // no ir al futuro
+  _cpMesOffset = nuevo;
+  _cpUpdateMesNav();
+  _cpRefreshMetricas();
+  _cpRenderMesSparkline();
+  if (_cpVolPeriodo === 'mes') _cpRenderVolumenChart();
+}
+
+function _cpUpdateMesNav() {
+  const label   = document.getElementById('cp-mes-nav-label');
+  const nextBtn = document.getElementById('cp-mes-next');
+  if (label) {
+    const txt = _cpPeriodLabel('mes', _cpMesOffset);
+    label.textContent = txt.charAt(0).toUpperCase() + txt.slice(1);
+  }
+  if (nextBtn) {
+    nextBtn.disabled     = (_cpMesOffset >= 0);
+    nextBtn.style.opacity = (_cpMesOffset >= 0) ? '0.35' : '1';
+    nextBtn.style.cursor  = (_cpMesOffset >= 0) ? 'default' : 'pointer';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// GRÁFICO "VOLUMEN DE CONSULTAS" + sparkline de la card "Este mes"
+// Datos reales (no de ejemplo): se agrupan por día/mes a partir del
+// array global `consultas`, con el mismo criterio de _cpFilterPeriod
+// (excluye programación interna).
+// ════════════════════════════════════════════════════════════════
+
+function _cpTodas() {
+  return (typeof consultas !== 'undefined')
+    ? consultas.filter(c => c.tipoConsulta !== 'programacion_interna' && c.tipo_consulta !== 'programacion_interna')
+    : [];
+}
+
+function _cpDateKey(d) {
+  // Clave YYYY-MM-DD en hora local (evita corrimientos de zona horaria de toISOString)
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function setCpVolPeriodo(periodo) {
+  _cpVolPeriodo = periodo;
+  ['semana', 'mes', 'anio'].forEach(p => {
+    const btn = document.getElementById('cp-vol-btn-' + p);
+    if (btn) btn.classList.toggle('active', p === periodo);
+  });
+  _cpRenderVolumenChart();
+}
+
+function _cpRenderVolumenChart() {
+  const ctx = document.getElementById('cp-chart-volumen');
+  if (!ctx) return;
+  const todas = _cpTodas();
+  const ahora = new Date();
+  const hoyKey = _cpDateKey(ahora);
+
+  let labels = [];
+  let data = [];
+  let todayIdx = -1;
+  let titulo = 'Volumen de consultas';
+  let sub = '';
+
+  if (_cpVolPeriodo === 'semana') {
+    const hoy0 = new Date(ahora); hoy0.setHours(0, 0, 0, 0);
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(hoy0); d.setDate(d.getDate() - i);
+      const key = _cpDateKey(d);
+      const count = todas.filter(c => _cpDateKey(new Date(c.timestamp)) === key).length;
+      labels.push(['D', 'L', 'M', 'X', 'J', 'V', 'S'][d.getDay()] + ' ' + d.getDate());
+      data.push(count);
+      if (key === hoyKey) todayIdx = labels.length - 1;
+    }
+    titulo = 'Volumen de consultas — Últimos 7 días';
+    sub = 'Últimos 7 días' + (todayIdx >= 0 ? ' · hoy destacado' : '');
+  } else if (_cpVolPeriodo === 'anio') {
+    const year = ahora.getFullYear();
+    for (let m = 0; m < 12; m++) {
+      const count = todas.filter(c => {
+        const d = new Date(c.timestamp);
+        return d.getFullYear() === year && d.getMonth() === m;
+      }).length;
+      const lbl = new Date(year, m, 1).toLocaleDateString('es-AR', { month: 'short' }).replace('.', '');
+      labels.push(lbl.charAt(0).toUpperCase() + lbl.slice(1));
+      data.push(count);
+      if (m === ahora.getMonth()) todayIdx = m;
+    }
+    titulo = 'Volumen de consultas — ' + year;
+    sub = 'Enero – diciembre' + (todayIdx >= 0 ? ' · mes actual destacado' : '');
+  } else {
+    // 'mes' — sigue al selector de mes de arriba (_cpMesOffset)
+    const totalMeses  = ahora.getFullYear() * 12 + ahora.getMonth() + _cpMesOffset;
+    const year         = Math.floor(totalMeses / 12);
+    const month        = ((totalMeses % 12) + 12) % 12;
+    const esMesActual  = _cpMesOffset === 0;
+    const diasEnMes    = new Date(year, month + 1, 0).getDate();
+    const ultimoDia    = esMesActual ? ahora.getDate() : diasEnMes;
+    for (let dia = 1; dia <= ultimoDia; dia++) {
+      const count = todas.filter(c => {
+        const d = new Date(c.timestamp);
+        return d.getFullYear() === year && d.getMonth() === month && d.getDate() === dia;
+      }).length;
+      labels.push(String(dia));
+      data.push(count);
+      if (_cpDateKey(new Date(year, month, dia)) === hoyKey) todayIdx = dia - 1;
+    }
+    const mesLabelRaw = new Date(year, month, 1).toLocaleDateString('es-AR', { month: 'long' });
+    const mesLabel    = mesLabelRaw.charAt(0).toUpperCase() + mesLabelRaw.slice(1);
+    titulo = 'Volumen de consultas — ' + mesLabel;
+    sub = `Días 1–${ultimoDia}` + (todayIdx >= 0 ? ' · hoy destacado' : '');
+  }
+
+  const elTitulo = document.getElementById('cp-vol-titulo');
+  const elSub    = document.getElementById('cp-vol-sub');
+  if (elTitulo) elTitulo.textContent = titulo;
+  if (elSub)    elSub.textContent    = sub;
+
+  const accentColor = (getComputedStyle(document.documentElement).getPropertyValue('--accent') || '').trim() || '#2d2d8e';
+  const pointBg     = data.map((_, i) => i === todayIdx ? accentColor : 'transparent');
+  const pointRadius = data.map((_, i) => i === todayIdx ? 5 : 0);
+  const pointHover  = data.map((_, i) => i === todayIdx ? 6 : 4);
+
+  if (!_cpChartVolumen) {
+    _cpChartVolumen = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          data: [],
+          borderColor: accentColor,
+          backgroundColor: accentColor + '1a',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2,
+          pointBackgroundColor: [],
+          pointBorderColor: accentColor,
+          pointBorderWidth: 2,
+          pointRadius: [],
+          pointHoverRadius: [],
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (item) => item.parsed.y + (item.parsed.y === 1 ? ' consulta' : ' consultas')
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(148,163,184,0.12)' },
+            ticks: { color: '#9e9e99', font: { size: 11 }, stepSize: 1, precision: 0 }
+          },
+          x: { grid: { display: false }, ticks: { color: '#9e9e99', font: { size: 11 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } }
+        }
+      }
+    });
+  }
+
+  _cpChartVolumen.data.labels                          = labels;
+  _cpChartVolumen.data.datasets[0].data                 = data;
+  _cpChartVolumen.data.datasets[0].borderColor          = accentColor;
+  _cpChartVolumen.data.datasets[0].backgroundColor      = accentColor + '1a';
+  _cpChartVolumen.data.datasets[0].pointBorderColor     = accentColor;
+  _cpChartVolumen.data.datasets[0].pointBackgroundColor = pointBg;
+  _cpChartVolumen.data.datasets[0].pointRadius          = pointRadius;
+  _cpChartVolumen.data.datasets[0].pointHoverRadius     = pointHover;
+  _cpChartVolumen.update();
+}
+
+// Mini gráfico de tendencia dentro de la card "Este mes" (días 1..hoy,
+// o el mes completo si es un mes cerrado).
+function _cpRenderMesSparkline() {
+  const ctx = document.getElementById('cp-mes-sparkline');
+  if (!ctx) return;
+  const todas = _cpTodas();
+  const ahora = new Date();
+
+  const totalMeses = ahora.getFullYear() * 12 + ahora.getMonth() + _cpMesOffset;
+  const year        = Math.floor(totalMeses / 12);
+  const month       = ((totalMeses % 12) + 12) % 12;
+  const esMesActual = _cpMesOffset === 0;
+  const diasEnMes   = new Date(year, month + 1, 0).getDate();
+  const ultimoDia   = esMesActual ? Math.max(ahora.getDate(), 1) : diasEnMes;
+
+  const data = [];
+  for (let dia = 1; dia <= ultimoDia; dia++) {
+    const count = todas.filter(c => {
+      const d = new Date(c.timestamp);
+      return d.getFullYear() === year && d.getMonth() === month && d.getDate() === dia;
+    }).length;
+    data.push(count);
+  }
+  if (data.length === 0) data.push(0);
+
+  const greenColor = (getComputedStyle(document.documentElement).getPropertyValue('--green') || '').trim() || '#2d6a2d';
+
+  if (!_cpChartSparkline) {
+    _cpChartSparkline = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: data.map((_, i) => i),
+        datasets: [{
+          data,
+          borderColor: greenColor,
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          tension: 0.35,
+          pointRadius: 0,
+        }]
+      },
+      options: {
+        responsive: false,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: { x: { display: false }, y: { display: false } },
+      }
+    });
+  } else {
+    _cpChartSparkline.data.labels             = data.map((_, i) => i);
+    _cpChartSparkline.data.datasets[0].data   = data;
+    _cpChartSparkline.data.datasets[0].borderColor = greenColor;
+    _cpChartSparkline.update();
+  }
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -706,7 +1027,10 @@ function _cpRefreshMetricas() {
 
 function renderConsultasPage() {
   if (!document.getElementById('cp-hoy')) return;
+  _cpUpdateMesNav();
   _cpRefreshMetricas();
+  _cpRenderMesSparkline();
+  _cpRenderVolumenChart();
   _cpUpdateRankingNav('cp-top-cli');
   _cpUpdateRankingNav('cp-top-cat');
   _cpUpdateRankingNav('cp-top-tiempo');

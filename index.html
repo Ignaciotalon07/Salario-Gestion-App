@@ -960,6 +960,13 @@
               <button class="btn-primary" onclick="abrirModalConsulta()">+ Registrar consulta</button>
             </div>
 
+            <!-- Selector de mes: controla Este mes / Top cliente / Promedio (Hoy no cambia) -->
+            <div class="panel-mes-nav">
+              <button id="cp-mes-prev" class="panel-mes-nav__btn" onclick="navCpMes(-1)" title="Mes anterior">◀</button>
+              <span id="cp-mes-nav-label" class="panel-mes-nav__label">Cargando...</span>
+              <button id="cp-mes-next" class="panel-mes-nav__btn" onclick="navCpMes(1)" disabled title="Mes siguiente">▶</button>
+            </div>
+
             <!-- Métricas principales -->
             <div class="metrics-grid" style="margin-bottom:20px">
               <div class="metric-card" style="border-top:3px solid #E65C00;padding-top:15px">
@@ -968,19 +975,38 @@
                 <div class="metric-sub" id="cp-hoy-sub">consultas</div>
               </div>
               <div class="metric-card" style="border-top:3px solid var(--green);padding-top:15px">
-                <div class="metric-label" style="color:var(--green)">Este mes</div>
-                <div class="metric-value" id="cp-mes">—</div>
+                <div class="metric-label" style="color:var(--green)" id="cp-mes-label">Este mes</div>
+                <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:8px">
+                  <div class="metric-value" id="cp-mes">—</div>
+                  <canvas id="cp-mes-sparkline" width="70" height="28" style="flex:none"></canvas>
+                </div>
                 <div class="metric-sub" id="cp-mes-sub">—</div>
               </div>
               <div class="metric-card" style="border-top:3px solid var(--accent);padding-top:15px">
-                <div class="metric-label" style="color:var(--accent)">Top cliente del mes</div>
+                <div class="metric-label" style="color:var(--accent)" id="cp-top-mes-label">Top cliente del mes</div>
                 <div class="metric-value" id="cp-top-mes-nombre" style="font-size:16px;line-height:1.2">—</div>
                 <div class="metric-sub" id="cp-top-mes-sub">—</div>
               </div>
               <div class="metric-card" style="border-top:3px solid var(--blue);padding-top:15px">
-                <div class="metric-label" style="color:var(--blue)">Prom. diario (mes)</div>
+                <div class="metric-label" style="color:var(--blue)" id="cp-prom-label">Prom. diario (mes)</div>
                 <div class="metric-value" id="cp-prom">—</div>
                 <div class="metric-sub">consultas por día</div>
+              </div>
+            </div>
+
+            <!-- Volumen de consultas: línea diaria/mensual según el período elegido -->
+            <div class="card" style="margin-bottom:20px">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
+                <span class="card-title" style="margin:0;flex:1" id="cp-vol-titulo">Volumen de consultas</span>
+                <div style="display:inline-flex;border:1px solid var(--border2);border-radius:8px;overflow:hidden">
+                  <button id="cp-vol-btn-semana" class="cp-range-btn" onclick="setCpVolPeriodo('semana')">Semana</button>
+                  <button id="cp-vol-btn-mes" class="cp-range-btn active" onclick="setCpVolPeriodo('mes')">Mes</button>
+                  <button id="cp-vol-btn-anio" class="cp-range-btn" onclick="setCpVolPeriodo('anio')">Año</button>
+                </div>
+              </div>
+              <div class="page-sub" id="cp-vol-sub" style="margin-bottom:10px">—</div>
+              <div style="position:relative;height:220px">
+                <canvas id="cp-chart-volumen"></canvas>
               </div>
             </div>
 
@@ -1695,24 +1721,16 @@
                 <div class="page-title">Equipo</div>
                 <div class="page-sub">Carga y rendimiento por asesor</div>
               </div>
-              <!-- Columna derecha: botón + filtro de mes apilados (igual que Panel general) -->
-              <div style="display:flex;flex-direction:column;gap:6px;align-items:stretch;min-width:180px">
-                <button class="btn-primary" onclick="abrirModalHoras()" style="height:42px;width:100%">+ Carga de horas</button>
-                <div style="display:flex;align-items:center;gap:0;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;overflow:hidden;height:32px">
-                  <button id="eq-mes-prev" onclick="navEqMes(-1)"
-                    style="background:none;border:none;border-right:1px solid var(--border2);color:var(--text2);font-size:12px;cursor:pointer;padding:0 10px;height:100%;display:flex;align-items:center;transition:background .13s"
-                    onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='none'"
-                    title="Mes anterior">◀</button>
-                  <span id="eq-mes-label"
-                    style="font-size:12px;font-weight:600;color:var(--text);flex:1;text-align:center">
-                    Cargando...
-                  </span>
-                  <button id="eq-mes-next" onclick="navEqMes(1)" disabled
-                    style="background:none;border:none;border-left:1px solid var(--border2);color:var(--text2);font-size:12px;cursor:pointer;padding:0 10px;height:100%;display:flex;align-items:center;opacity:0.35;transition:background .13s"
-                    onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='none'"
-                    title="Mes siguiente">▶</button>
-                </div>
+              <div class="panel-header-right">
+                <button class="btn-primary" onclick="abrirModalHoras()">+ Carga de horas</button>
               </div>
+            </div>
+
+            <!-- Selector de mes: full-width, igual que en Panel general -->
+            <div class="panel-mes-nav">
+              <button id="eq-mes-prev" class="panel-mes-nav__btn" onclick="navEqMes(-1)" title="Mes anterior">◀</button>
+              <span id="eq-mes-label" class="panel-mes-nav__label">Cargando...</span>
+              <button id="eq-mes-next" class="panel-mes-nav__btn" onclick="navEqMes(1)" disabled title="Mes siguiente">▶</button>
             </div>
 
             <div class="metrics-grid">
