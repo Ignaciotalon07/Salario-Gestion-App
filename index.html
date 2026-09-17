@@ -20,6 +20,13 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
+    <!-- SheetJS (exportar Reportes a Excel) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- jsPDF + autotable (exportar Reportes a PDF) -->
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+
     <!-- Supabase JS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -591,6 +598,13 @@
               <span>Repositorio</span>
               <span class="nav-badge warn" id="repo-nav-badge" style="display:none"></span>
             </button>
+            <button class="nav-item" onclick="goTo(this, 'reportes')">
+              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M2 14V2M2 14h12"></path>
+                <path d="M5 11V7M8.5 11V4M12 11V9"></path>
+              </svg>
+              <span>Reportes</span>
+            </button>
           </div>
 
           <div class="sidebar-section" style="margin-top: auto">
@@ -715,99 +729,91 @@
               </div>
             </div>
 
-            <div class="grid-2">
+            <div class="grid-2" id="grid-autonomia-categoria">
               <div class="card">
                 <div class="card-title">Autonomía de clientes</div>
-                <div
-                  style="
-                    display: flex;
-                    gap: 14px;
-                    margin-bottom: 16px;
-                    align-items: center;
-                  "
-                >
-                  <div style="text-align: center">
-                    <div
-                      class="score-ring"
-                      id="ring-aut-baja"
-                      style="
-                        background: var(--red-bg);
-                        color: var(--red-text);
-                        margin: 0 auto 4px;
-                      "
-                    >
-                      0%
+                <div class="aut-donut-row">
+                  <div class="aut-left-group">
+                    <div class="aut-donut-wrap">
+                      <div class="aut-donut" id="aut-donut"></div>
+                      <div class="aut-donut-center">
+                        <div class="aut-donut-center__num" id="aut-donut-total">0</div>
+                        <div class="aut-donut-center__label">clientes</div>
+                      </div>
                     </div>
-                    <div style="font-size: 11px; color: var(--text3)">Baja</div>
-                  </div>
-                  <div style="text-align: center">
-                    <div
-                      class="score-ring"
-                      id="ring-aut-media"
-                      style="
-                        background: var(--amber-bg);
-                        color: var(--amber-text);
-                        margin: 0 auto 4px;
-                      "
-                    >
-                      0%
-                    </div>
-                    <div style="font-size: 11px; color: var(--text3)">
-                      Media
+                    <div class="aut-legend__labels">
+                      <div class="aut-legend__label-row">
+                        <span class="aut-legend__dot" style="background: var(--red)"></span>
+                        <span class="aut-legend__label">Baja autonomía</span>
+                      </div>
+                      <div class="aut-legend__label-row">
+                        <span class="aut-legend__dot" style="background: var(--amber)"></span>
+                        <span class="aut-legend__label">Media autonomía</span>
+                      </div>
+                      <div class="aut-legend__label-row">
+                        <span class="aut-legend__dot" style="background: var(--green)"></span>
+                        <span class="aut-legend__label">Alta autonomía</span>
+                      </div>
                     </div>
                   </div>
-                  <div style="text-align: center">
-                    <div
-                      class="score-ring"
-                      id="ring-aut-alta"
-                      style="
-                        background: var(--green-bg);
-                        color: var(--green-text);
-                        margin: 0 auto 4px;
-                      "
-                    >
-                      0%
+                  <div class="aut-legend__pcts">
+                    <div class="aut-legend__pct-row">
+                      <span class="aut-legend__pct" id="ring-aut-baja" style="color: var(--red-text)">0%</span>
+                      <span class="aut-legend__count" id="bar-aut-baja-count">0 clientes</span>
                     </div>
-                    <div style="font-size: 11px; color: var(--text3)">Alta</div>
+                    <div class="aut-legend__pct-row">
+                      <span class="aut-legend__pct" id="ring-aut-media" style="color: var(--amber-text)">0%</span>
+                      <span class="aut-legend__count" id="bar-aut-media-count">0 clientes</span>
+                    </div>
+                    <div class="aut-legend__pct-row">
+                      <span class="aut-legend__pct" id="ring-aut-alta" style="color: var(--green-text)">0%</span>
+                      <span class="aut-legend__count" id="bar-aut-alta-count">0 clientes</span>
+                    </div>
                   </div>
                 </div>
-                <div class="bar-wrap">
-                  <div class="bar-label">
-                    <span>Baja autonomía</span
-                    ><span id="bar-aut-baja-count">0 clientes</span>
+
+                <!-- Versión mobile: donut chico arriba + filas tipo "tile" (mismo
+                     lenguaje visual que los mensajes del panel), en vez de forzar
+                     el layout de 2 columnas de desktop a un ancho angosto. -->
+                <div class="aut-mobile">
+                  <div class="aut-mobile-donut-wrap">
+                    <div class="aut-donut" id="aut-donut-m"></div>
+                    <div class="aut-donut-center">
+                      <div class="aut-donut-center__num" id="aut-donut-total-m">0</div>
+                      <div class="aut-donut-center__label">clientes</div>
+                    </div>
                   </div>
-                  <div class="bar-track">
-                    <div
-                      id="bar-aut-baja-fill"
-                      class="bar-fill"
-                      style="width: 0%; background: var(--red)"
-                    ></div>
-                  </div>
-                </div>
-                <div class="bar-wrap">
-                  <div class="bar-label">
-                    <span>Media autonomía</span
-                    ><span id="bar-aut-media-count">0 clientes</span>
-                  </div>
-                  <div class="bar-track">
-                    <div
-                      id="bar-aut-media-fill"
-                      class="bar-fill"
-                      style="width: 0%; background: var(--amber)"
-                    ></div>
-                  </div>
-                </div>
-                <div class="bar-wrap">
-                  <div class="bar-label">
-                    <span>Alta autonomía</span
-                    ><span id="bar-aut-alta-count">0 clientes</span>
-                  </div>
-                  <div class="bar-track">
-                    <div
-                      id="bar-aut-alta-fill"
-                      class="bar-fill"
-                      style="width: 0%; background: var(--green)"
-                    ></div>
+                  <div class="aut-mobile-rows">
+                    <div class="aut-mobile-row" style="--aut-color: var(--red)">
+                      <span class="aut-mobile-row__label">
+                        <span class="aut-legend__dot" style="background: var(--red)"></span>
+                        Baja autonomía
+                      </span>
+                      <span class="aut-mobile-row__stats">
+                        <strong id="ring-aut-baja-m" style="color: var(--red-text)">0%</strong>
+                        <span id="bar-aut-baja-count-m">0 clientes</span>
+                      </span>
+                    </div>
+                    <div class="aut-mobile-row" style="--aut-color: var(--amber)">
+                      <span class="aut-mobile-row__label">
+                        <span class="aut-legend__dot" style="background: var(--amber)"></span>
+                        Media autonomía
+                      </span>
+                      <span class="aut-mobile-row__stats">
+                        <strong id="ring-aut-media-m" style="color: var(--amber-text)">0%</strong>
+                        <span id="bar-aut-media-count-m">0 clientes</span>
+                      </span>
+                    </div>
+                    <div class="aut-mobile-row" style="--aut-color: var(--green)">
+                      <span class="aut-mobile-row__label">
+                        <span class="aut-legend__dot" style="background: var(--green)"></span>
+                        Alta autonomía
+                      </span>
+                      <span class="aut-mobile-row__stats">
+                        <strong id="ring-aut-alta-m" style="color: var(--green-text)">0%</strong>
+                        <span id="bar-aut-alta-count-m">0 clientes</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2047,6 +2053,89 @@
           </div>
 
           <!-- ════════════════════════════════════
+         REPORTES
+    ════════════════════════════════════ -->
+          <div id="reportes" class="page">
+            <div class="page-header">
+              <div>
+                <div class="page-title">Reportes</div>
+                <div class="page-sub">Consultas por período y por cliente, con exportación a Excel/PDF</div>
+              </div>
+            </div>
+
+            <div class="card rep-filtros-card">
+              <div class="rep-filtros">
+                <div class="rep-filtro-grupo">
+                  <label class="fl">Período</label>
+                  <select id="rep-periodo" class="repo-select" onchange="onCambioPeriodoReporte()">
+                    <option value="mes_actual">Este mes (hasta hoy)</option>
+                    <option value="mes_cerrado">Un mes específico</option>
+                    <option value="anio">Un año completo</option>
+                  </select>
+                </div>
+                <div class="rep-filtro-grupo" id="rep-mes-wrap" style="display:none">
+                  <label class="fl">Mes</label>
+                  <input type="month" id="rep-mes" class="repo-select" />
+                </div>
+                <div class="rep-filtro-grupo" id="rep-anio-wrap" style="display:none">
+                  <label class="fl">Año</label>
+                  <select id="rep-anio" class="repo-select"></select>
+                </div>
+                <div class="rep-filtro-grupo">
+                  <label class="fl">Cliente</label>
+                  <select id="rep-cliente" class="repo-select">
+                    <option value="">Todos los clientes</option>
+                  </select>
+                </div>
+                <button class="btn-primary" onclick="generarReporte()" style="align-self:flex-end">Generar</button>
+              </div>
+            </div>
+
+            <div id="reportes-empty" class="rep-empty">
+              Elegí un período (y opcionalmente un cliente) y tocá "Generar" para armar el reporte.
+            </div>
+
+            <div id="reportes-resultado" style="display:none">
+              <div class="metrics-grid" id="rep-metrics"></div>
+
+              <div class="grid-2">
+                <div class="card">
+                  <div class="page-sub" style="margin-bottom:10px">Por categoría</div>
+                  <div style="position: relative; height: 220px">
+                    <canvas id="rep-chart-categorias"></canvas>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="page-sub" style="margin-bottom:10px">Por asesor</div>
+                  <div style="position: relative; height: 220px">
+                    <canvas id="rep-chart-asesores"></canvas>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card" style="margin-top:16px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:10px">
+                  <div class="page-sub" id="rep-detalle-titulo" style="margin-bottom:0">Detalle</div>
+                  <div style="display:flex;gap:8px">
+                    <button class="btn-secondary" onclick="exportarReporteExcel()">⬇ Excel</button>
+                    <button class="btn-secondary" onclick="exportarReportePDF()">⬇ PDF</button>
+                  </div>
+                </div>
+                <div style="overflow-x:auto">
+                  <table class="tbl" id="rep-tabla">
+                    <thead>
+                      <tr>
+                        <th>Fecha</th><th>Cliente</th><th>Asesor</th><th>Tipo</th><th>Categoría</th><th>Solución aplicada</th><th>Tiempo (hs)</th>
+                      </tr>
+                    </thead>
+                    <tbody id="rep-tabla-body"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ════════════════════════════════════
          ALERTAS
     ════════════════════════════════════ -->
           <div id="alertas" class="page">
@@ -2250,6 +2339,7 @@
     <script src="js/alertas.js"></script>
     <script src="js/consultas-page.js"></script>
     <script src="js/repositorio.js"></script>
+    <script src="js/reportes.js"></script>
     <script src="js/saludo.js"></script>
 
     <!-- ════════════════════════════════════

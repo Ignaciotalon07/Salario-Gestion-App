@@ -507,27 +507,46 @@ function refreshClientMetrics() {
   const pMedia = Math.round((media / totalAut) * 100);
   const pAlta  = Math.round((alta  / totalAut) * 100);
 
-  const elRingBaja  = document.getElementById('ring-aut-baja');
-  const elRingMedia = document.getElementById('ring-aut-media');
-  const elRingAlta  = document.getElementById('ring-aut-alta');
-  if (elRingBaja)  elRingBaja.textContent  = pBaja  + '%';
-  if (elRingMedia) elRingMedia.textContent = pMedia + '%';
-  if (elRingAlta)  elRingAlta.textContent  = pAlta  + '%';
+  // Actualiza un mismo id y su variante "-m" (versión mobile, misma data)
+  const _setTxt = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+    const elM = document.getElementById(id + '-m');
+    if (elM) elM.textContent = val;
+  };
+
+  _setTxt('ring-aut-baja',  pBaja  + '%');
+  _setTxt('ring-aut-media', pMedia + '%');
+  _setTxt('ring-aut-alta',  pAlta  + '%');
 
   // ── Barras de autonomía ──
-  const elBajaCount  = document.getElementById('bar-aut-baja-count');
-  const elMediaCount = document.getElementById('bar-aut-media-count');
-  const elAltaCount  = document.getElementById('bar-aut-alta-count');
   const elBajaFill   = document.getElementById('bar-aut-baja-fill');
   const elMediaFill  = document.getElementById('bar-aut-media-fill');
   const elAltaFill   = document.getElementById('bar-aut-alta-fill');
 
-  if (elBajaCount)  elBajaCount.textContent  = baja  + ' cliente' + (baja  !== 1 ? 's' : '');
-  if (elMediaCount) elMediaCount.textContent = media + ' cliente' + (media !== 1 ? 's' : '');
-  if (elAltaCount)  elAltaCount.textContent  = alta  + ' cliente' + (alta  !== 1 ? 's' : '');
+  _setTxt('bar-aut-baja-count',  baja  + ' cliente' + (baja  !== 1 ? 's' : ''));
+  _setTxt('bar-aut-media-count', media + ' cliente' + (media !== 1 ? 's' : ''));
+  _setTxt('bar-aut-alta-count',  alta  + ' cliente' + (alta  !== 1 ? 's' : ''));
   if (elBajaFill)   elBajaFill.style.width   = pBaja  + '%';
   if (elMediaFill)  elMediaFill.style.width  = pMedia + '%';
   if (elAltaFill)   elAltaFill.style.width   = pAlta  + '%';
+
+  // ── Donut de autonomía (una sola dona con los 3 segmentos, via conic-gradient) ──
+  const donutBg = (baja + media + alta === 0)
+    ? 'var(--border)'
+    : (() => {
+        // Porcentajes reales (no redondeados) para que los cortes del gráfico sean exactos
+        const pctBajaReal  = (baja  / totalAut) * 100;
+        const pctMediaReal = (media / totalAut) * 100;
+        const corte1 = pctBajaReal;
+        const corte2 = pctBajaReal + pctMediaReal;
+        return `conic-gradient(var(--red) 0% ${corte1}%, var(--amber) ${corte1}% ${corte2}%, var(--green) ${corte2}% 100%)`;
+      })();
+  ['aut-donut', 'aut-donut-m'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.background = donutBg;
+  });
+  _setTxt('aut-donut-total', (baja + media + alta));
 
   // ── Alertas dinámicas (se re-evalúan cuando cambia la lista de clientes) ──
   if (typeof refreshAlertas === 'function') refreshAlertas();

@@ -26,6 +26,10 @@ function goTo(btn, id) {
   if (id === 'dashboard' && typeof renderSaludoPanel === 'function') {
     renderSaludoPanel();
   }
+  // Refrescar selectores (clientes, años) cada vez que se entra a Reportes
+  if (id === 'reportes' && typeof initReportesFiltros === 'function') {
+    initReportesFiltros();
+  }
   // Forzar resize de charts de equipo al navegar (se inicializan con display:none)
   if (id === 'equipo') {
     setTimeout(() => {

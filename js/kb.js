@@ -11,6 +11,7 @@ let kbActiva      = null;
 let kbEditId      = null;   // si esta seteado, el form de "Nueva solucion" guarda como edicion
 let kbArchivos    = {};     // { solucion_id: [archivo, ...] }
 let _kbArchivosStaged = []; // File objects pendientes para una nueva solución
+let solucionVotos = {};     // { solucion_id: [{ usuario, voto: 'util'|'no_util' }, ...] }
 
 // ────────── Mapeo DB <-> UI ──────────
 
@@ -50,6 +51,15 @@ async function initKB() {
   (archRows || []).forEach(a => {
     if (!kbArchivos[a.solucion_id]) kbArchivos[a.solucion_id] = [];
     kbArchivos[a.solucion_id].push(a);
+  });
+
+  solucionVotos = {};
+  const { data: votoRows } = await sb()
+    .from('soluciones_votos')
+    .select('*');
+  (votoRows || []).forEach(v => {
+    if (!solucionVotos[v.solucion_id]) solucionVotos[v.solucion_id] = [];
+    solucionVotos[v.solucion_id].push({ usuario: v.usuario, voto: v.voto });
   });
 
   try {
@@ -209,6 +219,7 @@ function verKBDetalle(id) {
         <div style="font-size:15px;font-weight:600;line-height:1.4;color:var(--accent-text)">${escapeHtmlKB(s.titulo)}</div>
         <div style="font-size:11px;color:var(--text3);margin-top:4px">Por ${escapeHtmlKB(s.autor)} &middot; Actualizado ${s.fecha} &middot; Usado ${s.usos} ${s.usos === 1 ? 'vez' : 'veces'} &middot; ${escapeHtmlKB(s.aplica)}</div>
         ${primerCliente ? `<div style="font-size:11px;color:var(--text3);margin-top:3px">Solución aplicada a: <strong style="color:var(--text2)">${escapeHtmlKB(primerCliente)}</strong></div>` : ''}
+        <div id="kb-detail-votos" style="margin-top:10px">${_renderKbVotosHTML(s.id)}</div>
       </div>
       <button onclick="cerrarKB()" style="background:none;border:none;font-size:22px;line-height:1;color:var(--text3);cursor:pointer;padding:2px 4px;border-radius:6px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">✕</button>
     </div>
@@ -234,6 +245,88 @@ function cerrarKB() {
   const overlay = document.getElementById('kb-detail-overlay');
   if (overlay) overlay.classList.remove('kb-modal--open');
   document.body.style.overflow = '';
+}
+
+// ────────── Votos 👍/👎 ──────────
+// Un voto por usuario por solución. Click de nuevo en el mismo botón saca
+// el voto (toggle); click en el otro lo cambia.
+
+function _kbVotosDe(solucionId) {
+  return solucionVotos[solucionId] || [];
+}
+
+function _kbMiVoto(solucionId) {
+  const me = typeof getCurrentUserName === 'function' ? getCurrentUserName() : null;
+  if (!me) return null;
+  const v = _kbVotosDe(solucionId).find(v => v.usuario === me);
+  return v ? v.voto : null;
+}
+
+function _kbConteoVotos(solucionId) {
+  const votos = _kbVotosDe(solucionId);
+  return {
+    util:   votos.filter(v => v.voto === 'util').length,
+    noUtil: votos.filter(v => v.voto === 'no_util').length,
+  };
+}
+
+function _renderKbVotosHTML(solucionId) {
+  const { util, noUtil } = _kbConteoVotos(solucionId);
+  const miVoto = _kbMiVoto(solucionId);
+  return `
+    <div class="kb-votos">
+      <span class="kb-votos__label">¿Te sirvió esta solución?</span>
+      <button class="kb-voto-btn ${miVoto === 'util' ? 'kb-voto-btn--activo-util' : ''}"
+        onclick="votarSolucion('${solucionId}','util')" title="Útil">
+        👍 <span>${util}</span>
+      </button>
+      <button class="kb-voto-btn ${miVoto === 'no_util' ? 'kb-voto-btn--activo-no' : ''}"
+        onclick="votarSolucion('${solucionId}','no_util')" title="No útil">
+        👎 <span>${noUtil}</span>
+      </button>
+    </div>`;
+}
+
+function _actualizarKbVotosDOM(solucionId) {
+  const el = document.getElementById('kb-detail-votos');
+  if (el) el.innerHTML = _renderKbVotosHTML(solucionId);
+}
+
+async function votarSolucion(solucionId, voto) {
+  const me = typeof getCurrentUserName === 'function' ? getCurrentUserName() : null;
+  if (!me) return;
+  const actual = _kbMiVoto(solucionId);
+  try {
+    if (actual === voto) {
+      // Ya había votado esto — sacar el voto.
+      await sb().from('soluciones_votos').delete().eq('solucion_id', solucionId).eq('usuario', me);
+      solucionVotos[solucionId] = _kbVotosDe(solucionId).filter(v => v.usuario !== me);
+    } else {
+      await sb().from('soluciones_votos').upsert(
+        { solucion_id: solucionId, usuario: me, voto, updated_at: new Date().toISOString() },
+        { onConflict: 'solucion_id,usuario' }
+      );
+      solucionVotos[solucionId] = _kbVotosDe(solucionId).filter(v => v.usuario !== me).concat([{ usuario: me, voto }]);
+    }
+    _actualizarKbVotosDOM(solucionId);
+  } catch (e) {
+    console.error('Error votando solucion', e);
+    if (typeof toast === 'function') toast('No se pudo registrar el voto.');
+  }
+}
+
+function handleSolucionVotoChange(payload) {
+  const { eventType, new: newRow, old: oldRow } = payload;
+  const solId = (newRow && newRow.solucion_id) || (oldRow && oldRow.solucion_id);
+  if (!solId) return;
+  if (!solucionVotos[solId]) solucionVotos[solId] = [];
+  if (eventType === 'DELETE') {
+    solucionVotos[solId] = solucionVotos[solId].filter(v => v.usuario !== oldRow.usuario);
+  } else {
+    solucionVotos[solId] = solucionVotos[solId].filter(v => v.usuario !== newRow.usuario)
+      .concat([{ usuario: newRow.usuario, voto: newRow.voto }]);
+  }
+  if (kbActiva === solId) _actualizarKbVotosDOM(solId);
 }
 
 // ────────── Buscar / Filtrar ──────────
@@ -467,6 +560,12 @@ function suscribirSoluciones() {
   sb().channel('soluciones-archivos-changes')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'soluciones_archivos' },
       handleSolucionArchivoChange)
+    .subscribe();
+
+  // Realtime para votos 👍/👎
+  sb().channel('soluciones-votos-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'soluciones_votos' },
+      handleSolucionVotoChange)
     .subscribe();
 
   if (_solucionesChannel) return;

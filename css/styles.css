@@ -174,6 +174,9 @@ body {
 /* Grid layouts */
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
 .grid-2 > * { min-width: 0; }
+
+/* Autonomía de clientes / Consultas por categoría: 40% / 60% en vez de 50/50 */
+#grid-autonomia-categoria { grid-template-columns: 2fr 3fr; }
 .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
 .grid-3 > * { min-width: 0; }
 
@@ -276,6 +279,56 @@ textarea::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3
 /* Score ring */
 .score-ring { width: 58px; height: 58px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
 
+/* Donut de autonomía de clientes (Panel general) */
+.aut-donut-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding: 6px 0; max-width: 520px; margin: 0 auto; }
+.aut-left-group { display: flex; align-items: center; gap: 22px; }
+.aut-donut-wrap { position: relative; width: 136px; height: 136px; flex-shrink: 0; }
+.aut-donut {
+  width: 136px; height: 136px; border-radius: 50%;
+  background: var(--border);
+  transition: background .3s;
+}
+.aut-donut-center {
+  position: absolute; inset: 20px; border-radius: 50%;
+  background: var(--surface);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.aut-donut-center__num { font-size: 26px; font-weight: 700; line-height: 1.1; color: var(--text); }
+.aut-donut-center__label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
+.aut-legend__labels, .aut-legend__pcts { display: flex; flex-direction: column; gap: 18px; }
+.aut-legend__label-row { display: flex; align-items: center; gap: 9px; }
+.aut-legend__dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.aut-legend__label { font-size: 14px; color: var(--text2); white-space: nowrap; }
+.aut-legend__pct-row { display: flex; align-items: baseline; gap: 10px; }
+.aut-legend__pct { font-size: 15px; font-weight: 700; min-width: 32px; }
+.aut-legend__count { font-size: 12.5px; color: var(--text3); white-space: nowrap; }
+/* Versión mobile: donut chico centrado arriba + filas tipo "tile" (mismo
+   lenguaje visual que los mensajes del panel: fondo tintado, borde izquierdo
+   de color, ícono/dot). Oculta en desktop; reemplaza por completo al layout
+   de 2 columnas en vez de intentar que ese mismo layout se adapte. */
+.aut-mobile { display: none; }
+.aut-mobile-donut-wrap { position: relative; width: 118px; height: 118px; margin: 0 auto 18px; }
+.aut-mobile-donut-wrap .aut-donut { width: 118px; height: 118px; }
+.aut-mobile-donut-wrap .aut-donut-center { inset: 17px; }
+.aut-mobile-donut-wrap .aut-donut-center__num { font-size: 21px; }
+.aut-mobile-rows { display: flex; flex-direction: column; gap: 10px; }
+.aut-mobile-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.aut-mobile-row__label { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text2); }
+.aut-mobile-row__stats { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
+.aut-mobile-row__stats strong { font-size: 15px; font-weight: 700; }
+.aut-mobile-row__stats span { font-size: 12px; color: var(--text3); white-space: nowrap; }
+
+@media (max-width: 640px) {
+  .aut-donut-row { display: none; }
+  .aut-mobile { display: block; }
+}
+
 /* Detail panel (KB) */
 .detail-panel { display: block; }
 /* Modal de detalle de solución KB */
@@ -333,6 +386,20 @@ textarea::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3
 .step-list li { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(45,45,142,.1); font-size: 13px; }
 .step-list li:last-child { border-bottom: none; }
 .step-num { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; margin-top: 1px; }
+
+/* Votos 👍/👎 en el detalle de una solución de la KB */
+.kb-votos { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kb-votos__label { font-size: 11px; color: var(--text3); margin-right: 2px; }
+.kb-voto-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 999px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text2); font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: background .13s, border-color .13s, color .13s;
+}
+.kb-voto-btn:hover { background: var(--border); }
+.kb-voto-btn--activo-util { background: var(--green-bg); border-color: var(--green); color: var(--green-text); }
+.kb-voto-btn--activo-no   { background: var(--red-bg);   border-color: var(--red);   color: var(--red-text); }
 
 /* KB items */
 .kb-item { padding: 11px 0; border-bottom: 1px solid var(--border); cursor: pointer; transition: var(--transition); }
@@ -520,6 +587,7 @@ textarea::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3
   .main { margin-left: 60px; padding: 20px 16px; }
   .metrics-grid { grid-template-columns: repeat(2,1fr); }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  #grid-autonomia-categoria { grid-template-columns: 1fr; }
 }
 
 
@@ -4029,7 +4097,12 @@ input[type=date]:focus {
   color: #fff;
 }
 .saludo-tile__msg {
-  flex: 1;
+  /* Ojo: "flex:1" solo (flex-basis 0%) deja que el texto se aplaste a un
+     ancho mínimo casi nulo en vez de forzar el wrap del CTA a la línea de
+     abajo en mobile (el navegador prefiere achicar esto a 0 antes que
+     mandar el CTA a otra línea). "flex:1 1 auto" respeta un ancho de
+     contenido razonable en la primera línea. */
+  flex: 1 1 auto;
   min-width: 0;
   font-size: 14px;
   font-weight: 500;
@@ -4051,8 +4124,39 @@ input[type=date]:focus {
 @media (max-width: 640px) {
   .saludo-greet__texto { font-size: 26px; }
   .saludo-greet__frase { font-size: 15px; }
-  .saludo-tile { flex-wrap: wrap; }
-  .saludo-tile__cta { margin-left: 42px; }
+
+  /* En mobile pasamos de flex-row a grid: 2 columnas fijas (ícono | contenido)
+     y el mensaje + CTA apilados dentro de la columna de contenido. Con flex
+     el ancho del texto dependía de cuánto "sobraba" en la fila y el wrap
+     podía arrancar en cualquier punto, desalineando el texto con el ícono.
+     Con grid la columna 2 tiene un borde izquierdo fijo: todas las líneas
+     del mensaje y el CTA quedan siempre alineados entre sí. */
+  .saludo-tile {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    column-gap: 10px;
+    row-gap: 4px;
+    align-items: start;
+    padding: 10px 12px;
+  }
+  .saludo-tile__icon {
+    grid-column: 1;
+    grid-row: 1;
+    width: 26px;
+    height: 26px;
+    font-size: 12.5px;
+    margin-top: 1px;
+  }
+  .saludo-tile__msg {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 13.5px;
+  }
+  .saludo-tile__cta {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .saludo-cartelito__texto { font-size: 13.5px; }
 }
 
 /* ════════════════════════════════════
@@ -5581,6 +5685,87 @@ input[type=date]:focus {
 @media (max-width: 640px) {
   .repo-search { max-width: none; flex-basis: 100%; }
   .repo-select { max-width: none; }
+}
+
+/* ═══════════════ Reportes — Tarjeta de filtros ═══════════════ */
+
+.rep-filtros-card {
+  margin-bottom: 18px;
+  padding: 14px 16px;
+}
+.rep-filtros {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.rep-filtro-grupo {
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+}
+.rep-filtro-grupo .fl { margin-bottom: 5px; }
+
+/* Mismo tratamiento de especificidad que en Repositorio: hay reglas globales
+   en tema oscuro con selector por ID que pisan background/flechita de los
+   <select>. Igualamos #app-root + .rep-filtros-card para ganarles. */
+#app-root .rep-filtros-card select.repo-select {
+  height: 40px;
+  min-width: 160px;
+  padding: 0 30px 0 14px;
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  background-color: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='5 8 10 13 15 8'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#app-root .rep-filtros-card select.repo-select:focus,
+#app-root .rep-filtros-card input.repo-select:focus {
+  background-color: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(45,45,142,.08);
+}
+#app-root .rep-filtros-card input.repo-select[type="month"] {
+  height: 40px;
+  min-width: 160px;
+  padding: 0 14px;
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  background-color: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.rep-empty {
+  text-align: center;
+  color: var(--text3);
+  font-size: 13.5px;
+  padding: 40px 20px;
+  background: var(--surface2);
+  border: 1px dashed var(--border2);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 640px) {
+  .rep-filtros { flex-direction: column; align-items: stretch; }
+  .rep-filtro-grupo { min-width: 0; }
+  #app-root .rep-filtros-card select.repo-select,
+  #app-root .rep-filtros-card input.repo-select { min-width: 0; width: 100%; }
+  .rep-filtros .btn-primary { width: 100%; }
 }
 
 /* ═══════════════ Chip-tabs: diseño reutilizable de tabs por categoría ═══════════════
