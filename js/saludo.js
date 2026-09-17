@@ -45,6 +45,13 @@ let _saludoCacheFranja = null;
 let _saludoCacheNombre = null;
 let _saludoCacheTexto  = null;
 
+// Mismo criterio para el mensaje del tile de "muchos pendientes vencidos":
+// se elige entre un par de variantes al azar, pero se cachea por día (no
+// por render) para que no cambie cada vez que llega una actualización por
+// realtime — solo se vuelve a sortear si cambia el día o la cantidad.
+let _saludoCacheVencidosKey = null;
+let _saludoCacheVencidosTexto = null;
+
 // Estado del resumen colapsado de "Tu día" en mobile (persiste entre
 // re-renders — si el usuario lo desplegó, no queremos que se vuelva a
 // cerrar solo porque llegó un cambio por realtime).
@@ -74,6 +81,20 @@ function _saludoTextoSaludo(h, nombre) {
     _saludoCacheNombre = nombre;
   }
   return _saludoCacheTexto;
+}
+
+function _saludoTextoVencidosMuchos(n) {
+  const diaKey = new Date().toDateString();
+  const cacheKey = diaKey + '|' + n;
+  if (_saludoCacheVencidosKey !== cacheKey) {
+    const opciones = [
+      `Se te acumularon <strong>${n}</strong> pendientes vencidos. Vamos de a poco, arrancá por el más viejo.`,
+      `Se te acumularon <strong>${n}</strong> pendientes vencidos. Revisá que no te haya quedado alguno resuelto sin cerrar.`,
+    ];
+    _saludoCacheVencidosTexto = opciones[Math.floor(Math.random() * opciones.length)];
+    _saludoCacheVencidosKey = cacheKey;
+  }
+  return _saludoCacheVencidosTexto;
 }
 
 function _saludoEsHoy(ts) {
@@ -427,7 +448,7 @@ function renderSaludoPanel() {
     {
       count: misPendVencidos, color: '#c0392b', icon: '🔴',
       msg: misPendVencidos >= PEND_VENCIDOS_MUCHOS
-        ? `Se te acumularon <strong>${misPendVencidos}</strong> pendientes vencidos. Vamos de a poco, arrancá por el más viejo.`
+        ? _saludoTextoVencidosMuchos(misPendVencidos)
         : `Tenés <strong>${misPendVencidos}</strong> pendiente${misPendVencidos !== 1 ? 's' : ''} vencido${misPendVencidos !== 1 ? 's' : ''}.`,
       cta: 'Ver pendientes →', accion: '_saludoIrAPendientesVencidos()',
     },
