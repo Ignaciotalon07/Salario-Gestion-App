@@ -89,6 +89,131 @@ function navPanelMes(dir) {
   if (nuevoOffset > 0) return;
   _panelMesOffset = nuevoOffset;
   refreshPanelMetrics();
+  // El donut de autonomía también depende del mes seleccionado acá.
+  _renderAutonomiaDonut(_panelMesOffset);
+}
+
+// { year, month, labelCap } para un offset de mes dado (0 = mes actual).
+function _mesOffsetInfo(offset) {
+  const ahora = new Date();
+  const totalMeses = ahora.getFullYear() * 12 + ahora.getMonth() + offset;
+  const year  = Math.floor(totalMeses / 12);
+  const month = ((totalMeses % 12) + 12) % 12;
+  const label = new Date(year, month, 1).toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+  return { year, month, labelCap: label.charAt(0).toUpperCase() + label.slice(1) };
+}
+
+// Último instante del mes correspondiente a ese offset (23:59:59.999 del último día).
+function _finDeMesOffset(offset) {
+  const { year, month } = _mesOffsetInfo(offset);
+  return new Date(year, month + 1, 0, 23, 59, 59, 999);
+}
+
+// Reconstruye qué autonomía tenía un cliente a fin de un mes pasado,
+// recalculando la MISMA fórmula automática que usa recalcularAutonomiaCliente
+// (js/consultas.js), paso a paso, con las consultas que existían hasta ese
+// momento — exactamente como se recalculó en su momento en vivo (se dispara
+// después de cada consulta nueva del cliente). Así el gráfico se comporta
+// igual que "Consultas por categoría" y el resto: se recalcula a partir de
+// `consultas` filtradas por mes, sin depender de ningún log aparte.
+function _autonomiaClienteEnFecha(cliente, fechaLimite) {
+  const todasConsultas = (typeof consultas !== 'undefined') ? consultas : [];
+  const delCliente = todasConsultas
+    .filter(c => c.cliente === cliente.nombre && new Date(c.timestamp) <= fechaLimite)
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  let valor = 'media'; // autonomía inicial de todo cliente nuevo (ver guardarCliente)
+  if (typeof _calcularAutonomiaFormula !== 'function') return valor;
+
+  for (let i = 1; i <= delCliente.length; i++) {
+    const hastaAhi  = delCliente.slice(0, i);
+    const fechaRef  = new Date(hastaAhi[hastaAhi.length - 1].timestamp);
+    const calculado = _calcularAutonomiaFormula(hastaAhi, fechaRef);
+    if (calculado) valor = calculado;
+  }
+  return valor;
+}
+
+// Renderiza el donut + anillos + barras de "Autonomía de clientes" para el
+// mes seleccionado en el Panel general (offset 0 = estado actual en vivo,
+// offset < 0 = estado reconstruido a fin de ese mes con el historial).
+function _renderAutonomiaDonut(offset) {
+  const lista = (typeof clientes !== 'undefined') ? clientes : [];
+
+  const _setTxt = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+    const elM = document.getElementById(id + '-m');
+    if (elM) elM.textContent = val;
+  };
+
+  let baja = 0, media = 0, alta = 0;
+
+  if (offset === 0) {
+    lista.forEach(c => {
+      if (c.autonomia === 'baja') baja++;
+      else if (c.autonomia === 'media') media++;
+      else if (c.autonomia === 'alta') alta++;
+    });
+  } else {
+    const fechaLimite = _finDeMesOffset(offset);
+    lista.forEach(c => {
+      // Cliente creado después de esa fecha → todavía no existía, no cuenta.
+      if (c.createdAt && new Date(c.createdAt) > fechaLimite) return;
+      const valor = _autonomiaClienteEnFecha(c, fechaLimite);
+      if (valor === 'baja') baja++;
+      else if (valor === 'media') media++;
+      else if (valor === 'alta') alta++;
+    });
+  }
+
+  const totalAut = baja + media + alta || 1;
+  const pBaja  = Math.round((baja  / totalAut) * 100);
+  const pMedia = Math.round((media / totalAut) * 100);
+  const pAlta  = Math.round((alta  / totalAut) * 100);
+
+  _setTxt('ring-aut-baja',  pBaja  + '%');
+  _setTxt('ring-aut-media', pMedia + '%');
+  _setTxt('ring-aut-alta',  pAlta  + '%');
+
+  const elBajaFill  = document.getElementById('bar-aut-baja-fill');
+  const elMediaFill = document.getElementById('bar-aut-media-fill');
+  const elAltaFill  = document.getElementById('bar-aut-alta-fill');
+
+  _setTxt('bar-aut-baja-count',  baja  + ' cliente' + (baja  !== 1 ? 's' : ''));
+  _setTxt('bar-aut-media-count', media + ' cliente' + (media !== 1 ? 's' : ''));
+  _setTxt('bar-aut-alta-count',  alta  + ' cliente' + (alta  !== 1 ? 's' : ''));
+  if (elBajaFill)  elBajaFill.style.width  = pBaja  + '%';
+  if (elMediaFill) elMediaFill.style.width = pMedia + '%';
+  if (elAltaFill)  elAltaFill.style.width  = pAlta  + '%';
+
+  // ── Donut (una sola dona con los 3 segmentos, via conic-gradient) ──
+  const donutBg = (baja + media + alta === 0)
+    ? 'var(--border)'
+    : (() => {
+        // Porcentajes reales (no redondeados) para que los cortes del gráfico sean exactos
+        const pctBajaReal  = (baja  / totalAut) * 100;
+        const pctMediaReal = (media / totalAut) * 100;
+        const corte1 = pctBajaReal;
+        const corte2 = pctBajaReal + pctMediaReal;
+        return `conic-gradient(var(--red) 0% ${corte1}%, var(--amber) ${corte1}% ${corte2}%, var(--green) ${corte2}% 100%)`;
+      })();
+  ['aut-donut', 'aut-donut-m'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.background = donutBg;
+  });
+  _setTxt('aut-donut-total', (baja + media + alta));
+
+  // ── Subtítulo: qué mes se está mostrando (solo si no es el actual) ──
+  let subtitulo = '';
+  if (offset !== 0) {
+    const { labelCap } = _mesOffsetInfo(offset);
+    subtitulo = `Estado a fin de ${labelCap}`;
+  }
+  const elSubAut  = document.getElementById('aut-donut-subtitulo');
+  const elSubAutM = document.getElementById('aut-donut-subtitulo-m');
+  if (elSubAut)  { elSubAut.textContent  = subtitulo; elSubAut.style.display  = subtitulo ? 'block' : 'none'; }
+  if (elSubAutM) { elSubAutM.textContent = subtitulo; elSubAutM.style.display = subtitulo ? 'block' : 'none'; }
 }
 
 function setEqView(mode) {
@@ -485,10 +610,6 @@ function refreshClientMetrics() {
   const lista  = (typeof clientes !== 'undefined') ? clientes : [];
   const total  = lista.length;
   const impl   = lista.filter(c => c.area === 'impl').length;
-  const baja   = lista.filter(c => c.autonomia === 'baja').length;
-  const media  = lista.filter(c => c.autonomia === 'media').length;
-  const alta   = lista.filter(c => c.autonomia === 'alta').length;
-  const totalAut = baja + media + alta || 1;
 
   // ── Card "Clientes activos" en el Panel ──
   const elAct  = document.getElementById('metric-clientes-activos');
@@ -502,51 +623,8 @@ function refreshClientMetrics() {
 
   // El sub-label del panel lo maneja refreshPanelMetrics con el mes seleccionado
 
-  // ── Anillos de autonomía ──
-  const pBaja  = Math.round((baja  / totalAut) * 100);
-  const pMedia = Math.round((media / totalAut) * 100);
-  const pAlta  = Math.round((alta  / totalAut) * 100);
-
-  // Actualiza un mismo id y su variante "-m" (versión mobile, misma data)
-  const _setTxt = (id, val) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = val;
-    const elM = document.getElementById(id + '-m');
-    if (elM) elM.textContent = val;
-  };
-
-  _setTxt('ring-aut-baja',  pBaja  + '%');
-  _setTxt('ring-aut-media', pMedia + '%');
-  _setTxt('ring-aut-alta',  pAlta  + '%');
-
-  // ── Barras de autonomía ──
-  const elBajaFill   = document.getElementById('bar-aut-baja-fill');
-  const elMediaFill  = document.getElementById('bar-aut-media-fill');
-  const elAltaFill   = document.getElementById('bar-aut-alta-fill');
-
-  _setTxt('bar-aut-baja-count',  baja  + ' cliente' + (baja  !== 1 ? 's' : ''));
-  _setTxt('bar-aut-media-count', media + ' cliente' + (media !== 1 ? 's' : ''));
-  _setTxt('bar-aut-alta-count',  alta  + ' cliente' + (alta  !== 1 ? 's' : ''));
-  if (elBajaFill)   elBajaFill.style.width   = pBaja  + '%';
-  if (elMediaFill)  elMediaFill.style.width  = pMedia + '%';
-  if (elAltaFill)   elAltaFill.style.width   = pAlta  + '%';
-
-  // ── Donut de autonomía (una sola dona con los 3 segmentos, via conic-gradient) ──
-  const donutBg = (baja + media + alta === 0)
-    ? 'var(--border)'
-    : (() => {
-        // Porcentajes reales (no redondeados) para que los cortes del gráfico sean exactos
-        const pctBajaReal  = (baja  / totalAut) * 100;
-        const pctMediaReal = (media / totalAut) * 100;
-        const corte1 = pctBajaReal;
-        const corte2 = pctBajaReal + pctMediaReal;
-        return `conic-gradient(var(--red) 0% ${corte1}%, var(--amber) ${corte1}% ${corte2}%, var(--green) ${corte2}% 100%)`;
-      })();
-  ['aut-donut', 'aut-donut-m'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.style.background = donutBg;
-  });
-  _setTxt('aut-donut-total', (baja + media + alta));
+  // ── Donut de autonomía (según el mes seleccionado en el Panel general) ──
+  _renderAutonomiaDonut(typeof _panelMesOffset !== 'undefined' ? _panelMesOffset : 0);
 
   // ── Alertas dinámicas (se re-evalúan cuando cambia la lista de clientes) ──
   if (typeof refreshAlertas === 'function') refreshAlertas();

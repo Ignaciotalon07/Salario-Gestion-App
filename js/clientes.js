@@ -27,7 +27,8 @@ function dbRowToCliente(row) {
     idApi:                       row.id_api || null,
     whaticket_url:               row.whaticket_url,
     fecha_inicio_implementacion: row.fecha_inicio_implementacion,
-    fecha_fin_objetivo:          row.fecha_fin_objetivo
+    fecha_fin_objetivo:          row.fecha_fin_objetivo,
+    createdAt:                   row.created_at
   };
 }
 
@@ -64,6 +65,7 @@ async function initClientes() {
 
     renderClientes();
     refrescarSelectsCliente(clientes.map(c => c.nombre));
+
     // Actualizar métricas del panel con el conteo real de clientes
     if (typeof refreshClientMetrics === 'function') refreshClientMetrics();
     suscribirClientes();

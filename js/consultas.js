@@ -668,27 +668,27 @@ async function recalcularScoreCliente(nombreCliente) {
 //
 // Requiere mínimo 3 consultas históricas para disparar.
 // Si no hay datos suficientes, no modifica el valor existente.
+//
+// La fórmula vive en _calcularAutonomiaFormula() (más abajo) para poder
+// reusarla también en el Panel general: el gráfico de "Autonomía de
+// clientes" recalcula esta misma fórmula con las consultas de hasta el mes
+// que se esté mirando, igual que hacen el resto de los gráficos del panel
+// (ej: "Consultas por categoría") al navegar entre meses.
 
-async function recalcularAutonomiaCliente(nombreCliente) {
-  const cliente = (typeof clientes !== 'undefined')
-    ? clientes.find(c => c.nombre === nombreCliente)
-    : null;
-  if (!cliente) return;
+// Dado el histórico de consultas de UN cliente (ya ordenado, lo que importa
+// es que "todas" incluya solo lo que existía hasta fechaRef) devuelve la
+// autonomía que daría la fórmula, o null si no hay datos suficientes para
+// que dispare (en ese caso el valor vigente no se toca).
+function _calcularAutonomiaFormula(todasDelCliente, fechaRef) {
+  // Sin datos suficientes → no dispara
+  if (todasDelCliente.length < 3) return null;
 
-  const todasDelCliente = (typeof consultas !== 'undefined')
-    ? consultas.filter(c => c.cliente === nombreCliente)
-    : [];
-
-  // Sin datos suficientes → no tocar
-  if (todasDelCliente.length < 3) return;
-
-  // Últimos 3 meses
-  const ahora     = new Date();
-  const hace3Meses = new Date(ahora.getFullYear(), ahora.getMonth() - 3, 1);
+  // Últimos 3 meses contados desde fechaRef
+  const hace3Meses = new Date(fechaRef.getFullYear(), fechaRef.getMonth() - 3, 1);
   const recientes  = todasDelCliente.filter(c => new Date(c.timestamp) >= hace3Meses);
 
-  // Si no hay actividad reciente tampoco tocamos (cliente inactivo, sin señal)
-  if (recientes.length === 0) return;
+  // Sin actividad reciente tampoco dispara (cliente inactivo, sin señal)
+  if (recientes.length === 0) return null;
 
   // ── Frecuencia mensual promedio (últimos 3 meses) ──
   const avgMensual = recientes.length / 3;
@@ -718,12 +718,24 @@ async function recalcularAutonomiaCliente(nombreCliente) {
 
   // ── Resultado ──
   const total = frecPts + repPts + materialPenalty + remotaPenalty;
-  const nuevaAutonomia = total >= 5 ? 'alta'
-                       : total >= 3 ? 'media'
-                       : 'baja';
+  return total >= 5 ? 'alta'
+       : total >= 3 ? 'media'
+       : 'baja';
+}
 
-  // Solo guardar si cambió
-  if (nuevaAutonomia === cliente.autonomia) return;
+async function recalcularAutonomiaCliente(nombreCliente) {
+  const cliente = (typeof clientes !== 'undefined')
+    ? clientes.find(c => c.nombre === nombreCliente)
+    : null;
+  if (!cliente) return;
+
+  const todasDelCliente = (typeof consultas !== 'undefined')
+    ? consultas.filter(c => c.cliente === nombreCliente)
+    : [];
+
+  const nuevaAutonomia = _calcularAutonomiaFormula(todasDelCliente, new Date());
+  if (nuevaAutonomia === null) return;      // sin datos suficientes → no tocar
+  if (nuevaAutonomia === cliente.autonomia) return; // no cambió
 
   try {
     await dbUpdate('clientes', cliente.id, { autonomia: nuevaAutonomia });
