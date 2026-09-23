@@ -64,6 +64,14 @@ async function getCurrentUser() {
 
 function onAuthStateChange(callback) {
   return sb().auth.onAuthStateChange((event, session) => {
+    // Cuando el token de sesión se renueva solo en segundo plano
+    // (TOKEN_REFRESHED, o cualquier otro evento con sesión nueva), hay que
+    // avisarle explícitamente al socket de Realtime cuál es el token vigente.
+    // Si no, las suscripciones ya abiertas (repositorio, clientes, etc.)
+    // pueden dejar de recibir eventos en silencio hasta recargar la página.
+    if (session?.access_token) {
+      try { sb().realtime.setAuth(session.access_token); } catch (e) { /* no-op */ }
+    }
     callback(session?.user || null, event);
   });
 }

@@ -282,6 +282,18 @@ function _saludoElegirMensaje(ctx) {
     return { tono: 'blue', texto, cta: { label: 'Revisar →', accion: '_saludoIrARepositorio()' } };
   }
 
+  // 4b) Viernes desde las 16hs, solo para Ignacio y Matías: recordatorio de
+  // mandar el informe semanal de implementación a los clientes. Tiene
+  // prioridad sobre el aviso genérico de "cerrando la semana" (siguiente
+  // punto) para que no se lo tape.
+  if (dia === 5 && h >= 16 && (me === 'Ignacio Talon' || me === 'Matias Ferro')) {
+    return {
+      tono: 'blue',
+      texto: `📄 Recordá enviar el informe de implementación a los clientes correspondientes.`,
+      cta: { label: 'Ir a Implementación →', accion: '_saludoIrAImplMias()' },
+    };
+  }
+
   // 5) Viernes desde media tarde: cierre de semana.
   if (dia === 5 && h >= 15) {
     const consultasSemana = consultasArr.filter(c => c.asesor === me && _saludoEsEstaSemana(c.timestamp));
@@ -389,7 +401,32 @@ function _saludoElegirMensaje(ctx) {
       texto: `📋 Ayer atendiste a <strong>${clientesAyer}</strong> cliente${clientesAyer !== 1 ? 's' : ''} y cargaste <strong>${soporteAyer}</strong> consulta${soporteAyer !== 1 ? 's' : ''} de soporte.`,
     };
   }
-  return { tono: 'amber', texto: `🔔 No te olvides de cargar el soporte que atendiste hoy.` };
+  return { tono: 'amber', texto: _saludoTextoFallbackFinal(me, h) };
+}
+
+// Mensaje "de cierre" (fallback final del horario laboral, h >= 12). Para
+// Ignacio y Matías, a partir de las 15hs alterna con un recordatorio para
+// actualizar el módulo de Implementación — cacheado por día para que no
+// cambie en cada re-render (mismo criterio que el resto de las variantes).
+let _saludoCacheImplKey   = null;
+let _saludoCacheImplTexto = null;
+
+function _saludoTextoFallbackFinal(me, h) {
+  const textoSoporte = '🔔 No te olvides de cargar el soporte que atendiste hoy.';
+
+  const esEquipoImpl = me === 'Ignacio Talon' || me === 'Matias Ferro';
+  if (!esEquipoImpl || h < 15) return textoSoporte;
+
+  const cacheKey = new Date().toDateString() + '|' + me;
+  if (_saludoCacheImplKey !== cacheKey) {
+    const opciones = [
+      textoSoporte,
+      '🛠️ No te olvides de actualizar el módulo de Implementación con el avance de hoy.',
+    ];
+    _saludoCacheImplTexto = opciones[Math.floor(Math.random() * opciones.length)];
+    _saludoCacheImplKey = cacheKey;
+  }
+  return _saludoCacheImplTexto;
 }
 
 function renderSaludoPanel() {
