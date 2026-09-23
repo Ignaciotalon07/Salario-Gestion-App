@@ -465,6 +465,49 @@ function filtAut(val) { autFilter  = val; renderClientes(); }
 function filtTipo(val) { tipoFilter = val; renderClientes(); }
 function sortClientes(v) { sortBy = v; renderClientes(); }
 
+// ────────── Exportar a Excel ──────────
+
+const AUT_LABELS_XLS = { baja: 'Baja', media: 'Media', alta: 'Alta' };
+
+function exportarClientesExcel() {
+  if (typeof XLSX === 'undefined') {
+    alert('No se pudo cargar la librería de exportación a Excel. Revisá tu conexión e intentá de nuevo.');
+    return;
+  }
+  if (!clientes || clientes.length === 0) {
+    alert('No hay clientes cargados todavía.');
+    return;
+  }
+
+  const filas = [...clientes]
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+    .map(c => ({
+      Cliente:      c.nombre,
+      'ID API':     c.idApi || '',
+      'Razón social': c.razon_social || '',
+      CUIT:         c.cuit || '',
+      Tipo:         (typeof TIPO_LABELS !== 'undefined' && TIPO_LABELS[c.tipo]) || c.tipo || '',
+      Área:         c.area === 'impl' ? 'Implementación' : 'Soporte',
+      Autonomía:    AUT_LABELS_XLS[c.autonomia] || c.autonomia || '',
+    }));
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(filas);
+  ws['!cols'] = [
+    { wch: 28 }, // Cliente
+    { wch: 14 }, // ID API
+    { wch: 32 }, // Razón social
+    { wch: 15 }, // CUIT
+    { wch: 18 }, // Tipo
+    { wch: 16 }, // Área
+    { wch: 12 }, // Autonomía
+  ];
+  XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
+
+  const fecha = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `clientes_${fecha}.xlsx`);
+}
+
 // ────────── Realtime ──────────
 
 let _clientesChannel = null;

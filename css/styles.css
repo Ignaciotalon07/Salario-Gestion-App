@@ -4798,6 +4798,9 @@ input[type=date]:focus {
      ya está el mismo acceso en la bottom nav. */
   #btn-registrar-consulta-panel { display: none !important; }
 
+  /* "Exportar clientes" es una acción de escritorio (descarga un .xlsx) */
+  #btn-exportar-clientes { display: none !important; }
+
   #dashboard #panel-page-sub { font-size: 11px; }
 
   /* ── Page header ── */
