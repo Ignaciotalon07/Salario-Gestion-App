@@ -606,6 +606,8 @@ function renderGanttCliente(tareasCli, cliente, escala) {
         <span class="gantt-legend-item"><span class="gantt-legend-color" style="background:var(--text3)"></span>Pendiente</span>
         <span class="gantt-legend-item"><span class="gantt-legend-color" style="background:var(--blue)"></span>En progreso</span>
         <span class="gantt-legend-item"><span class="gantt-legend-color" style="background:var(--green)"></span>Completada</span>
+        <span class="gantt-legend-item"><span class="gantt-legend-dashed"></span>Duración planeada</span>
+        <span class="gantt-legend-item"><span class="gantt-legend-color" style="background:var(--amber)"></span>Días de atraso (tarea completada)</span>
         <span class="gantt-legend-item"><span class="gantt-legend-color" style="background:var(--red)"></span>Vencida</span>
         <span class="gantt-legend-item"><span class="gantt-legend-line gantt-legend-line--today"></span>Hoy</span>
         ${cliente.fecha_fin_objetivo ? `<span class="gantt-legend-item"><span class="gantt-legend-line gantt-legend-line--objetivo"></span>Objetivo</span>` : ''}
@@ -1367,6 +1369,7 @@ function renderClienteViewToggle(c) {
           <button class="filter-chip ${escala === 'semana' ? 'active' : ''}" onclick="setEscalaCliente('${c.id}','semana')">Semana</button>
           <button class="filter-chip ${escala === 'mes'    ? 'active' : ''}" onclick="setEscalaCliente('${c.id}','mes')">Mes</button>
         </div>` : ''}
+      <button class="btn-sm" style="font-size:11px;margin-left:auto" onclick="abrirModalReporteImpl('${c.id}', event)">📄 Reporte semanal</button>
     </div>`;
 }
 

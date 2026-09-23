@@ -2423,6 +2423,15 @@ input[type=date]:focus {
   display: inline-block;
   background: repeating-linear-gradient(135deg, var(--accent) 0px, var(--accent) 4px, rgba(99,102,241,0.3) 4px, rgba(99,102,241,0.3) 8px);
 }
+.gantt-legend-dashed {
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+  box-sizing: border-box;
+  border: 2px dashed var(--text3);
+  background: transparent;
+}
 .gantt-legend-line {
   width: 2px;
   height: 14px;
