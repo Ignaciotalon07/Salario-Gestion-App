@@ -201,25 +201,40 @@ function _renderRepCharts(filtradas) {
   });
   const catSorted = Object.entries(porCategoria).sort((a, b) => b[1] - a[1]);
 
+  const COLORES_CATEGORIAS = ['#2d2d8e', '#c0392b', '#2d6a2d', '#b45309', '#1a5fa5', '#7c3aed', '#0d9488', '#be185d', '#5f5e5a', '#65a30d'];
+
   const ctxCat = document.getElementById('rep-chart-categorias');
   if (ctxCat) {
     if (!_repChartCategorias) {
       _repChartCategorias = new Chart(ctxCat, {
-        type: 'bar',
-        data: { labels: [], datasets: [{ data: [], backgroundColor: '#2d2d8e', borderRadius: 5, borderSkipped: false }] },
+        type: 'doughnut',
+        data: { labels: [], datasets: [{ data: [], backgroundColor: [], borderColor: 'var(--surface,#1a1a1a)', borderWidth: 2 }] },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#9e9e99', font: { size: 11 }, stepSize: 1, precision: 0 } },
-            x: { grid: { display: false }, ticks: { color: '#9e9e99', font: { size: 11 }, maxRotation: 30 } }
+          cutout: '58%',
+          plugins: {
+            legend: {
+              display: true,
+              position: 'bottom',
+              labels: { color: '#9e9e99', font: { size: 11 }, boxWidth: 12, padding: 10 }
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                  const pct = total > 0 ? Math.round((ctx.parsed / total) * 100) : 0;
+                  return ` ${ctx.label}: ${ctx.parsed} (${pct}%)`;
+                }
+              }
+            }
           }
         }
       });
     }
-    _repChartCategorias.data.labels           = catSorted.map(e => e[0]);
-    _repChartCategorias.data.datasets[0].data  = catSorted.map(e => e[1]);
+    _repChartCategorias.data.labels                     = catSorted.map(e => e[0]);
+    _repChartCategorias.data.datasets[0].data            = catSorted.map(e => e[1]);
+    _repChartCategorias.data.datasets[0].backgroundColor = catSorted.map((_, i) => COLORES_CATEGORIAS[i % COLORES_CATEGORIAS.length]);
     _repChartCategorias.update();
   }
 
@@ -340,9 +355,152 @@ function exportarReporteExcel() {
   XLSX.writeFile(wb, nombreArchivo);
 }
 
-// ────────── Exportar a PDF ──────────
+// ────────── PDF — modal de notas ──────────
+//
+// Igual que el reporte semanal de Implementación: al tocar "Descargar PDF"
+// se abre un modal chico para sumar una nota opcional antes de generar el
+// archivo (no se genera directo al tocar el botón de la tabla).
 
-function exportarReportePDF() {
+function abrirModalReporteConsultas() {
+  if (!_repUltimoReporte || _repUltimoReporte.filtradas.length === 0) {
+    alert('Generá un reporte primero.');
+    return;
+  }
+  const { rango, clienteFiltro } = _repUltimoReporte;
+  const subEl = document.getElementById('repc-modal-sub');
+  if (subEl) subEl.textContent = (clienteFiltro || 'Todos los clientes') + ' — ' + rango.label;
+  const notasEl = document.getElementById('repc-notas');
+  if (notasEl) notasEl.value = '';
+
+  const modal = document.getElementById('modal-reporte-consultas');
+  if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+}
+
+function cerrarModalReporteConsultas() {
+  const modal = document.getElementById('modal-reporte-consultas');
+  if (modal) { modal.style.display = 'none'; document.body.style.overflow = ''; }
+}
+
+// ────────── Texto narrativo automático ──────────
+
+function _repCategoriasTop(arr, n) {
+  const porCategoria = {};
+  arr.forEach(c => {
+    const l = _repCatLabel(c.categoria);
+    if (l) porCategoria[l] = (porCategoria[l] || 0) + 1;
+  });
+  return Object.entries(porCategoria).sort((a, b) => b[1] - a[1]).slice(0, n || 999);
+}
+
+// Rango del mes calendario inmediatamente anterior al mes en el que arranca
+// `desde` (se usa para comparar contra "el mes pasado").
+function _repRangoMesAnterior(desde) {
+  const anteriorDesde = new Date(desde.getFullYear(), desde.getMonth() - 1, 1, 0, 0, 0);
+  const anteriorHasta = new Date(desde.getFullYear(), desde.getMonth(), 0, 23, 59, 59);
+  return { desde: anteriorDesde, hasta: anteriorHasta };
+}
+
+// Arma un resumen en prosa, profesional, de qué estuvo consultando el
+// cliente en el período y si hay continuidad con el mes anterior. Devuelve
+// un array de párrafos.
+function _repTextoNarrativo(rango, clienteFiltro, filtradas, periodo) {
+  const parrafos = [];
+  const total = filtradas.length;
+  if (total === 0) return parrafos;
+
+  const topCats = _repCategoriasTop(filtradas, 3);
+  const catsTxt = topCats.map(([k, v]) => `${k} (${v})`).join(', ');
+  const rangoLabelMin = rango.label.charAt(0).toLowerCase() + rango.label.slice(1);
+
+  if (clienteFiltro) {
+    parrafos.push(
+      topCats.length > 0
+        ? `Durante ${rangoLabelMin}, ${clienteFiltro} realizó ${total} consulta${total !== 1 ? 's' : ''} a través de nuestro equipo de soporte. Los temas más recurrentes fueron ${catsTxt}.`
+        : `Durante ${rangoLabelMin}, ${clienteFiltro} realizó ${total} consulta${total !== 1 ? 's' : ''} a través de nuestro equipo de soporte.`
+    );
+
+    // Comparación con el mes anterior — solo tiene sentido cuando el período
+    // elegido es un mes concreto (cerrado o el actual en curso).
+    if (periodo === 'mes_cerrado' || periodo === 'mes_actual') {
+      const rangoAnt = _repRangoMesAnterior(rango.desde);
+      const todas = (typeof consultas !== 'undefined') ? consultas : [];
+      const anteriores = todas.filter(c => {
+        if (c.cliente !== clienteFiltro) return false;
+        const t = new Date(c.timestamp);
+        return t >= rangoAnt.desde && t <= rangoAnt.hasta;
+      });
+
+      if (anteriores.length > 0) {
+        const catsAntNombres = _repCategoriasTop(anteriores).map(e => e[0]);
+        const catsActNombres = topCats.map(e => e[0]);
+        const comunes = catsActNombres.filter(c => catsAntNombres.includes(c));
+
+        if (comunes.length > 0) {
+          parrafos.push(
+            `Se observa continuidad respecto al mes anterior (${anteriores.length} consulta${anteriores.length !== 1 ? 's' : ''}): el cliente también había consultado sobre ${comunes.join(', ')}. Puede ser una buena oportunidad para reforzar ese punto con una capacitación puntual o material de apoyo.`
+          );
+        } else {
+          parrafos.push(
+            `En el mes anterior el cliente había realizado ${anteriores.length} consulta${anteriores.length !== 1 ? 's' : ''}, pero sobre temáticas distintas a las de este período, sin coincidencias relevantes.`
+          );
+        }
+      } else {
+        parrafos.push('No se registran consultas de este cliente en el mes anterior.');
+      }
+    }
+
+    const repetidas = filtradas.filter(c => c.repetida === 'si').length;
+    if (repetidas > 0) {
+      parrafos.push(
+        `${repetidas} de estas consultas fueron marcadas como repetidas, lo que puede indicar que conviene reforzar ese tema con el cliente para reducir la cantidad de consultas asociadas a futuro.`
+      );
+    }
+  } else {
+    parrafos.push(
+      topCats.length > 0
+        ? `Durante ${rangoLabelMin} se registraron ${total} consulta${total !== 1 ? 's' : ''} en total entre todos los clientes, principalmente sobre ${topCats.map(e => e[0]).join(', ')}.`
+        : `Durante ${rangoLabelMin} se registraron ${total} consulta${total !== 1 ? 's' : ''} en total entre todos los clientes.`
+    );
+  }
+
+  return parrafos;
+}
+
+// ────────── Generación del PDF ──────────
+
+// Logo institucional, cargado una sola vez y reutilizado en cada PDF que se
+// genere (evita recargarlo de disco cada vez que se apreta "Descargar").
+//
+// Probamos primero una versión PNG con fondo transparente (mejor para el
+// PDF, sin recuadro visible) y si no existe, caemos al JPEG con fondo que
+// ya está en assets/img. Cuando subas la versión transparente, guardala
+// como assets/img/logoconsultoraferro.png y se usa sola, sin tocar código.
+let _repLogo = null; // { img, formato: 'PNG'|'JPEG' }
+let _repLogoPromise = null;
+
+function _repCargarImagen(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload  = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+async function _repCargarLogo() {
+  if (_repLogo) return _repLogo;
+  if (_repLogoPromise) return _repLogoPromise;
+
+  _repLogoPromise = (async () => {
+    const img = await _repCargarImagen('assets/img/consultora-ferro-logo-sin-fondo.png');
+    _repLogo = img ? { img, formato: 'PNG' } : null;
+    return _repLogo;
+  })();
+
+  return _repLogoPromise;
+}
+
+async function generarReporteConsultasPDF() {
   if (!_repUltimoReporte || _repUltimoReporte.filtradas.length === 0) {
     alert('Generá un reporte primero.');
     return;
@@ -352,49 +510,219 @@ function exportarReportePDF() {
     return;
   }
 
-  const { jsPDF } = window.jspdf;
-  const { rango, clienteFiltro, filtradas } = _repUltimoReporte;
+  const btn = document.getElementById('repc-btn-generar');
+  const textoOriginalBtn = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Generando...'; }
 
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'pt' });
+  try {
+    const notas = ((document.getElementById('repc-notas') || {}).value || '').trim();
+    const periodo = document.getElementById('rep-periodo').value;
+    const { jsPDF } = window.jspdf;
+    const { rango, clienteFiltro, filtradas } = _repUltimoReporte;
+    const logo = await _repCargarLogo();
 
-  doc.setFontSize(16);
-  doc.setTextColor(20);
-  doc.text('Reporte de consultas — Salario', 40, 40);
+    // Naranja institucional (mismo tono que el badge "Nuevo" del Repositorio)
+    const NARANJA = [245, 158, 11];
 
-  doc.setFontSize(10.5);
-  doc.setTextColor(90);
-  doc.text('Período: ' + rango.label, 40, 60);
-  doc.text('Cliente: ' + (clienteFiltro || 'Todos los clientes'), 40, 75);
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 44;
+    let y = margin;
 
-  const minTotal  = sumaMinutos(filtradas);
-  const repetidas = filtradas.filter(c => c.repetida === 'si').length;
-  doc.text(
-    'Total consultas: ' + filtradas.length +
-    '     Tiempo total: ' + (minTotal > 0 ? fmtMinutos(minTotal) : '—') +
-    '     Repetidas: ' + repetidas,
-    40, 90
-  );
+    const checkPageBreak = (alturaNecesaria) => {
+      if (y + alturaNecesaria > pageH - margin) {
+        doc.addPage('a4', 'landscape');
+        y = margin;
+      }
+    };
 
-  const rows = filtradas.map(c => [
-    new Date(c.timestamp).toLocaleDateString('es-AR'),
-    c.cliente || '—',
-    c.asesor || '—',
-    REP_TIPO_LABELS[c.tipoConsulta] || c.tipoConsulta || '—',
-    [_repCatLabel(c.categoria), c.subtema].filter(Boolean).join(' › ') || '—',
-    c.tiempo ? fmtHHMM(c.tiempo) : '—'
-  ]);
+    // ── Encabezado ──
+    // Logo institucional en su propia fila, arriba a la izquierda, antes de
+    // todo el resto del contenido (incluido el título).
+    if (logo && logo.img.naturalWidth) {
+      const logoX = 2;
+      const logoY = -6;
+      const logoH = 105;
+      const logoW = logoH * (logo.img.naturalWidth / logo.img.naturalHeight);
+      doc.addImage(logo.img, logo.formato, logoX, logoY, logoW, logoH);
+      y = logoY + logoH + 8;
+    }
 
-  doc.autoTable({
-    startY: 108,
-    head: [['Fecha', 'Cliente', 'Asesor', 'Tipo', 'Categoría', 'Tiempo']],
-    body: rows,
-    styles: { fontSize: 8, cellPadding: 4 },
-    headStyles: { fillColor: [45, 45, 142] },
-    margin: { left: 40, right: 40 }
-  });
+    // Título en serif (Times), más elegante y distinguible del resto del
+    // texto (que sigue en Helvetica, sans-serif) — un contraste tipográfico
+    // clásico de reportes corporativos.
+    doc.setFont('times', 'bold');
+    doc.setFontSize(21);
+    doc.setTextColor(48, 48, 52);
+    doc.text('Reporte de Consultas', pageW / 2, y, { align: 'center', charSpace: 0.4 }); y += 15;
+    doc.setFont('times', 'italic');
+    doc.setFontSize(12.5);
+    doc.setTextColor(110);
+    doc.text('Salario Gestión', pageW / 2, y, { align: 'center' }); y += 12;
 
-  const nombreArchivo = 'reporte_' +
-    (clienteFiltro ? clienteFiltro.replace(/[^a-zA-Z0-9]/g, '_') + '_' : '') +
-    rango.label.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
-  doc.save(nombreArchivo);
+    // Línea divisoria naranja debajo del título, para separar el
+    // encabezado del resto del documento.
+    doc.setDrawColor(NARANJA[0], NARANJA[1], NARANJA[2]);
+    doc.setLineWidth(1.6);
+    doc.line(pageW / 2 - 90, y, pageW / 2 + 90, y);
+    y += 40;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.setTextColor(30);
+    doc.text(clienteFiltro || 'Todos los clientes', margin, y); y += 15;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10.5);
+    doc.setTextColor(120);
+    doc.text(rango.label, margin, y, { charSpace: 0.2 }); y += 26;
+
+    // ── Métricas ──
+    // Tira de estadísticas tipo "stat cards" en texto: etiqueta chica en
+    // mayúsculas gris arriba, valor grande y en negrita abajo — más prolijo
+    // que una sola línea corrida de texto.
+    const minTotal  = sumaMinutos(filtradas);
+    const repetidas = filtradas.filter(c => c.repetida === 'si').length;
+    const pctRep    = filtradas.length > 0 ? Math.round((repetidas / filtradas.length) * 100) : 0;
+
+    const stats = [
+      { label: 'TOTAL CONSULTAS', valor: String(filtradas.length) },
+      { label: 'TIEMPO TOTAL',    valor: minTotal > 0 ? fmtMinutos(minTotal) : '—' },
+      { label: 'REPETIDAS',       valor: `${repetidas} (${pctRep}%)` },
+    ];
+    const statColW = 150;
+    stats.forEach((s, i) => {
+      const sx = margin + i * statColW;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(140);
+      doc.text(s.label, sx, y, { charSpace: 0.5 });
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(14.5);
+      doc.setTextColor(NARANJA[0], NARANJA[1], NARANJA[2]);
+      doc.text(s.valor, sx, y + 16);
+      if (i > 0) {
+        doc.setDrawColor(225, 225, 220);
+        doc.setLineWidth(0.7);
+        doc.line(sx - 14, y - 9, sx - 14, y + 14);
+      }
+    });
+    y += 34;
+    doc.setDrawColor(230, 230, 225);
+    doc.setLineWidth(0.7);
+    doc.line(margin, y, pageW - margin, y);
+    y += 24;
+
+    const seccion = (titulo) => {
+      checkPageBreak(32);
+      // Marca de acento naranja a la izquierda del título de sección.
+      doc.setFillColor(NARANJA[0], NARANJA[1], NARANJA[2]);
+      doc.rect(margin, y - 9, 3, 12, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11.5);
+      doc.setTextColor(40);
+      doc.text(titulo.toUpperCase(), margin + 10, y, { charSpace: 0.6 });
+      y += 19;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(70);
+    };
+
+    const parrafo = (texto) => {
+      const wrapped = doc.splitTextToSize(texto, pageW - margin * 2);
+      checkPageBreak(wrapped.length * 14 + 8);
+      doc.text(wrapped, margin, y);
+      y += wrapped.length * 14 + 8;
+    };
+
+    // ── Resumen del período (texto narrativo) ──
+    const narrativa = _repTextoNarrativo(rango, clienteFiltro, filtradas, periodo);
+    if (narrativa.length > 0) {
+      seccion('Resumen del período');
+      narrativa.forEach(p => parrafo(p));
+    }
+
+    // ── Detalle de consultas ──
+    seccion('Detalle de consultas');
+    y -= 5; // el autoTable ya trae su propio espaciado superior
+
+    const rows = filtradas.map(c => [
+      new Date(c.timestamp).toLocaleDateString('es-AR'),
+      c.cliente || '—',
+      c.asesor || '—',
+      REP_TIPO_LABELS[c.tipoConsulta] || c.tipoConsulta || '—',
+      [_repCatLabel(c.categoria), c.subtema].filter(Boolean).join(' › ') || '—',
+      c.descripcion || '—',
+      c.tiempo ? fmtHHMM(c.tiempo) : '—'
+    ]);
+
+    doc.autoTable({
+      startY: y,
+      head: [['Fecha', 'Cliente', 'Asesor', 'Tipo', 'Categoría', 'Descripción', 'Tiempo']],
+      body: rows,
+      styles: { fontSize: 8, cellPadding: 5, lineColor: [235, 231, 222], lineWidth: 0.5 },
+      headStyles: { fillColor: NARANJA, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+      alternateRowStyles: { fillColor: [250, 247, 241] },
+      columnStyles: { 5: { cellWidth: 220 } },
+      margin: { left: margin, right: margin }
+    });
+
+    y = doc.lastAutoTable.finalY + 20;
+
+    // ── Cierre ──
+    checkPageBreak(40);
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(10);
+    doc.setTextColor(90);
+    parrafo('Ante cualquier consulta sobre este reporte, quedamos a disposición del equipo de Salario.');
+
+    // ── Notas opcionales ──
+    // Solo se salta de hoja si no queda lugar en la actual; si hay espacio
+    // libre después del cierre, las notas se agregan ahí mismo.
+    if (notas) {
+      checkPageBreak(40);
+      y += 8;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(20);
+      doc.text('Notas', margin, y); y += 18;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10.5);
+      doc.setTextColor(60);
+      parrafo(notas);
+    }
+
+    // ── Pie de página en todas las hojas: fecha de generación + autor a la
+    // izquierda, numeración "Página X de Y" a la derecha. ──
+    const totalPaginas = doc.getNumberOfPages();
+    const fechaGen = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const autor = (typeof getCurrentUserName === 'function' && getCurrentUserName()) || '';
+    for (let p = 1; p <= totalPaginas; p++) {
+      doc.setPage(p);
+      doc.setDrawColor(225, 225, 220);
+      doc.setLineWidth(0.6);
+      doc.line(margin, pageH - 28, pageW - margin, pageH - 28);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(130);
+      doc.text(
+        `Generado el ${fechaGen}${autor ? ' por ' + autor : ''} — Salario Gestión`,
+        margin, pageH - 16
+      );
+      doc.text(`Página ${p} de ${totalPaginas}`, pageW - margin, pageH - 16, { align: 'right' });
+    }
+
+    const nombreArchivo = 'reporte_' +
+      (clienteFiltro ? clienteFiltro.replace(/[^a-zA-Z0-9]/g, '_') + '_' : '') +
+      rango.label.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
+    doc.save(nombreArchivo);
+    cerrarModalReporteConsultas();
+  } catch (e) {
+    console.error('Error generando el reporte de consultas', e);
+    alert('No se pudo generar el PDF: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = textoOriginalBtn || 'Descargar PDF'; }
+  }
 }

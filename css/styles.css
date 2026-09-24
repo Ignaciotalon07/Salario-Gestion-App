@@ -239,6 +239,9 @@ body {
 #dashboard .metrics-grid .metric-card { padding: 14px 14px; }
 #dashboard .metrics-grid .metric-value { font-size: 26px; }
 #consultas-page .metrics-grid { grid-template-columns: repeat(5,1fr); }
+/* Reportes: 5 o 6 cards según haya filtro de cliente — se acomodan solas en
+   la fila, sin dejar una card huérfana sola en la fila de abajo. */
+#reportes .metrics-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .metric-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-lg); padding: 16px 18px;
