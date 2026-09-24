@@ -283,13 +283,14 @@ function _saludoElegirMensaje(ctx) {
   }
 
   // 4b) Viernes desde las 16hs, solo para Ignacio y Matías: recordatorio de
-  // mandar el informe semanal de implementación a los clientes. Tiene
-  // prioridad sobre el aviso genérico de "cerrando la semana" (siguiente
-  // punto) para que no se lo tape.
+  // cierre de semana de Implementación — las dos cosas juntas (actualizar el
+  // módulo con el avance de la semana y enviar el informe a los clientes),
+  // no una u otra. Tiene prioridad sobre el aviso genérico de "cerrando la
+  // semana" (siguiente punto) para que no se lo tape.
   if (dia === 5 && h >= 16 && (me === 'Ignacio Talon' || me === 'Matias Ferro')) {
     return {
       tono: 'blue',
-      texto: `📄 Recordá enviar el informe de implementación a los clientes correspondientes.`,
+      texto: `📄 Antes de cerrar la semana: actualizá el módulo de Implementación con el avance de la semana y enviá el informe semanal a los clientes correspondientes, si aún no lo hiciste.`,
       cta: { label: 'Ir a Implementación →', accion: '_saludoIrAImplMias()' },
     };
   }
