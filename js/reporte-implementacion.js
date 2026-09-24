@@ -158,7 +158,13 @@ async function _rimplCapturarGantt(clienteId) {
 // Dibuja un canvas (potencialmente más alto que una página) paginado dentro
 // del doc, escalado al ancho útil de la página. Todas las páginas que agrega
 // son horizontales (landscape), igual que el resto del documento.
-function _rimplAgregarCanvasPaginado(doc, canvas, margin) {
+//
+// `startY` permite arrancar a continuación del contenido que ya haya en la
+// página actual (en vez de siempre forzar una hoja nueva): si el Gantt (o el
+// primer tramo, si no entra entero) cabe en el espacio que queda debajo del
+// texto, se dibuja ahí mismo; recién agrega páginas nuevas para lo que no
+// entre.
+function _rimplAgregarCanvasPaginado(doc, canvas, margin, startY) {
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const usableW = pageW - margin * 2;
@@ -170,7 +176,14 @@ function _rimplAgregarCanvasPaginado(doc, canvas, margin) {
   let renderedHeight = 0;
   let first = true;
   while (renderedHeight < canvas.height) {
-    const sliceHeight = Math.min(pageHeightInCanvasPx, canvas.height - renderedHeight);
+    // En la primera tanda, si nos pasaron startY, usamos el espacio real
+    // que queda hasta el pie de página; de ahí en más, la página entera.
+    const yActual   = first ? startY : margin;
+    const hDisponibleCanvasPx = first && startY != null
+      ? Math.max(1, Math.floor(((pageH - margin) - startY) / scale))
+      : pageHeightInCanvasPx;
+
+    const sliceHeight = Math.min(hDisponibleCanvasPx, canvas.height - renderedHeight);
 
     const sliceCanvas = document.createElement('canvas');
     sliceCanvas.width  = canvas.width;
@@ -180,7 +193,7 @@ function _rimplAgregarCanvasPaginado(doc, canvas, margin) {
 
     const imgData = sliceCanvas.toDataURL('image/png');
     if (!first) doc.addPage('a4', 'landscape');
-    doc.addImage(imgData, 'PNG', margin, margin, usableW, sliceHeight * scale);
+    doc.addImage(imgData, 'PNG', margin, yActual, usableW, sliceHeight * scale);
     first = false;
     renderedHeight += sliceHeight;
   }
@@ -210,6 +223,9 @@ async function generarReporteImplPDF() {
     // 'gantt' momentáneamente si el cliente estaba en vista de Lista).
     const ganttCanvas = await _rimplCapturarGantt(clienteId);
 
+    // Mismo logo institucional que usa el reporte de Consultas (js/reportes.js).
+    const logo = (typeof _repCargarLogo === 'function') ? await _repCargarLogo() : null;
+
     const { jsPDF } = window.jspdf;
     // Todo el documento en horizontal.
     const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
@@ -217,6 +233,9 @@ async function generarReporteImplPDF() {
     const pageH = doc.internal.pageSize.getHeight();
     const margin = 44;
     let y = margin;
+
+    // Naranja institucional (mismo tono que el reporte de Consultas)
+    const NARANJA = [245, 158, 11];
 
     // Si estamos por escribir cerca del borde inferior, salta a una página nueva.
     const checkPageBreak = (alturaNecesaria) => {
@@ -227,14 +246,38 @@ async function generarReporteImplPDF() {
     };
 
     // ── Encabezado ──
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(17);
-    doc.setTextColor(20);
-    doc.text('Reporte Semanal de Implementación', pageW / 2, y, { align: 'center' }); y += 24;
+    // Logo institucional en su propia fila, arriba a la izquierda, antes de
+    // todo el resto del contenido (mismo tratamiento que el reporte de
+    // Consultas, para que los dos PDFs se vean parte de la misma familia).
+    if (logo && logo.img.naturalWidth) {
+      const logoX = -8;
+      const logoY = -6;
+      const logoH = 105;
+      const logoW = logoH * (logo.img.naturalWidth / logo.img.naturalHeight);
+      doc.addImage(logo.img, logo.formato, logoX, logoY, logoW, logoH);
+      y = logoY + logoH + 8;
+    }
 
-    doc.setFontSize(12);
-    doc.setTextColor(60);
-    doc.text(`Cliente: ${cliente.nombre}`, margin, y); y += 18;
+    // Título en serif (Times), en dos líneas — igual que el reporte de Consultas.
+    doc.setFont('times', 'bold');
+    doc.setFontSize(21);
+    doc.setTextColor(48, 48, 52);
+    doc.text('Reporte Semanal de Implementación', pageW / 2, y, { align: 'center', charSpace: 0.4 }); y += 15;
+    doc.setFont('times', 'italic');
+    doc.setFontSize(12.5);
+    doc.setTextColor(110);
+    doc.text('Salario Gestión', pageW / 2, y, { align: 'center' }); y += 12;
+
+    // Línea divisoria naranja debajo del título.
+    doc.setDrawColor(NARANJA[0], NARANJA[1], NARANJA[2]);
+    doc.setLineWidth(1.6);
+    doc.line(pageW / 2 - 90, y, pageW / 2 + 90, y);
+    y += 40;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.setTextColor(30);
+    doc.text(cliente.nombre, margin, y); y += 15;
 
     const hoy = new Date();
     // Semana laboral lunes → viernes: el reporte siempre arranca en el
@@ -246,10 +289,10 @@ async function generarReporteImplPDF() {
     inicioSemana.setDate(hoy.getDate() - offsetDesdeLunes);
     inicioSemana.setHours(0, 0, 0, 0);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
+    doc.setFontSize(10.5);
     doc.setTextColor(120);
-    doc.text(`Semana del ${formatFechaImpl(inicioSemana)} al ${formatFechaImpl(hoy)}`, margin, y);
-    y += 26;
+    doc.text(`Semana del ${formatFechaImpl(inicioSemana)} al ${formatFechaImpl(hoy)}`, margin, y, { charSpace: 0.2 });
+    y += 34;
 
     // ── Datos calculados (mismas fórmulas que usa la app) ──
     const total = tareasCliente.length;
@@ -258,14 +301,19 @@ async function generarReporteImplPDF() {
     const semaforo = calcularSemaforo(cliente, tareasCliente, progreso);
     const eta = calcularETACliente(tareasCliente);
 
-    const seccion = (titulo, colorTitulo) => {
-      checkPageBreak(30);
+    // Marca de acento a la izquierda del título de sección (naranja por
+    // defecto, o el color que se pase — ej. rojo para "Atención").
+    const seccion = (titulo, colorAcento) => {
+      checkPageBreak(32);
       y += 6;
+      const c = colorAcento || NARANJA;
+      doc.setFillColor(c[0], c[1], c[2]);
+      doc.rect(margin, y - 9, 3, 12, 'F');
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.setTextColor(colorTitulo ? colorTitulo[0] : 20, colorTitulo ? colorTitulo[1] : 20, colorTitulo ? colorTitulo[2] : 20);
-      doc.text(titulo, margin, y);
-      y += 17;
+      doc.setFontSize(11.5);
+      doc.setTextColor(colorAcento ? c[0] : 40, colorAcento ? c[1] : 40, colorAcento ? c[2] : 40);
+      doc.text(titulo.toUpperCase(), margin + 10, y, { charSpace: 0.6 });
+      y += 19;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(70);
@@ -273,9 +321,9 @@ async function generarReporteImplPDF() {
 
     const parrafo = (texto, ancho) => {
       const wrapped = doc.splitTextToSize(texto, ancho || (pageW - margin * 2));
-      checkPageBreak(wrapped.length * 13 + 5);
+      checkPageBreak(wrapped.length * 14 + 5);
       doc.text(wrapped, margin, y);
-      y += wrapped.length * 13 + 5;
+      y += wrapped.length * 14 + 5;
     };
 
     const item = (texto, ancho) => {
@@ -327,9 +375,19 @@ async function generarReporteImplPDF() {
     }
 
     // ── Gantt ──
+    // Solo saltamos a una hoja nueva si no queda espacio razonable en la
+    // actual (título + un tramo útil del diagrama); si entra, se dibuja a
+    // continuación del texto.
     if (ganttCanvas) {
-      doc.addPage('a4', 'landscape');
-      _rimplAgregarCanvasPaginado(doc, ganttCanvas, margin);
+      const ALTO_TITULO_GANTT   = 30;  // lo que ocupa el título de sección
+      const ESPACIO_MINIMO_GANTT = 160 + ALTO_TITULO_GANTT;
+      const espacioDisponible = (pageH - margin) - y;
+      if (espacioDisponible < ESPACIO_MINIMO_GANTT) {
+        doc.addPage('a4', 'landscape');
+        y = margin;
+      }
+      seccion(`Diagrama de Gantt — Actualizado al ${formatFechaImpl(hoy)}`);
+      _rimplAgregarCanvasPaginado(doc, ganttCanvas, margin, y);
     }
 
     // ── Notas opcionales (debajo del Gantt) ──
@@ -346,6 +404,28 @@ async function generarReporteImplPDF() {
       doc.setFontSize(10.5);
       doc.setTextColor(60);
       parrafo(notas);
+    }
+
+    // ── Pie de página en todas las hojas: fecha de generación + autor a la
+    // izquierda, numeración "Página X de Y" a la derecha (igual que el
+    // reporte de Consultas). ──
+    const totalPaginas = doc.getNumberOfPages();
+    const fechaGen = hoy.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const autor = (typeof getCurrentUserName === 'function' && getCurrentUserName()) || '';
+    for (let p = 1; p <= totalPaginas; p++) {
+      doc.setPage(p);
+      doc.setDrawColor(225, 225, 220);
+      doc.setLineWidth(0.6);
+      doc.line(margin, pageH - 28, pageW - margin, pageH - 28);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(130);
+      doc.text(
+        `Generado el ${fechaGen}${autor ? ' por ' + autor : ''} — Salario`,
+        margin, pageH - 16
+      );
+      doc.text(`Página ${p} de ${totalPaginas}`, pageW - margin, pageH - 16, { align: 'right' });
     }
 
     const nombreArchivo = `reporte_${cliente.nombre.replace(/[^a-zA-Z0-9]/g, '_')}_${hoy.toISOString().slice(0, 10)}.pdf`;
