@@ -541,7 +541,7 @@ async function generarReporteConsultasPDF() {
     // Logo institucional en su propia fila, arriba a la izquierda, antes de
     // todo el resto del contenido (incluido el título).
     if (logo && logo.img.naturalWidth) {
-      const logoX = 2;
+      const logoX = -8;
       const logoY = -6;
       const logoH = 105;
       const logoW = logoH * (logo.img.naturalWidth / logo.img.naturalHeight);
