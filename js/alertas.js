@@ -390,6 +390,41 @@ function refreshAlertas() {
     });
   }
 
+  // ── 9. AVANCE DEL EQUIPO: hito de registros del año (misma cuenta y mismo
+  // texto que el cartel de festejo en js/hitos.js — cada 500 registros
+  // cargados). Se muestra solo durante los 7 días posteriores a haber
+  // alcanzado el hito; pasada esa semana, desaparece de Alertas (el cartel
+  // modal en cambio ya se mostró una vez y no vuelve a salir). ──
+  if (typeof _hitoConsultasEsteAnio === 'function' && typeof getConsultasAnio === 'function') {
+    const pasoHito    = (typeof HITO_PASO !== 'undefined') ? HITO_PASO : 500;
+    const totalAnio   = _hitoConsultasEsteAnio();
+    const hitoActual  = Math.floor(totalAnio / pasoHito) * pasoHito;
+    if (hitoActual >= pasoHito) {
+      // Fecha en la que se alcanzó el hito: el registro N° `hitoActual` del
+      // año, ordenado cronológicamente.
+      const registrosAnio = getConsultasAnio(new Date().getFullYear())
+        .filter(c => c.timestamp)
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      const registroHito = registrosAnio[hitoActual - 1];
+      const diasDesdeHito = registroHito
+        ? (Date.now() - new Date(registroHito.timestamp).getTime()) / 86400000
+        : Infinity;
+
+      if (diasDesdeHito <= 7) {
+        // Si el total es exactamente el hito, "Llegamos a los X". Si ya lo
+        // pasamos (por ej. hito=1000 y total=1001), "Superamos los X".
+        const verboHito = totalAnio > hitoActual ? 'Superamos' : 'Llegamos a';
+        alertas.push({
+          tipo:    'green',
+          titulo:  `¡${verboHito} los ${hitoActual.toLocaleString('es-AR')} registros! 🎉`,
+          texto:   `Entre todo el equipo llevamos ${totalAnio.toLocaleString('es-AR')} registros cargados este año.`,
+          accion:  null,
+          onClick: null
+        });
+      }
+    }
+  }
+
   // ── Render ──
   _renderAlertas(alertas);
 }

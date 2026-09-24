@@ -772,6 +772,12 @@ function _cpRefreshMetricas() {
       : 'sin datos aún';
   }
   set('cp-prom', promDia);
+
+  // Consultas este año — solo consultas de clientes (excluye programación
+  // interna, igual que el resto de esta sección; no depende del mes elegido).
+  const desAnio = _cpFilterPeriod('anio', 0);
+  set('cp-anio', desAnio.length);
+
   // cp-sub es texto fijo definido en el HTML, no se sobreescribe
 
   // Etiquetas dinámicas: "Este mes" / "Top cliente del mes" / "Prom. diario (mes)"

@@ -8,6 +8,58 @@
 *::-webkit-scrollbar-thumb { background: var(--border2, rgba(0,0,0,0.2)); border-radius: 3px; }
 *::-webkit-scrollbar-thumb:hover { background: var(--text3, rgba(0,0,0,0.35)); }
 
+/* ── Cartel de festejo: hitos de consultas (cada 500 en el año) ── */
+.hito-celebracion-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: hitoFadeIn 0.25s ease;
+}
+.hito-celebracion-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px 36px 32px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  animation: hitoPopIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.hito-celebracion-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--text3);
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+}
+.hito-celebracion-emoji { font-size: 52px; line-height: 1; margin-bottom: 12px; }
+.hito-celebracion-titulo { font-size: 21px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.hito-celebracion-sub { font-size: 14px; color: var(--text2); line-height: 1.5; }
+
+@keyframes hitoFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes hitoPopIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@media (max-width: 480px) {
+  .hito-celebracion-card { padding: 32px 24px 26px; }
+  .hito-celebracion-emoji { font-size: 44px; }
+  .hito-celebracion-titulo { font-size: 18px; }
+}
+
 :root {
   --bg: #f5f4f0;
   --surface: #ffffff;
@@ -186,6 +238,7 @@ body {
 #dashboard .metrics-grid { grid-template-columns: repeat(5,1fr); }
 #dashboard .metrics-grid .metric-card { padding: 14px 14px; }
 #dashboard .metrics-grid .metric-value { font-size: 26px; }
+#consultas-page .metrics-grid { grid-template-columns: repeat(5,1fr); }
 .metric-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-lg); padding: 16px 18px;
@@ -5083,6 +5136,14 @@ input[type=date]:focus {
     grid-template-columns: repeat(2, 1fr) !important;
   }
   #dashboard .metrics-grid .metric-card:nth-child(5) {
+    grid-column: 1 / -1;
+  }
+
+  /* ── Consultas: mismo criterio, 5ta métrica ocupa todo el ancho ── */
+  #consultas-page .metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  #consultas-page .metrics-grid .metric-card:nth-child(5) {
     grid-column: 1 / -1;
   }
 

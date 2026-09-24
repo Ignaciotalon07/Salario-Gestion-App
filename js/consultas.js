@@ -164,6 +164,8 @@ async function initConsultas() {
     consultas = rows.map(dbRowToConsulta);
     // Refrescar métricas del panel con los datos reales
     if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
+    // Chequear si con esta carga ya llegamos a un hito de consultas del año
+    if (typeof checkHitoConsultas === 'function') checkHitoConsultas();
     // Re-renderizar cards de clientes para que muestren las stats correctas
     if (typeof renderClientes === 'function') renderClientes();
     // Refrescar la página de Consultas
@@ -192,6 +194,8 @@ function suscribirConsultas() {
           if (!consultas.find(c => c.id === payload.new.id)) {
             consultas.unshift(dbRowToConsulta(payload.new));
             if (typeof refreshPanelMetrics === 'function') refreshPanelMetrics();
+            // Chequear si esta nueva consulta nos hizo llegar a un hito del año
+            if (typeof checkHitoConsultas === 'function') checkHitoConsultas();
             // Re-render cards de clientes para actualizar stats (consultas/mes, % repetidas)
             if (typeof renderClientes === 'function') renderClientes();
             // Refrescar la página de Consultas
@@ -222,11 +226,45 @@ const CATEGORIAS_EXCLUIDAS = new Set([
   'implementacion', 'Implementación'
 ]);
 
+// Normaliza un nombre de categoría para poder comparar variantes que en
+// realidad son "lo mismo" pero se cargaron distinto a mano: mayúsculas,
+// acentos, o singular/plural ("Actualización" / "actualizacion" /
+// "Actualizaciones" / "Revisión" / "revision", etc.)
+function _normCategoriaKey(str) {
+  return String(str || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // saca acentos
+    .replace(/ciones$/, 'cion'); // plural de "-ción" → singular
+}
+
+// Claves normalizadas de las categorías fijas (por label y por key interna),
+// para no listar como "custom" algo que en el fondo ya es una categoría fija.
+const CATS_NORM_KEYS = new Set([
+  ...Object.keys(CATS).map(_normCategoriaKey),
+  ...Object.values(CATS).map(c => _normCategoriaKey(c.label)),
+]);
+
 function getCategoriasCustom() {
   if (typeof consultas === 'undefined') return [];
   const conocidas = new Set(Object.keys(CATS));
   const todas = [...new Set(consultas.map(c => c.categoria).filter(Boolean))];
-  return todas.filter(c => !conocidas.has(c) && !CATEGORIAS_EXCLUIDAS.has(c)).sort();
+  const candidatas = todas.filter(c => !conocidas.has(c) && !CATEGORIAS_EXCLUIDAS.has(c));
+
+  // Agrupar variantes equivalentes y quedarnos con una sola por grupo (la
+  // más usada), descartando además las que ya son, en el fondo, una
+  // categoría fija cargada con otra ortografía.
+  const grupos = {}; // normKey -> { label, count }
+  candidatas.forEach(c => {
+    const key = _normCategoriaKey(c);
+    if (CATS_NORM_KEYS.has(key)) return;
+    const count = consultas.filter(x => x.categoria === c).length;
+    if (!grupos[key] || count > grupos[key].count) {
+      grupos[key] = { label: c, count };
+    }
+  });
+
+  return Object.values(grupos).map(g => g.label).sort();
 }
 
 // Devuelve los subtemas custom usados para una categoría (no están en CATS[cat].sub)
