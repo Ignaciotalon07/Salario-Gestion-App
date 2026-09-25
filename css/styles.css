@@ -5061,6 +5061,14 @@ input[type=date]:focus {
     width: 100%;
     justify-content: center;
   }
+  /* #pendientes y #consultas-page tienen "align-items: center" seteado
+     para desktop (fuera de este media query) con selector #id, que le
+     gana en especificidad a la regla genérica de arriba y quedaba
+     centrando el título en mobile en vez de pegarlo a la izquierda. */
+  #pendientes .page-header,
+  #consultas-page .page-header {
+    align-items: flex-start;
+  }
 
   /* ── Métricas ── */
   .metrics-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; }
