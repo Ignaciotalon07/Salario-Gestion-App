@@ -45,6 +45,9 @@ function goClienteDetail(id) {
 }
 
 // ── Navegación mobile (bottom nav) ──
+// Mismos side-effects que goTo() (desktop) para que las secciones se
+// comporten igual sin importar si se entra desde el sidebar o desde el
+// bottom nav / hoja "Más" de mobile.
 function mobileGoTo(pageId, btn) {
   // Navegar a la página
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -52,33 +55,82 @@ function mobileGoTo(pageId, btn) {
   if (page) page.classList.add('active');
   window.scrollTo(0, 0);
 
-  // Marcar el item activo en el bottom nav
+  // Marcar el item activo en el bottom nav (si la página tiene ícono propio
+  // ahí; las que solo viven en la hoja "Más" navegan con btn = null)
   document.querySelectorAll('.mobile-nav-item').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-}
 
-// Abre/cierra el menú "Más" del bottom nav
-function toggleMobileMore() {
-  const menu = document.getElementById('mobile-more-menu');
-  if (!menu) return;
-  const visible = menu.style.display !== 'none';
-  menu.style.display = visible ? 'none' : 'block';
-  // Cerrar al tocar fuera — delay generoso para que el tap actual no lo dispare
-  if (!visible) {
+  if (pageId === 'consultas-page' && typeof refreshConsultasPage === 'function') refreshConsultasPage();
+  if (pageId === 'repositorio' && typeof marcarRepositorioVisto === 'function') marcarRepositorioVisto();
+  if (pageId === 'dashboard' && typeof renderSaludoPanel === 'function') renderSaludoPanel();
+  if (pageId === 'reportes' && typeof initReportesFiltros === 'function') initReportesFiltros();
+  if (pageId === 'equipo') {
     setTimeout(() => {
-      function closeMobileMore(e) {
-        const btn = document.querySelector('.mobile-nav-item:last-child');
-        if (!menu.contains(e.target) && (!btn || !btn.contains(e.target))) {
-          menu.style.display = 'none';
-          document.removeEventListener('click', closeMobileMore);
-          document.removeEventListener('touchend', closeMobileMore);
-        }
-      }
-      document.addEventListener('click', closeMobileMore);
-      document.addEventListener('touchend', closeMobileMore);
-    }, 300);
+      if (typeof chartEquipoInstance !== 'undefined' && chartEquipoInstance) chartEquipoInstance.resize();
+    }, 30);
   }
 }
+
+// Abre/cierra la hoja "Más" del bottom nav (desliza desde abajo, con backdrop).
+function toggleMobileMore() {
+  const menu = document.getElementById('mobile-more-menu');
+  const backdrop = document.getElementById('mobile-more-backdrop');
+  if (!menu || !backdrop) return;
+
+  const isOpen = menu.classList.contains('open');
+  if (isOpen) {
+    menu.classList.remove('show');
+    backdrop.classList.remove('show');
+    setTimeout(() => {
+      menu.classList.remove('open');
+      backdrop.classList.remove('open');
+    }, 250);
+    return;
+  }
+
+  menu.classList.add('open');
+  backdrop.classList.add('open');
+  // Forzamos un frame antes de agregar "show" para que la transición
+  // (translateY / opacity) realmente corra en vez de aparecer de golpe.
+  requestAnimationFrame(() => {
+    menu.classList.add('show');
+    backdrop.classList.add('show');
+  });
+}
+
+// ── Indicadores de la hoja "Más": puntitos en Repositorio/Alertas y el
+// numerito en el ícono "Más" del bottom nav — se sincronizan solos
+// observando los badges que ya mantiene el sidebar de escritorio
+// (alert-nav-badge, repo-nav-badge), sin duplicar ninguna lógica de conteo.
+function _mobileSyncMasIndicadores() {
+  const alertBadge = document.getElementById('alert-nav-badge');
+  const repoBadge  = document.getElementById('repo-nav-badge');
+  const alertCount = alertBadge ? (parseInt(alertBadge.textContent, 10) || 0) : 0;
+  const repoCount  = (repoBadge && repoBadge.style.display !== 'none') ? (parseInt(repoBadge.textContent, 10) || 0) : 0;
+
+  const alertDot = document.getElementById('mobile-alertas-dot');
+  if (alertDot) alertDot.style.display = alertCount > 0 ? 'block' : 'none';
+  const repoDot = document.getElementById('mobile-repo-dot');
+  if (repoDot) repoDot.style.display = repoCount > 0 ? 'block' : 'none';
+
+  const masBadge = document.getElementById('mobile-mas-badge');
+  const total = alertCount + repoCount;
+  if (masBadge) {
+    masBadge.textContent = total;
+    masBadge.style.display = total > 0 ? 'block' : 'none';
+  }
+}
+
+function _mobileInitMasObservers() {
+  const alertBadge = document.getElementById('alert-nav-badge');
+  const repoBadge  = document.getElementById('repo-nav-badge');
+  const obs = new MutationObserver(_mobileSyncMasIndicadores);
+  if (alertBadge) obs.observe(alertBadge, { childList: true, characterData: true, subtree: true });
+  if (repoBadge)  obs.observe(repoBadge, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+  _mobileSyncMasIndicadores();
+}
+
+window.addEventListener('app-ready', () => setTimeout(_mobileInitMasObservers, 1200));
 
 // Sincronizar badge de pendientes en el bottom nav
 function syncMobilePendBadge() {

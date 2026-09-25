@@ -18,6 +18,26 @@ let pendientesCerradosTotal      = 0; // contador histórico de pendientes cerra
 
 const TEAM_ASESORES = ['Ignacio Talon', 'Matias Ferro', 'Daniel Colomer', 'Daniel Ferro', 'Renzo Moretti', 'Alfredo Cesar'];
 
+// Las tarjetas de Pendientes arman un HTML distinto según sea mobile o
+// desktop (esMobile, dentro de renderPendienteCard) — pero eso se calcula
+// solo en el momento en que se renderiza. Si el usuario achica o agranda la
+// ventana SIN recargar la página, sin esto la tarjeta se queda con la
+// versión vieja hasta el próximo render. Escuchamos el cruce del breakpoint
+// (600px, el mismo que usa css/styles.css para todo el modo mobile) y
+// volvemos a renderizar apenas se cruza, para que cambie al toque.
+if (typeof window.matchMedia === 'function') {
+  const _pendMql = window.matchMedia('(max-width: 600px)');
+  const _onPendBreakpointChange = () => {
+    if (typeof renderPendientes === 'function') renderPendientes();
+  };
+  if (_pendMql.addEventListener) {
+    _pendMql.addEventListener('change', _onPendBreakpointChange);
+  } else if (_pendMql.addListener) {
+    // Fallback para navegadores viejos que no soportan addEventListener acá.
+    _pendMql.addListener(_onPendBreakpointChange);
+  }
+}
+
 // ────────── Mapeo DB <-> UI ──────────
 
 function dbRowToPendiente(row) {
@@ -277,6 +297,92 @@ function renderPendientes() {
   } else {
     list.innerHTML = visible.map(renderPendienteCard).join('');
   }
+
+  _initSwipePendientes();
+}
+
+// ── Swipe para resolver (solo mobile) ──
+// Deslizar una tarjeta hacia la izquierda dispara el mismo flujo que tocar
+// "Marcar como resuelto" (abre el modal de cierre con tiempo/solución si
+// corresponde) — es solo un atajo, no evita el modal ni los permisos.
+function _initSwipePendientes() {
+  // 600px: mismo breakpoint que usa el resto de la app para "modo mobile"
+  // (sidebar oculto / bottom nav visible en css/styles.css). Si esto no
+  // coincide con el breakpoint real, en anchos intermedios (ej. 700px) el JS
+  // arma el markup mobile pero el CSS todavía no lo estiliza — se ve roto.
+  if (!window.matchMedia('(max-width: 600px)').matches) return;
+
+  const UMBRAL = -80; // px hacia la izquierda para considerar "swipe completo"
+
+  document.querySelectorAll('#pend-list .pend-swipe-card').forEach(card => {
+    let startX = 0, startY = 0, dx = 0, dragging = false, decided = false, horizontal = false;
+
+    card.addEventListener('touchstart', (e) => {
+      const t = e.touches[0];
+      startX = t.clientX; startY = t.clientY; dx = 0;
+      dragging = true; decided = false; horizontal = false;
+      card.style.transition = 'none';
+    }, { passive: true });
+
+    card.addEventListener('touchmove', (e) => {
+      if (!dragging) return;
+      const t = e.touches[0];
+      const deltaX = t.clientX - startX;
+      const deltaY = t.clientY - startY;
+      if (!decided && (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8)) {
+        decided = true;
+        horizontal = Math.abs(deltaX) > Math.abs(deltaY);
+      }
+      if (!horizontal) return; // dejamos que la página scrollee vertical normal
+      dx = Math.min(0, deltaX); // solo permitimos deslizar hacia la izquierda
+      card.style.transform = `translateX(${dx}px)`;
+    }, { passive: true });
+
+    const terminarSwipe = () => {
+      if (!dragging) return;
+      dragging = false;
+      card.style.transition = 'transform 0.25s ease';
+      if (horizontal && dx < UMBRAL) {
+        card.style.transform = 'translateX(-90px)';
+        const id = card.getAttribute('data-pend-id');
+        const btnResolver = card.querySelector('.btn-row .btn-primary, .btn-row .pend-resolver-hint');
+        setTimeout(() => {
+          card.style.transform = '';
+          if (id) cerrarPendiente(id, btnResolver || null);
+        }, 180);
+      } else {
+        card.style.transform = '';
+      }
+    };
+    card.addEventListener('touchend', terminarSwipe);
+    card.addEventListener('touchcancel', terminarSwipe);
+  });
+}
+
+// Abre/cierra el menú "⋯" de acciones secundarias de una tarjeta de
+// pendiente en mobile (Reasignar, Whaticket, Ir a la tarea, Ver historial).
+// Cierra cualquier otro menú abierto y se cierra solo al tocar afuera.
+function togglePendMoreMenu(id, event) {
+  if (event) event.stopPropagation();
+  const menu = document.getElementById('pend-more-' + id);
+  if (!menu) return;
+
+  const yaAbierto = menu.classList.contains('open');
+  document.querySelectorAll('.pend-more-menu.open').forEach(m => m.classList.remove('open'));
+  if (yaAbierto) return;
+
+  menu.classList.add('open');
+  setTimeout(() => {
+    const cerrar = (e) => {
+      if (!menu.contains(e.target)) {
+        menu.classList.remove('open');
+        document.removeEventListener('click', cerrar);
+        document.removeEventListener('touchend', cerrar);
+      }
+    };
+    document.addEventListener('click', cerrar);
+    document.addEventListener('touchend', cerrar);
+  }, 10);
 }
 
 function toggleGroupByCliente() {
@@ -362,8 +468,63 @@ function renderPendienteCard(p) {
   // Permisos: solo el asesor asignado (o nadie asignado) puede modificar
   const puedoEditar = puedeEditarPendiente(p);
 
-  return `
-    <div class="card" data-pend-id="${p.id}" style="border-left:5px solid ${finalBorder};${(!p.interno && venc && venc.urgente) ? 'background:rgba(239,68,68,0.08)' : ''}">
+  // 600px: mismo breakpoint que css/styles.css usa para todo el modo mobile
+  // (sidebar oculto, bottom nav, etc.) — tiene que coincidir siempre, si no
+  // en anchos intermedios el JS arma HTML "mobile" sin el CSS que lo viste.
+  const esMobile = window.matchMedia('(max-width: 600px)').matches;
+
+  // En mobile: swipe hacia la izquierda para resolver rápido (mismo modal
+  // de "Marcar como resuelto"), sin tener que ir a buscar el botón abajo de
+  // toda la tarjeta. Solo si es mobile y el usuario puede editar este
+  // pendiente — en desktop no hay gesto táctil, así que ni se envuelve.
+  const swipeOpen  = (esMobile && puedoEditar) ? `<div class="pend-swipe"><div class="pend-swipe__action">✓ Resolver</div>` : '';
+  const swipeClose = (esMobile && puedoEditar) ? `</div>` : '';
+  const swipeClass = (esMobile && puedoEditar) ? ' pend-swipe-card' : '';
+  // En mobile, en vez del botón CTA de escritorio, un chip liviano tipo
+  // "hint" nativo de mobile (flecha animada + texto chico) que avisa que
+  // se puede resolver deslizando — no un botón grande y pesado como en desktop.
+  const btnResolver = !puedoEditar ? '' : (esMobile
+    ? `<button class="pend-resolver-hint" onclick="cerrarPendiente('${p.id}',this)"><span class="pend-resolver-hint__arrow">‹‹</span>Deslizá o tocá para resolver</button>`
+    : `<button class="btn-primary btn-primary--sm" onclick="cerrarPendiente('${p.id}',this)">Marcar como resuelto</button>`);
+
+  // En mobile: solo quedan a la vista "Resolver" y "Agregar nota" — el resto
+  // de las acciones secundarias (Reasignar, Whaticket, Ir a la tarea, Ver
+  // historial) se agrupan detrás de un menú "⋯" para no saturar la tarjeta
+  // con hasta 6 botones peleando espacio en una pantalla chica.
+  let filaAcciones;
+  if (esMobile) {
+    const itemsMenu = [
+      puedoEditar ? `<button class="pend-more-item" onclick="reasignarPendiente('${p.id}',this)">↔ Reasignar</button>` : '',
+      whaticketUrl ? `<a class="pend-more-item" href="${escapeHtml(whaticketUrl)}" target="_blank" rel="noopener">🎫 Abrir Whaticket</a>` : '',
+      implTareaInfo ? `<button class="pend-more-item" onclick="irATareaImpl('${implTareaInfo.id}','${implTareaInfo.clienteId}')">🔗 Ir a la tarea</button>` : '',
+      `<button class="pend-more-item" onclick="toggleHistorial('${p.id}')">${historialAbierto[p.id] ? '▴ Ocultar historial' : '▾ Ver historial'}</button>`,
+      !puedoEditar ? `<div class="pend-more-item pend-more-item--info">🔒 Asignado a ${escapeHtml(p.asesor)}</div>` : '',
+    ].filter(Boolean).join('');
+
+    filaAcciones = `
+      <div class="btn-row">
+        ${btnResolver}
+        <button class="btn-secondary btn-secondary--sm" onclick="toggleNotaForm('${p.id}', true)">Agregar nota</button>
+        <div class="pend-more-wrap">
+          <button class="pend-more-btn" onclick="togglePendMoreMenu('${p.id}', event)">⋯</button>
+          <div class="pend-more-menu" id="pend-more-${p.id}">${itemsMenu}</div>
+        </div>
+      </div>`;
+  } else {
+    filaAcciones = `
+      <div class="btn-row">
+        ${btnResolver}
+        <button class="btn-secondary btn-secondary--sm" onclick="toggleNotaForm('${p.id}', true)">Agregar nota</button>
+        ${puedoEditar ? `<button class="btn-sm" onclick="reasignarPendiente('${p.id}',this)">Reasignar</button>` : ''}
+        ${whaticketUrl ? `<a class="btn-sm wt-btn" href="${escapeHtml(whaticketUrl)}" target="_blank" rel="noopener" title="Abrir chat en Whaticket">🎫 Whaticket</a>` : ''}
+        ${implTareaInfo ? `<button class="btn-sm" style="color:var(--amber,#f59e0b);border-color:rgba(245,158,11,0.35)" onclick="irATareaImpl('${implTareaInfo.id}','${implTareaInfo.clienteId}')">🔗 Ir a la tarea</button>` : ''}
+        <button class="btn-sm" onclick="toggleHistorial('${p.id}')">${historialAbierto[p.id] ? 'Ocultar' : 'Ver'} historial</button>
+        ${!puedoEditar ? `<span class="readonly-badge" title="Solo ${escapeHtml(p.asesor)} puede modificar este pendiente">🔒 Asignado a ${escapeHtml(p.asesor)}</span>` : ''}
+      </div>`;
+  }
+
+  return `${swipeOpen}
+    <div class="card${swipeClass}" data-pend-id="${p.id}" style="border-left:5px solid ${finalBorder};${(!p.interno && venc && venc.urgente) ? 'background:rgba(239,68,68,0.08)' : ''}">
       <div class="card-header-row" style="margin-bottom:12px">
         <div class="identity-row identity-row--top">
           ${p.interno
@@ -381,7 +542,7 @@ function renderPendienteCard(p) {
                   : (tipoPend ? `<span class="badge ${tipoPend.badge}" title="Tipo: ${tipoPend.label}">${tipoPend.emoji} ${tipoPend.label}</span>` : '')
               }
               <span class="badge ${prioBadge}">${prioLabel}</span>
-              ${venc ? `<span class="badge ${venc.badge}" title="Plazo de 5 dias">⏰ ${venc.label}</span>` : ''}
+              ${venc ? `<span class="badge badge-venc ${venc.badge}" title="Plazo de 5 dias">⏰ ${venc.label}</span>` : ''}
               <span class="text-meta-sm">${p.cuando} &middot; ${p.asesor}</span>
             </div>
             ${implTareaInfo ? (() => {
@@ -422,7 +583,10 @@ function renderPendienteCard(p) {
           };
           const label = TIPO_BADGE_LABEL[tipoClave] || tipoClave;
           const col   = tipoColor.border;
-          return `<span style="flex-shrink:0;font-size:11px;font-weight:600;color:${col};background:${tipoColor.bg};border:1px solid ${col}33;border-radius:6px;padding:3px 10px;white-space:nowrap">${label}</span>`;
+          // En mobile se oculta (clase pend-tipo-top): el borde izquierdo de
+          // la tarjeta ya comunica el mismo color/tipo, así que acá era una
+          // pastilla de color redundante compitiendo por atención.
+          return `<span class="pend-tipo-top" style="flex-shrink:0;font-size:11px;font-weight:600;color:${col};background:${tipoColor.bg};border:1px solid ${col}33;border-radius:6px;padding:3px 10px;white-space:nowrap">${label}</span>`;
         })()}
       </div>
       ${p.intento  ? `<div class="info-pill"><div class="info-pill__label">Lo que se intento</div><div class="info-pill__body">${p.intento}</div></div>` : ''}
@@ -445,16 +609,8 @@ function renderPendienteCard(p) {
 
       ${renderHistorial(p)}
 
-      <div class="btn-row">
-        ${puedoEditar ? `<button class="btn-primary btn-primary--sm" onclick="cerrarPendiente('${p.id}',this)">Marcar como resuelto</button>` : ''}
-        <button class="btn-secondary btn-secondary--sm" onclick="toggleNotaForm('${p.id}', true)">Agregar nota</button>
-        ${puedoEditar ? `<button class="btn-sm" onclick="reasignarPendiente('${p.id}',this)">Reasignar</button>` : ''}
-        ${whaticketUrl ? `<a class="btn-sm wt-btn" href="${escapeHtml(whaticketUrl)}" target="_blank" rel="noopener" title="Abrir chat en Whaticket">🎫 Whaticket</a>` : ''}
-        ${implTareaInfo ? `<button class="btn-sm" style="color:var(--amber,#f59e0b);border-color:rgba(245,158,11,0.35)" onclick="irATareaImpl('${implTareaInfo.id}','${implTareaInfo.clienteId}')">🔗 Ir a la tarea</button>` : ''}
-        <button class="btn-sm" onclick="toggleHistorial('${p.id}')">${historialAbierto[p.id] ? 'Ocultar' : 'Ver'} historial</button>
-        ${!puedoEditar ? `<span class="readonly-badge" title="Solo ${escapeHtml(p.asesor)} puede modificar este pendiente">🔒 Asignado a ${escapeHtml(p.asesor)}</span>` : ''}
-      </div>
-    </div>`;
+      ${filaAcciones}
+    </div>${swipeClose}`;
 }
 
 // Devuelve true si el usuario actual puede modificar este pendiente.

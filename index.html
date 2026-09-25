@@ -15,7 +15,7 @@
     />
 
     <!-- Estilos -->
-    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/styles.css?v=20260925i" />
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -235,242 +235,215 @@
         class="mobile-nav-item active"
         onclick="mobileGoTo('dashboard', this)"
       >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
-        </svg>
-        Panel
+        <span class="mobile-nav-item__icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3" y="3" width="7" height="7" rx="1.5" />
+            <rect x="14" y="3" width="7" height="7" rx="1.5" />
+            <rect x="3" y="14" width="7" height="7" rx="1.5" />
+            <rect x="14" y="14" width="7" height="7" rx="1.5" />
+          </svg>
+        </span>
+        <span class="mobile-nav-item__label">Panel</span>
       </button>
       <button class="mobile-nav-item" onclick="mobileGoTo('clientes', this)">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="12" cy="8" r="4" />
-          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-        </svg>
-        Clientes
+        <span class="mobile-nav-item__icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+          </svg>
+        </span>
+        <span class="mobile-nav-item__label">Clientes</span>
       </button>
-      <button
-        class="mobile-nav-item"
-        onclick="abrirModalConsulta()"
-        style="color: var(--accent)"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 8v8M8 12h8" />
-        </svg>
-        Consulta
+
+      <!-- Acceso central destacado: registrar consulta (FAB) -->
+      <button class="mobile-nav-fab-wrap" onclick="abrirModalConsulta()">
+        <span class="mobile-nav-fab">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </span>
+        <span class="mobile-nav-fab-label">Consulta</span>
       </button>
+
       <button class="mobile-nav-item" onclick="mobileGoTo('pendientes', this)">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M9 11l3 3L22 4" />
-          <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
-        </svg>
-        Pendientes
-        <span
-          class="mobile-nav-badge"
-          id="mobile-pend-badge"
-          style="display: none"
-          >0</span
-        >
+        <span class="mobile-nav-item__icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M9 11l3 3L22 4" />
+            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+          </svg>
+          <span
+            class="mobile-nav-badge"
+            id="mobile-pend-badge"
+            style="display: none"
+            >0</span
+          >
+        </span>
+        <span class="mobile-nav-item__label">Pendientes</span>
       </button>
-      <button class="mobile-nav-item" onclick="toggleMobileMore()">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="5" cy="12" r="1.5" />
-          <circle cx="12" cy="12" r="1.5" />
-          <circle cx="19" cy="12" r="1.5" />
-        </svg>
-        Más
+      <button class="mobile-nav-item" id="mobile-nav-mas-btn" onclick="toggleMobileMore()">
+        <span class="mobile-nav-item__icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="4" y="4" width="7" height="7" rx="1.5" />
+            <rect x="13" y="4" width="7" height="7" rx="1.5" />
+            <rect x="4" y="13" width="7" height="7" rx="1.5" />
+            <circle cx="16.5" cy="16.5" r="3.5" />
+          </svg>
+          <span
+            class="mobile-nav-badge"
+            id="mobile-mas-badge"
+            style="display: none"
+            >0</span
+          >
+        </span>
+        <span class="mobile-nav-item__label">Más</span>
       </button>
     </nav>
 
-    <!-- Menú "Más" mobile -->
-    <div
-      id="mobile-more-menu"
-      style="
-        display: none;
-        position: fixed;
-        bottom: 70px;
-        right: 12px;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 14px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-        z-index: 9000;
-        min-width: 200px;
-        overflow: hidden;
-      "
-    >
-      <button
-        class="mobile-more-item"
-        onclick="
-          mobileGoTo('implementacion', null);
-          toggleMobileMore();
-        "
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M3 3v18h18" />
-          <path d="M7 14l4-4 4 4 5-5" />
-        </svg>
-        Implementación
-      </button>
-      <button
-        class="mobile-more-item"
-        onclick="
-          mobileGoTo('equipo', null);
-          toggleMobileMore();
-        "
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="9" cy="7" r="3" />
-          <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
-          <circle cx="18" cy="7" r="3" />
-          <path d="M21 20c0-3.3-2.7-6-6-6" />
-        </svg>
-        Equipo
-      </button>
-      <button
-        class="mobile-more-item"
-        onclick="
-          mobileGoTo('alertas', null);
-          toggleMobileMore();
-        "
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 01-3.46 0" />
-        </svg>
-        Alertas
-      </button>
-      <button
-        class="mobile-more-item"
-        onclick="
-          mobileGoTo('biblioteca', null);
-          toggleMobileMore();
-        "
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" />
-          <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
-        </svg>
-        Base de soluciones
-      </button>
-      <button
-        class="mobile-more-item"
-        onclick="
-          mobileGoTo('configuracion', null);
-          toggleMobileMore();
-        "
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="12" cy="12" r="3" />
-          <path
-            d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"
-          />
-        </svg>
-        Configuración
-      </button>
-      <button
-        class="mobile-more-item"
-        onclick="signOut()"
-        style="color: var(--red)"
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
+    <!-- Menú "Más" mobile — hoja que sube desde abajo con el resto de los accesos -->
+    <div id="mobile-more-backdrop" onclick="toggleMobileMore()"></div>
+    <div id="mobile-more-menu">
+      <div class="mobile-sheet-handle"></div>
+      <div class="mobile-sheet-title">Más opciones</div>
+
+      <div class="mobile-sheet-grid">
+        <button class="mobile-sheet-item" onclick="mobileGoTo('consultas-page', null); toggleMobileMore();">
+          <span class="mobile-sheet-item__icon" style="--tile-color:#2d2d8e">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3h18v13H3z" />
+              <path d="M7 20h10M12 16v4" />
+              <path d="M7 7.5h10M7 11h7" />
+            </svg>
+          </span>
+          <span class="mobile-sheet-item__label">Consultas</span>
+        </button>
+
+        <button class="mobile-sheet-item" onclick="mobileGoTo('implementacion', null); toggleMobileMore();">
+          <span class="mobile-sheet-item__icon" style="--tile-color:#1a5fa5">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3v18h18" />
+              <path d="M7 14l4-4 4 4 5-5" />
+            </svg>
+          </span>
+          <span class="mobile-sheet-item__label">Implementación</span>
+        </button>
+
+        <button class="mobile-sheet-item" onclick="mobileGoTo('equipo', null); toggleMobileMore();">
+          <span class="mobile-sheet-item__icon" style="--tile-color:#7c3aed">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="9" cy="7" r="3" />
+              <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" />
+              <circle cx="18" cy="7" r="3" />
+              <path d="M21 20c0-3.3-2.7-6-6-6" />
+            </svg>
+          </span>
+          <span class="mobile-sheet-item__label">Equipo</span>
+        </button>
+
+        <button class="mobile-sheet-item" onclick="mobileGoTo('biblioteca', null); toggleMobileMore();">
+          <span class="mobile-sheet-item__icon" style="--tile-color:#0d9488">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" />
+              <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" />
+            </svg>
+          </span>
+          <span class="mobile-sheet-item__label">Base de soluciones</span>
+        </button>
+
+        <button class="mobile-sheet-item" onclick="mobileGoTo('repositorio', null); toggleMobileMore();">
+          <span class="mobile-sheet-item__icon" style="--tile-color:#f59e0b">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3h18v16H3z" />
+              <path d="M7 8.5h10M7 13h7" />
+            </svg>
+            <span class="mobile-sheet-item__dot" id="mobile-repo-dot" style="display:none"></span>
+          </span>
+          <span class="mobile-sheet-item__label">Repositorio</span>
+        </button>
+
+        <button class="mobile-sheet-item" onclick="mobileGoTo('reportes', null); toggleMobileMore();">
+          <span class="mobile-sheet-item__icon" style="--tile-color:#2d6a2d">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 21V3M3 21h18" />
+              <path d="M7.5 17V10M13 17V6M18.5 17v-5" />
+            </svg>
+          </span>
+          <span class="mobile-sheet-item__label">Reportes</span>
+        </button>
+
+        <button class="mobile-sheet-item" onclick="mobileGoTo('alertas', null); toggleMobileMore();">
+          <span class="mobile-sheet-item__icon" style="--tile-color:#c0392b">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 01-3.46 0" />
+            </svg>
+            <span class="mobile-sheet-item__dot" id="mobile-alertas-dot" style="display:none"></span>
+          </span>
+          <span class="mobile-sheet-item__label">Alertas</span>
+        </button>
+
+        <button class="mobile-sheet-item" onclick="mobileGoTo('configuracion', null); toggleMobileMore();">
+          <span class="mobile-sheet-item__icon" style="--tile-color:#5f5e5a">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+            </svg>
+          </span>
+          <span class="mobile-sheet-item__label">Configuración</span>
+        </button>
+      </div>
+
+      <button class="mobile-sheet-logout" onclick="signOut()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
           <polyline points="16 17 21 12 16 7" />
           <line x1="21" y1="12" x2="9" y2="12" />
         </svg>
         Cerrar sesión
       </button>
+    </div>
+
+    <!-- Campanita del Panel general (mobile) — hoja con el mensaje del día +
+         "tus cosas para revisar hoy", contenido lo arma js/saludo.js -->
+    <div id="saludo-notif-backdrop" onclick="toggleSaludoNotif()"></div>
+    <div id="saludo-notif-sheet">
+      <div class="mobile-sheet-handle"></div>
+      <div class="mobile-sheet-title">Notificaciones</div>
+      <div id="saludo-notif-content"></div>
     </div>
 
     <div id="app-root" style="display: none">
@@ -2196,7 +2169,7 @@
                   <table class="tbl" id="rep-tabla">
                     <thead>
                       <tr>
-                        <th>Fecha</th><th>Cliente</th><th>Asesor</th><th>Tipo</th><th>Categoría</th><th>Solución aplicada</th><th>Tiempo (hs)</th>
+                        <th>Fecha</th><th>Cliente</th><th>Asesor</th><th>Tipo</th><th>Categoría</th><th>Descripción</th><th>Tiempo (hs)</th>
                       </tr>
                     </thead>
                     <tbody id="rep-tabla-body"></tbody>

@@ -13,11 +13,14 @@ window.addEventListener('app-ready', () => {
 // Varias formas de saludar según el momento del día — para que no suene
 // siempre igual, cada entrada elige una al azar entre las que le calzan.
 function _saludoOpcionesSaludo(h) {
+  // Nota: todas las variantes se mantienen cortas a propósito (máx.
+  // ~20 caracteres sin el nombre) para que el saludo entre siempre en una
+  // sola línea en el header de mobile, sin importar qué nombre le toque.
   if (h < 6 || h >= 20) {
     return [
       (n) => `Buenas noches, ${n}`,
       (n) => `¡Hola, ${n}!`,
-      (n) => `¡Bienvenido de nuevo, ${n}!`,
+      (n) => `¡Bienvenido, ${n}!`,
     ];
   }
   if (h < 13) {
@@ -25,13 +28,13 @@ function _saludoOpcionesSaludo(h) {
       (n) => `Buenos días, ${n}`,
       (n) => `¡Buen día, ${n}!`,
       (n) => `¡Hola, ${n}!`,
-      (n) => `¡Bienvenido de nuevo, ${n}!`,
+      (n) => `¡Bienvenido, ${n}!`,
     ];
   }
   return [
     (n) => `Buenas tardes, ${n}`,
     (n) => `¡Hola, ${n}!`,
-    (n) => `¡Bienvenido de nuevo, ${n}!`,
+    (n) => `¡Bienvenido, ${n}!`,
   ];
 }
 
@@ -174,7 +177,7 @@ const SALUDO_HORA_FIN    = 17; // termina el turno
 // nada porque todavía no arrancó o ya terminó el turno.
 function _saludoElegirMensaje(ctx) {
   const {
-    me, h, dia, soporteHoy, clientesHoy, soporteAyer, clientesAyer,
+    me, h, m, dia, soporteHoy, clientesHoy, soporteAyer, clientesAyer,
     consultasHoyCount, misPendVencidos, misImplVencidas,
     implArr, pendArr, consultasArr,
   } = ctx;
@@ -196,6 +199,21 @@ function _saludoElegirMensaje(ctx) {
   }
 
   // ── Dentro de horario laboral (09 a 17hs): recordatorios y avisos ──
+
+  // 0) Viernes desde las 16hs, solo para Ignacio y Matías: recordatorio de
+  // cierre de semana de Implementación — las dos cosas juntas (actualizar el
+  // módulo con el avance de la semana y enviar el informe a los clientes),
+  // no una u otra. Va PRIMERO dentro de este bloque (antes que 1/1b) porque
+  // esos dos también arrancan a las 16hs sin distinguir el día, y como entre
+  // los dos cubren cualquier valor de consultasHoyCount, uno de ellos siempre
+  // se dispara antes y tapaba este aviso del viernes.
+  if (dia === 5 && h >= 16 && (me === 'Ignacio Talon' || me === 'Matias Ferro')) {
+    return {
+      tono: 'blue',
+      texto: `📄 Antes de cerrar la semana: actualizá el módulo de Implementación con el avance de la semana y enviá el informe semanal a los clientes correspondientes, si aún no lo hiciste.`,
+      cta: { label: 'Ir a Implementación →', accion: '_saludoIrAImplMias()' },
+    };
+  }
 
   // 1) Última hora del turno (16 a 17hs) y todavía no cargó ninguna consulta hoy.
   if (h >= SALUDO_HORA_FIN - 1 && consultasHoyCount === 0) {
@@ -282,21 +300,8 @@ function _saludoElegirMensaje(ctx) {
     return { tono: 'blue', texto, cta: { label: 'Revisar →', accion: '_saludoIrARepositorio()' } };
   }
 
-  // 4b) Viernes desde las 16hs, solo para Ignacio y Matías: recordatorio de
-  // cierre de semana de Implementación — las dos cosas juntas (actualizar el
-  // módulo con el avance de la semana y enviar el informe a los clientes),
-  // no una u otra. Tiene prioridad sobre el aviso genérico de "cerrando la
-  // semana" (siguiente punto) para que no se lo tape.
-  if (dia === 5 && h >= 16 && (me === 'Ignacio Talon' || me === 'Matias Ferro')) {
-    return {
-      tono: 'blue',
-      texto: `📄 Antes de cerrar la semana: actualizá el módulo de Implementación con el avance de la semana y enviá el informe semanal a los clientes correspondientes, si aún no lo hiciste.`,
-      cta: { label: 'Ir a Implementación →', accion: '_saludoIrAImplMias()' },
-    };
-  }
-
-  // 5) Viernes desde media tarde: cierre de semana.
-  if (dia === 5 && h >= 15) {
+  // 5) Viernes desde las 16:40: cierre de semana.
+  if (dia === 5 && (h > 16 || (h === 16 && m >= 40))) {
     const consultasSemana = consultasArr.filter(c => c.asesor === me && _saludoEsEstaSemana(c.timestamp));
     const soporteSemana = consultasSemana.filter(c => c.tipoConsulta === 'soporte').length;
     const clientesSemana = new Set(consultasSemana.map(c => c.cliente).filter(Boolean)).size;
@@ -323,57 +328,12 @@ function _saludoElegirMensaje(ctx) {
     return { tono: 'green', texto: `🔥 Llevás <strong>${racha}</strong> días seguidos cargando el soporte del día. ¡No cortes la racha!` };
   }
 
-  // 8) A la mañana: pendiente(s) propio(s) que quedaron abiertos desde
-  // ayer (no es lo mismo que "vencido" — es simplemente un recordatorio
-  // suave de lo que dejaste colgado el día anterior).
-  if (h < 12) {
-    const deAyer = pendArr.filter(p => p.asesor === me && _saludoEsAyer(p.createdAt));
-    if (deAyer.length === 1) {
-      const p = deAyer[0];
-      return {
-        tono: 'blue',
-        texto: `🗒️ Te cuento: tenés este pendiente que te quedó de ayer — <strong>${escapeHtmlSaludo(p.cliente || '')}</strong>${p.descripcion ? ': ' + escapeHtmlSaludo(p.descripcion) : ''}.`,
-        cta: { label: 'Ver pendientes →', accion: '_saludoIrAPendientes()' },
-      };
-    }
-    if (deAyer.length > 1) {
-      return {
-        tono: 'blue',
-        texto: `🗒️ Te quedaron <strong>${deAyer.length}</strong> pendientes de ayer sin resolver.`,
-        cta: { label: 'Ver pendientes →', accion: '_saludoIrAPendientes()' },
-      };
-    }
-  }
-
-  // 9) A la mañana: pendientes con prioridad media/alta que dejaste
-  // abiertos esta semana (sin contar hoy/ayer, ya cubiertos arriba, ni
-  // los ya vencidos, que tienen su propio aviso más fuerte).
-  if (h < 12) {
-    const prioritarios = pendArr.filter(p => {
-      if (p.asesor !== me) return false;
-      if (p.prioridad !== 'alta' && p.prioridad !== 'media') return false;
-      if (_saludoEsHoy(p.createdAt) || _saludoEsAyer(p.createdAt)) return false;
-      if (!_saludoEsEstaSemana(p.createdAt)) return false;
-      const v = (typeof vencimientoInfo === 'function') ? vencimientoInfo(p.createdAt) : null;
-      return !(v && v.urgente);
-    });
-    if (prioritarios.length === 1) {
-      const p = prioritarios[0];
-      const prioLabel = p.prioridad === 'alta' ? 'alta' : 'media';
-      return {
-        tono: 'blue',
-        texto: `📌 Dejaste un pendiente con ${prioLabel} prioridad para esta semana — <strong>${escapeHtmlSaludo(p.cliente || '')}</strong>.`,
-        cta: { label: 'Ver pendientes →', accion: '_saludoIrAPendientes()' },
-      };
-    }
-    if (prioritarios.length > 1) {
-      return {
-        tono: 'blue',
-        texto: `📌 Tenés <strong>${prioritarios.length}</strong> pendientes con prioridad media/alta para esta semana.`,
-        cta: { label: 'Ver pendientes →', accion: '_saludoIrAPendientes()' },
-      };
-    }
-  }
+  // Nota: los avisos de "pendiente de ayer" y "pendientes prioritarios de
+  // la semana" (antes acá como pasos 8 y 9) se movieron a una función
+  // aparte — _saludoInfoPendientes() — porque son información propia
+  // sobre tus pendientes, no un recordatorio del momento: pueden convivir
+  // con lo que sea que gane esta cadena de prioridad, no compiten por el
+  // mismo lugar. Ver más abajo.
 
   // 10) Lunes a la mañana con pendientes propios.
   if (dia === 1 && h < 12) {
@@ -403,6 +363,57 @@ function _saludoElegirMensaje(ctx) {
     };
   }
   return { tono: 'amber', texto: _saludoTextoFallbackFinal(me, h) };
+}
+
+// Información sobre tus propios pendientes (de ayer sin resolver, o con
+// prioridad media/alta para esta semana) — a diferencia del recordatorio
+// dinámico de _saludoElegirMensaje, esto no compite por un único lugar:
+// se muestra siempre que aplique, junto con lo que sea que diga el
+// recordatorio del momento. Devuelve null si no hay nada para mostrar.
+function _saludoInfoPendientes(pendArr, me) {
+  const deAyer = pendArr.filter(p => p.asesor === me && _saludoEsAyer(p.createdAt));
+  if (deAyer.length === 1) {
+    const p = deAyer[0];
+    return {
+      tono: 'blue',
+      texto: `🗒️ Te cuento: tenés este pendiente que te quedó de ayer — <strong>${escapeHtmlSaludo(p.cliente || '')}</strong>${p.descripcion ? ': ' + escapeHtmlSaludo(p.descripcion) : ''}.`,
+      cta: { label: 'Ver pendientes →', accion: '_saludoIrAPendientes()' },
+    };
+  }
+  if (deAyer.length > 1) {
+    return {
+      tono: 'blue',
+      texto: `🗒️ Te quedaron <strong>${deAyer.length}</strong> pendientes de ayer sin resolver.`,
+      cta: { label: 'Ver pendientes →', accion: '_saludoIrAPendientes()' },
+    };
+  }
+
+  const prioritarios = pendArr.filter(p => {
+    if (p.asesor !== me) return false;
+    if (p.prioridad !== 'alta' && p.prioridad !== 'media') return false;
+    if (_saludoEsHoy(p.createdAt) || _saludoEsAyer(p.createdAt)) return false;
+    if (!_saludoEsEstaSemana(p.createdAt)) return false;
+    const v = (typeof vencimientoInfo === 'function') ? vencimientoInfo(p.createdAt) : null;
+    return !(v && v.urgente);
+  });
+  if (prioritarios.length === 1) {
+    const p = prioritarios[0];
+    const prioLabel = p.prioridad === 'alta' ? 'alta' : 'media';
+    return {
+      tono: 'blue',
+      texto: `📌 Dejaste un pendiente con ${prioLabel} prioridad para esta semana — <strong>${escapeHtmlSaludo(p.cliente || '')}</strong>.`,
+      cta: { label: 'Ver pendientes →', accion: '_saludoIrAPendientes()' },
+    };
+  }
+  if (prioritarios.length > 1) {
+    return {
+      tono: 'blue',
+      texto: `📌 Tenés <strong>${prioritarios.length}</strong> pendientes con prioridad media/alta para esta semana.`,
+      cta: { label: 'Ver pendientes →', accion: '_saludoIrAPendientes()' },
+    };
+  }
+
+  return null;
 }
 
 // Mensaje "de cierre" (fallback final del horario laboral, h >= 12). Para
@@ -482,8 +493,12 @@ function renderSaludoPanel() {
   const PEND_VENCIDOS_MUCHOS = 5;
   const IMPL_VENCIDAS_MUCHAS = 3;
 
+  // Cada tile tiene un "bucket": 'notif' son eventos que otro generó o que
+  // requieren atención inmediata (van a la campanita); 'dia' son cosas de
+  // tu día a día que se muestran directo en pantalla (ver "Tu día" abajo).
   const tiles = [
     {
+      bucket: 'notif',
       count: misPendVencidos, color: '#c0392b', icon: '🔴',
       msg: misPendVencidos >= PEND_VENCIDOS_MUCHOS
         ? _saludoTextoVencidosMuchos(misPendVencidos)
@@ -491,6 +506,7 @@ function renderSaludoPanel() {
       cta: 'Ver pendientes →', accion: '_saludoIrAPendientesVencidos()',
     },
     {
+      bucket: 'dia',
       count: misImplVencidas, color: '#b45309', icon: '⏰',
       msg: misImplVencidas >= IMPL_VENCIDAS_MUCHAS
         ? `Se te acumularon <strong>${misImplVencidas}</strong> tareas de implementación vencidas. Vamos ordenando de a una.`
@@ -500,21 +516,27 @@ function renderSaludoPanel() {
       cta: 'Ver implementación →', accion: '_saludoIrAImplMias()',
     },
     {
+      bucket: 'dia',
       count: misImplEnProgreso, color: '#1a5fa5', icon: '▶',
       msg: `Tenés <strong>${misImplEnProgreso}</strong> tarea${misImplEnProgreso !== 1 ? 's' : ''} de implementación en progreso.`,
       cta: 'Ver implementación →', accion: '_saludoIrAImplMias()',
     },
     {
+      bucket: 'notif',
       count: repoNuevos, color: '#2d6a2d', icon: '📁',
       msg: `Hay <strong>${repoNuevos}</strong> item${repoNuevos !== 1 ? 's' : ''} nuevo${repoNuevos !== 1 ? 's' : ''} en el Repositorio.`,
       cta: 'Ver repositorio →', accion: '_saludoIrARepositorio()',
     },
     {
+      bucket: 'dia',
       count: kbParaRevisar, color: '#7c3aed', icon: '📚',
       msg: `Hay <strong>${kbParaRevisar}</strong> solución${kbParaRevisar !== 1 ? 'es' : ''} para revisar en la base de soluciones.`,
       cta: 'Ver base de soluciones →', accion: '_saludoIrABiblioteca()',
     },
   ].filter(t => t.count > 0);
+
+  const notifTiles = tiles.filter(t => t.bucket === 'notif');
+  const diaTiles = tiles.filter(t => t.bucket === 'dia');
 
   // Nota: si no hay tiles urgentes no se agrega texto extra acá — el
   // cartelito de arriba (_saludoElegirMensaje) ya cubre ese caso con un
@@ -542,23 +564,142 @@ function renderSaludoPanel() {
 
   const ahora = new Date();
   const mensaje = _saludoElegirMensaje({
-    me, h: ahora.getHours(), dia: ahora.getDay(),
+    me, h: ahora.getHours(), m: ahora.getMinutes(), dia: ahora.getDay(),
     soporteHoy, clientesHoy, soporteAyer, clientesAyer,
     consultasHoyCount: consultasHoy.length, misPendVencidos, misImplVencidas,
     implArr, pendArr, consultasArr,
   });
 
+  const fechaHoy = _saludoFechaHoyLabel();
+  // Resalta el nombre dentro del saludo completo (ej. "¡Buen día, Ignacio!")
+  // con su propio estilo tipográfico — ver .saludo-greet__nombre en mobile.
+  const nombreEsc = escapeHtmlSaludo(primerNombre);
+  const saludoConNombre = saludoCompleto.replace(nombreEsc, `<span class="saludo-greet__nombre">${nombreEsc}</span>`);
+
+  const subtituloHoy = _saludoFraseLiviana(horaActual);
+
+  // ── Campanita (solo mobile, ver CSS): eventos — algo que generó otra
+  // persona o el sistema (subida al Repositorio, pendientes vencidos, y a
+  // futuro "te asignaron un pendiente"). Todo lo que es "tu día a día"
+  // (tareas de implementación, KB para revisar) se ve directo en pantalla
+  // en la lista "Tu día" de abajo, sin pasar por la campanita.
+  const notifCount = notifTiles.length;
+
+  // El mensaje/recordatorio del momento (el que antes vivía en la
+  // tarjeta del header) siempre se identifica con la misma campanita
+  // amarilla — así se reconoce de un vistazo como "tu recordatorio del
+  // día", más allá de qué emoji traiga el texto de cada variante.
+  const iconoMensajeInline = _saludoExtraerIcono(mensaje.texto);
+
+  // Info sobre tus propios pendientes (de ayer / prioritarios de la
+  // semana): NO compite con el recordatorio de arriba — pueden convivir
+  // las dos tiles a la vez, por eso se calcula aparte.
+  const infoPend = _saludoInfoPendientes(pendArr, me);
+
+  // Recordatorio del momento — como bloque propio, entre el header y "Tu
+  // día" (ya no es una tile más de esa lista).
+  const reminderHTML = `<button class="saludo-tile saludo-reminder" style="--tile-color:var(--amber)" onclick="${mensaje.cta ? mensaje.cta.accion : ''}">
+      <span class="saludo-tile__icon">💡</span>
+      <div class="saludo-tile__msg">${iconoMensajeInline.texto}</div>
+      ${mensaje.cta ? `<div class="saludo-tile__cta">${mensaje.cta.label}</div>` : ''}
+    </button>`;
+
+  // "Tu día": primero la info de pendientes (si aplica), después el
+  // resto (impl, KB) — todo siempre visible, sin toggle, sin pasar por
+  // la campanita.
+  const diaItems = [
+    ...(infoPend ? [{
+      color: 'var(--blue)', icon: '📌', msg: _saludoExtraerIcono(infoPend.texto).texto,
+      cta: infoPend.cta ? infoPend.cta.label : null, accion: infoPend.cta ? infoPend.cta.accion : null,
+    }] : []),
+    ...diaTiles,
+  ];
+  const diaTilesHTML = diaItems.length > 0
+    ? `<div class="saludo-dia">
+        <div class="saludo-dia__title">Tu día</div>
+        ${diaItems.map(t => `
+          <button class="saludo-tile" style="--tile-color:${t.color}" onclick="${t.accion ? t.accion : ''}">
+            <span class="saludo-tile__icon">${t.icon}</span>
+            <div class="saludo-tile__msg">${t.msg}</div>
+            ${t.cta ? `<div class="saludo-tile__cta">${t.cta}</div>` : ''}
+          </button>`).join('')}
+      </div>`
+    : '';
+
   cont.innerHTML = `
     <div class="saludo-greet">
-      <div class="saludo-greet__titulo">
-        <span class="saludo-greet__texto">${saludoCompleto}</span>
+      <button class="saludo-bell" onclick="toggleSaludoNotif()" aria-label="Notificaciones">
+        <svg class="saludo-bell__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+          <path d="M13.73 21a2 2 0 01-3.46 0" />
+        </svg>
+        ${notifCount > 0 ? `<span class="saludo-bell__badge">${notifCount}</span>` : ''}
+      </button>
+      <div class="saludo-greet__col">
+        <span class="saludo-greet__texto">${saludoConNombre}</span>
+        <span class="saludo-greet__subtitulo">${subtituloHoy}</span>
+        <span class="saludo-greet__dash"></span>
       </div>
     </div>
-    <div class="alert alert-${mensaje.tono} saludo-cartelito">
-      <span class="saludo-cartelito__texto">${mensaje.texto}</span>
-      ${mensaje.cta ? `<button class="saludo-cartelito__cta" onclick="${mensaje.cta.accion}">${mensaje.cta.label}</button>` : ''}
-    </div>
-    ${tilesHTML}`;
+    ${reminderHTML}
+    ${diaTilesHTML}
+    <div class="saludo-inline-alerts">
+      <div class="alert alert-${mensaje.tono} saludo-cartelito">
+        <span class="saludo-cartelito__texto">${mensaje.texto}</span>
+        ${mensaje.cta ? `<button class="saludo-cartelito__cta" onclick="${mensaje.cta.accion}">${mensaje.cta.label}</button>` : ''}
+      </div>
+      ${tilesHTML}
+    </div>`;
+
+  // ── Hoja de notificaciones: solo eventos (pendientes vencidos, items
+  // nuevos del Repositorio, y a futuro "te asignaron un pendiente") — lo
+  // que es "tu día a día" ya se ve directo en pantalla, no se repite acá. ──
+  const notifCont = document.getElementById('saludo-notif-content');
+  if (notifCont) {
+    const notifItems = notifTiles.map(t => ({ color: t.color, icon: t.icon, msg: t.msg, cta: t.cta, accion: t.accion }));
+    notifCont.innerHTML = notifItems.length === 0
+      ? `<div class="saludo-notif-empty">Por ahora no tenés nada pendiente en esta lista. 🙌</div>`
+      : `<div class="saludo-notif-tiles">${notifItems.map(n => `
+      <button class="saludo-tile" style="--tile-color:${n.color}" onclick="${n.accion ? n.accion + ';' : ''}toggleSaludoNotif();">
+        <span class="saludo-tile__icon">${n.icon}</span>
+        <div class="saludo-tile__msg">${n.msg}</div>
+        ${n.cta ? `<div class="saludo-tile__cta">${n.cta}</div>` : ''}
+      </button>`).join('')}</div>`;
+  }
+}
+
+// Separa el emoji inicial de un mensaje ("📌 Tenés...") de su texto, para
+// mostrarlo como ícono de tarjeta en vez de repetido dentro del texto —
+// mismo criterio que ya usan las tiles de "Tu día".
+function _saludoExtraerIcono(texto) {
+  const m = texto.match(/^(\p{Extended_Pictographic}️?)\s*/u);
+  return m ? { icon: m[1], texto: texto.slice(m[0].length) } : { icon: '💬', texto };
+}
+
+// Abre/cierra la hoja de notificaciones (campanita del header mobile del
+// Panel general) — mismo patrón de animación que toggleMobileMore().
+function toggleSaludoNotif() {
+  const sheet = document.getElementById('saludo-notif-sheet');
+  const backdrop = document.getElementById('saludo-notif-backdrop');
+  if (!sheet || !backdrop) return;
+
+  const isOpen = sheet.classList.contains('open');
+  if (isOpen) {
+    sheet.classList.remove('show');
+    backdrop.classList.remove('show');
+    setTimeout(() => {
+      sheet.classList.remove('open');
+      backdrop.classList.remove('open');
+    }, 250);
+    return;
+  }
+
+  sheet.classList.add('open');
+  backdrop.classList.add('open');
+  requestAnimationFrame(() => {
+    sheet.classList.add('show');
+    backdrop.classList.add('show');
+  });
 }
 
 // ── Navegación desde los tiles ──
@@ -620,6 +761,53 @@ function _saludoNombreCliente(clienteId) {
   const arr = (typeof clientes !== 'undefined') ? clientes : [];
   const c = arr.find(c => c.id === clienteId);
   return c ? c.nombre : 'un cliente';
+}
+
+// Frase chica y liviana debajo del saludo — cambia según el momento del
+// día (mañana / mediodía / tarde), y dentro de cada franja rota entre
+// varias variantes. Se cachea por día+franja (no al azar en cada render)
+// para que no cambie cada vez que llega una actualización por realtime;
+// sí cambia sola cuando pasás de una franja horaria a la siguiente.
+let _saludoCacheFraseKey   = null;
+let _saludoCacheFraseTexto = null;
+
+function _saludoFraseLiviana(h) {
+  let banda, opciones;
+  if (h < 12) {
+    banda = 'manana';
+    opciones = [
+      'Vamos con todo hoy.',
+      'Arrancamos con buena energía.',
+      'A darle, que el día recién empieza.',
+    ];
+  } else if (h < 15) {
+    banda = 'mediodia';
+    opciones = [
+      'Buen momento para ponerte al día.',
+      'Vamos a mitad de camino, seguimos con todo.',
+      'A no bajar el ritmo.',
+    ];
+  } else {
+    banda = 'tarde';
+    opciones = [
+      'Vamos cerrando el día con todo.',
+      'Ya casi, buen ritmo hasta acá.',
+      'Dale que ya falta poco.',
+    ];
+  }
+  const cacheKey = new Date().toDateString() + '|' + banda;
+  if (_saludoCacheFraseKey !== cacheKey) {
+    _saludoCacheFraseTexto = opciones[Math.floor(Math.random() * opciones.length)];
+    _saludoCacheFraseKey = cacheKey;
+  }
+  return _saludoCacheFraseTexto;
+}
+
+// Fecha de hoy en formato "Viernes 25 de septiembre" — usada como
+// subtítulo chico debajo del saludo en el header mobile.
+function _saludoFechaHoyLabel() {
+  const txt = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+  return escapeHtmlSaludo(txt.charAt(0).toUpperCase() + txt.slice(1));
 }
 
 function escapeHtmlSaludo(str) {

@@ -274,25 +274,19 @@ function _renderRepTabla(filtradas) {
   const tbody = document.getElementById('rep-tabla-body');
   if (!tbody) return;
 
-  const solucionesMap = {};
-  if (typeof soluciones !== 'undefined') {
-    soluciones.forEach(s => { solucionesMap[s.id] = s.titulo; });
-  }
-
   tbody.innerHTML = filtradas.map(c => {
     const fecha     = new Date(c.timestamp).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const tipoLabel = REP_TIPO_LABELS[c.tipoConsulta] || c.tipoConsulta || '—';
     const catLabel  = [_repCatLabel(c.categoria), c.subtema].filter(Boolean).join(' › ') || '—';
-    const solucion  = (c.solucionId && solucionesMap[c.solucionId]) ? solucionesMap[c.solucionId] : '—';
     const tiempo    = c.tiempo ? fmtHHMM(c.tiempo) : '—';
     return `<tr>
-      <td>${escapeHtmlPanel(fecha)}</td>
-      <td>${escapeHtmlPanel(c.cliente || '—')}</td>
-      <td>${escapeHtmlPanel(c.asesor || '—')}</td>
-      <td>${escapeHtmlPanel(tipoLabel)}</td>
-      <td>${escapeHtmlPanel(catLabel)}</td>
-      <td>${escapeHtmlPanel(solucion)}</td>
-      <td>${escapeHtmlPanel(tiempo)}</td>
+      <td data-label="Fecha">${escapeHtmlPanel(fecha)}</td>
+      <td data-label="Cliente">${escapeHtmlPanel(c.cliente || '—')}</td>
+      <td data-label="Asesor">${escapeHtmlPanel(c.asesor || '—')}</td>
+      <td data-label="Tipo">${escapeHtmlPanel(tipoLabel)}</td>
+      <td data-label="Categoría">${escapeHtmlPanel(catLabel)}</td>
+      <td data-label="Descripción">${escapeHtmlPanel(c.descripcion || '—')}</td>
+      <td data-label="Tiempo">${escapeHtmlPanel(tiempo)}</td>
     </tr>`;
   }).join('');
 }
