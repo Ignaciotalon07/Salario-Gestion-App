@@ -644,7 +644,7 @@ function renderSaludoPanel() {
     ${reminderHTML}
     ${diaTilesHTML}
     <div class="saludo-inline-alerts">
-      <div class="alert alert-${mensaje.tono} saludo-cartelito">
+      <div class="alert alert-amber saludo-cartelito">
         <span class="saludo-cartelito__texto">${mensaje.texto}</span>
         ${mensaje.cta ? `<button class="saludo-cartelito__cta" onclick="${mensaje.cta.accion}">${mensaje.cta.label}</button>` : ''}
       </div>
