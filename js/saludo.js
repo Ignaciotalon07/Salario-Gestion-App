@@ -281,23 +281,34 @@ function _saludoElegirMensaje(ctx) {
     return { tono: 'blue', texto: avisosLiq[0].texto };
   }
 
-  // 4) Alguien del equipo subió algo nuevo al Repositorio desde tu última
-  // visita (no cuenta lo que subiste vos mismo).
+  // 4) Alguien del equipo subió o editó algo en el Repositorio desde tu
+  // última visita (no cuenta lo que subiste/editaste vos mismo).
   const repoArr   = (typeof repoItems !== 'undefined') ? repoItems : [];
   const repoVisto = (typeof _repoUltimoVisto !== 'undefined') ? _repoUltimoVisto : null;
-  const nuevosRepoOtros = repoArr.filter(i => {
-    if (!i.created_at || i.subido_por === me) return false;
-    return !repoVisto || new Date(i.created_at) > new Date(repoVisto);
-  });
-  if (nuevosRepoOtros.length > 0) {
-    const autores = [...new Set(nuevosRepoOtros.map(i => i.subido_por).filter(Boolean))];
+  const repoActividad = repoArr.map(i => {
+    const creado  = i.created_at ? new Date(i.created_at) : null;
+    const editado = (i.updated_at && i.updated_at !== i.created_at) ? new Date(i.updated_at) : null;
+    const fueEditado = !!(editado && creado && editado > creado);
+    return {
+      item: i,
+      fecha: fueEditado ? editado : creado,
+      autor: fueEditado ? (i.editado_por || i.subido_por) : i.subido_por,
+      fueEditado,
+    };
+  }).filter(a => a.fecha && a.autor !== me && (!repoVisto || a.fecha > new Date(repoVisto)));
+
+  if (repoActividad.length > 0) {
+    const autores = [...new Set(repoActividad.map(a => a.autor).filter(Boolean))];
     let texto;
-    if (nuevosRepoOtros.length === 1) {
-      texto = `🆕 <strong>${escapeHtmlSaludo(autores[0] || 'Alguien del equipo')}</strong> subió algo nuevo al Repositorio: "${escapeHtmlSaludo(nuevosRepoOtros[0].titulo || 'sin título')}".`;
+    if (repoActividad.length === 1) {
+      const a = repoActividad[0];
+      texto = a.fueEditado
+        ? `🆕 <strong>${escapeHtmlSaludo(a.autor || 'Alguien del equipo')}</strong> editó un item del Repositorio: "${escapeHtmlSaludo(a.item.titulo || 'sin título')}".`
+        : `🆕 <strong>${escapeHtmlSaludo(a.autor || 'Alguien del equipo')}</strong> subió algo nuevo al Repositorio: "${escapeHtmlSaludo(a.item.titulo || 'sin título')}".`;
     } else if (autores.length === 1) {
-      texto = `🆕 <strong>${escapeHtmlSaludo(autores[0])}</strong> subió <strong>${nuevosRepoOtros.length}</strong> items nuevos al Repositorio.`;
+      texto = `🆕 <strong>${escapeHtmlSaludo(autores[0])}</strong> actualizó <strong>${repoActividad.length}</strong> items en el Repositorio.`;
     } else {
-      texto = `🆕 Hay <strong>${nuevosRepoOtros.length}</strong> items nuevos en el Repositorio (${autores.map(a => escapeHtmlSaludo(a)).join(', ')}).`;
+      texto = `🆕 Hay <strong>${repoActividad.length}</strong> novedades en el Repositorio (${autores.map(a => escapeHtmlSaludo(a)).join(', ')}).`;
     }
     return { tono: 'blue', texto, cta: { label: 'Revisar →', accion: '_saludoIrARepositorio()' } };
   }

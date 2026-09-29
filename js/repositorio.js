@@ -100,16 +100,20 @@ async function initRepositorio() {
   }
 }
 
+// Timestamp de la actividad más reciente de un item: la creación, o la
+// última edición si es más nueva. Usado para ordenar "recientes" y para
+// el conteo de novedades.
+function _repoUltimaActividad(item) {
+  const c = item.created_at ? new Date(item.created_at).getTime() : 0;
+  const u = item.updated_at ? new Date(item.updated_at).getTime() : 0;
+  return Math.max(c, u);
+}
+
 // Cuenta items nuevos o editados después del último acceso del usuario
 function _repoNuevosCount() {
   if (!_repoUltimoVisto) return repoItems.length;
-  const limite = new Date(_repoUltimoVisto);
-  return repoItems.filter(i => {
-    const creado  = i.created_at ? new Date(i.created_at) : null;
-    const editado = i.updated_at ? new Date(i.updated_at) : null;
-    const masReciente = editado && editado > (creado || 0) ? editado : creado;
-    return masReciente && masReciente > limite;
-  }).length;
+  const limite = new Date(_repoUltimoVisto).getTime();
+  return repoItems.filter(i => _repoUltimaActividad(i) > limite).length;
 }
 
 // Actualiza el badge naranja en el nav
@@ -260,7 +264,10 @@ function renderRepoList() {
     if (repoOrden === 'viejos')    return new Date(a.created_at) - new Date(b.created_at);
     if (repoOrden === 'az')        return (a.titulo || '').localeCompare(b.titulo || '', 'es');
     if (repoOrden === 'descargas') return (b.descargas || 0) - (a.descargas || 0);
-    return new Date(b.created_at) - new Date(a.created_at); // recientes (default)
+    // "recientes" (default): un item editado hoy sube al principio igual
+    // que uno subido hoy — se ordena por la actividad más reciente entre
+    // creación y última edición, no solo por fecha de creación.
+    return _repoUltimaActividad(b) - _repoUltimaActividad(a);
   });
 
   if (visible.length === 0) {
@@ -301,15 +308,18 @@ function renderRepoCard(item) {
   const fechaRel = _repoFechaRelativa(item.created_at);
   const fechaAbs = _repoFecha(item.created_at);
 
-  // "Nuevo" ahora es por antigüedad (3 días desde que se creó), no por si ya lo
-  // viste — así el badge se mantiene visible aunque ya hayas entrado a la sección.
+  // "Nuevo" es por antigüedad (3 días desde que se creó O desde la última
+  // edición) — así un item editado hoy vuelve a figurar como nuevo, aunque
+  // se haya subido hace tiempo, y el badge se mantiene visible aunque ya
+  // hayas entrado a la sección.
   const limiteNuevo = new Date(Date.now() - REPO_NUEVO_DIAS * 24 * 60 * 60 * 1000);
-  const esNuevo      = !!item.created_at && new Date(item.created_at) > limiteNuevo;
+  const creadoReciente  = !!item.created_at && new Date(item.created_at) > limiteNuevo;
+  const editadoReciente = !!item.updated_at && item.updated_at !== item.created_at && new Date(item.updated_at) > limiteNuevo;
+  const esNuevo = creadoReciente || editadoReciente;
 
-  // "Editado" sigue atado a la última visita: solo importa si lo cambiaron
-  // después de la última vez que entraste a mirar el repositorio.
-  const limiteVisita = _repoUltimoVisto ? new Date(_repoUltimoVisto) : null;
-  const esEditado = !esNuevo && limiteVisita && item.updated_at && new Date(item.updated_at) > limiteVisita;
+  // "Editado" ya no hace falta como badge aparte: una edición reciente ahora
+  // entra directo en "esNuevo" de arriba.
+  const esEditado = false;
 
   // Thumbnail si hay imagen (usa cache _repoThumbs)
   const thumbUrl = repoThumbs[item.id];
@@ -514,6 +524,7 @@ async function guardarItemRepo() {
     if (repoEditId) {
       await dbUpdate('repositorio_items', repoEditId, {
         titulo, categoria, descripcion, url_externa,
+        editado_por: subidoPor,
         updated_at: new Date().toISOString()
       });
       itemId = repoEditId;
