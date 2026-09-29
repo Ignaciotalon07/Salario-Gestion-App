@@ -243,12 +243,14 @@ function _saludoElegirMensaje(ctx) {
     return {
       tono: 'amber',
       texto: `⏳ Tenés 1 tarea de implementación que vence en las próximas 48hs — <strong>${escapeHtmlSaludo(_saludoNombreCliente(porVencer[0].cliente_id))}</strong>.`,
+      cta: { label: 'Ir a la tarea →', accion: `irATareaImpl('${porVencer[0].id}', '${porVencer[0].cliente_id}')` },
     };
   }
   if (porVencer.length > 1) {
     return {
       tono: 'amber',
       texto: `⏳ Tenés <strong>${porVencer.length}</strong> tareas de implementación que vencen en las próximas 48hs.`,
+      cta: { label: 'Ir a Implementación →', accion: '_saludoIrAImplMias()' },
     };
   }
 

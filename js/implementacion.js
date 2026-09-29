@@ -1267,7 +1267,19 @@ function toggleFaseExpanded(clienteId, faseIdx) {
   const tareasCliente = implTareas.filter(t => t.cliente_id === clienteId);
   const fases = calcularFases(tareasCliente, fasesCliente);
   const f = fases[faseIdx];
-  const currentlyExpanded = window._implFaseExpanded[key] ?? false;
+  const me = (typeof getCurrentUserName === 'function') ? getCurrentUserName() : null;
+  const esGraduado = tareasCliente.length > 0 && tareasCliente.every(t => t.estado === 'completada');
+  const hayFiltro = !esGraduado && (implFiltroAsesor || implFiltroEstado || implFiltroResp);
+  const tareasVisFase = hayFiltro
+    ? tareasCliente.filter(t => (t.fase || 'relevamiento') === f.key && tareaMatcheaFiltros(t, me))
+    : tareasCliente.filter(t => (t.fase || 'relevamiento') === f.key);
+  // Si ya se tocó manualmente esta fase, respetar ese estado; si no, el
+  // estado "actual" es el auto-expandido por filtro (para poder invertirlo
+  // y que el primer click cierre lo que el filtro abrió automáticamente,
+  // o abra cualquier otra fase aunque el filtro no la haya marcado).
+  const currentlyExpanded = (key in window._implFaseExpanded)
+    ? window._implFaseExpanded[key]
+    : (hayFiltro && tareasVisFase.length > 0);
   window._implFaseExpanded[key] = !currentlyExpanded;
   renderImplementacion();
 }
@@ -1294,9 +1306,13 @@ function renderListaFases(c, tareasCliente, tareasVisibles) {
       // Si hay filtro activo, auto-expandir fases que tengan tareas visibles
       const tareasDeFase    = tareasCliente.filter(t => (t.fase || 'relevamiento') === f.key);
       const tareasVisFase   = tareasVisibles.filter(t => (t.fase || 'relevamiento') === f.key);
-      const isExpanded = hayFiltro
-        ? tareasVisFase.length > 0
-        : (window._implFaseExpanded[key] ?? false);
+      // El filtro solo decide el estado por default; si el usuario ya
+      // clickeó esta fase a mano (abrir o cerrar), eso manda siempre —
+      // así se puede abrir cualquier fase aunque no sea la que marca el
+      // filtro/recordatorio que te trajo hasta acá.
+      const isExpanded = (key in window._implFaseExpanded)
+        ? window._implFaseExpanded[key]
+        : (hayFiltro && tareasVisFase.length > 0);
 
       const colorBar  = f.estado === 'completa' ? 'var(--green)'
                       : f.estado === 'activa'   ? 'var(--accent)'
