@@ -19,22 +19,22 @@ function _saludoOpcionesSaludo(h) {
   if (h < 6 || h >= 20) {
     return [
       (n) => `Buenas noches, ${n}`,
-      (n) => `¡Hola, ${n}!`,
-      (n) => `¡Bienvenido, ${n}!`,
+      (n) => `Hola, ${n}`,
+      (n) => `Bienvenido, ${n}`,
     ];
   }
   if (h < 13) {
     return [
       (n) => `Buenos días, ${n}`,
-      (n) => `¡Buen día, ${n}!`,
-      (n) => `¡Hola, ${n}!`,
-      (n) => `¡Bienvenido, ${n}!`,
+      (n) => `Buen día, ${n}`,
+      (n) => `Hola, ${n}`,
+      (n) => `Bienvenido, ${n}`,
     ];
   }
   return [
     (n) => `Buenas tardes, ${n}`,
-    (n) => `¡Hola, ${n}!`,
-    (n) => `¡Bienvenido, ${n}!`,
+    (n) => `Hola, ${n}`,
+    (n) => `Bienvenido, ${n}`,
   ];
 }
 
@@ -576,7 +576,11 @@ function renderSaludoPanel() {
   const nombreEsc = escapeHtmlSaludo(primerNombre);
   const saludoConNombre = saludoCompleto.replace(nombreEsc, `<span class="saludo-greet__nombre">${nombreEsc}</span>`);
 
-  const subtituloHoy = _saludoFraseLiviana(horaActual);
+  const subtituloHoy = _saludoFraseLiviana(horaActual, ahora.getDay());
+  // El lunes a la mañana (9 a 12hs) la frase de "arranque de semana" se
+  // muestra también en desktop (el resto de las frases livianas quedan
+  // solo para mobile, como el resto del header rediseñado).
+  const esLunesManana = ahora.getDay() === 1 && horaActual >= 9 && horaActual < 12;
 
   // ── Campanita (solo mobile, ver CSS): eventos — algo que generó otra
   // persona o el sistema (subida al Repositorio, pendientes vencidos, y a
@@ -637,7 +641,7 @@ function renderSaludoPanel() {
       </button>
       <div class="saludo-greet__col">
         <span class="saludo-greet__texto">${saludoConNombre}</span>
-        <span class="saludo-greet__subtitulo">${subtituloHoy}</span>
+        <span class="saludo-greet__subtitulo${esLunesManana ? ' saludo-greet__subtitulo--visible' : ''}">${subtituloHoy}</span>
         <span class="saludo-greet__dash"></span>
       </div>
     </div>
@@ -771,9 +775,16 @@ function _saludoNombreCliente(clienteId) {
 let _saludoCacheFraseKey   = null;
 let _saludoCacheFraseTexto = null;
 
-function _saludoFraseLiviana(h) {
+function _saludoFraseLiviana(h, dia) {
   let banda, opciones;
-  if (h < 12) {
+  if (dia === 1 && h >= 9 && h < 12) {
+    banda = 'lunes-manana';
+    opciones = [
+      '¡Buen arranque de semana!',
+      'Arrancamos la semana con todo.',
+      'A darle, que la semana recién empieza.',
+    ];
+  } else if (h < 12) {
     banda = 'manana';
     opciones = [
       'Vamos con todo hoy.',

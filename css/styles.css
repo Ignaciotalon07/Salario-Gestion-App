@@ -4107,6 +4107,14 @@ input[type=date]:focus {
 .saludo-greet__eyebrow { display: none; }
 .saludo-greet__row { display: block; }
 .saludo-greet__subtitulo { display: none; }
+/* Excepción: la frase de "arranque de semana" (lunes 9 a 12hs) sí se ve
+   en desktop, a diferencia del resto del subtítulo que es solo mobile. */
+.saludo-greet__subtitulo--visible {
+  display: block;
+  font-size: 14px;
+  color: var(--text2);
+  margin-top: 4px;
+}
 .saludo-greet__dash { display: none; }
 .saludo-bell { display: none; }
 .saludo-dia { display: none; }
