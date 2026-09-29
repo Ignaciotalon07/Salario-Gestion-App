@@ -310,7 +310,10 @@ function _saludoElegirMensaje(ctx) {
     } else {
       texto = `🆕 Hay <strong>${repoActividad.length}</strong> novedades en el Repositorio (${autores.map(a => escapeHtmlSaludo(a)).join(', ')}).`;
     }
-    return { tono: 'blue', texto, cta: { label: 'Revisar →', accion: '_saludoIrARepositorio()' } };
+    const ctaAccion = repoActividad.length === 1
+      ? `_saludoIrARepoItem('${repoActividad[0].item.id}')`
+      : '_saludoIrARepositorio()';
+    return { tono: 'blue', texto, cta: { label: 'Revisar →', accion: ctaAccion } };
   }
 
   // 5) Viernes desde las 16:40: cierre de semana.
@@ -491,6 +494,29 @@ function renderSaludoPanel() {
   const misImplEnProgreso = implArr.filter(t => t.asesor === me && t.estado === 'en_progreso').length;
 
   const repoNuevos = (typeof _repoNuevosCount === 'function') ? _repoNuevosCount() : 0;
+  // Si es un solo item nuevo/editado, guardamos su id y quién lo subió/editó
+  // para que el botón te lleve directo a esa card (resaltada) y el mensaje
+  // diga quién fue, en vez de solo "hay 1 item nuevo".
+  let repoNuevoItemId = null;
+  let repoNuevoAutor  = null;
+  let repoNuevoFueEditado = false;
+  let repoNuevoTitulo = '';
+  if (repoNuevos === 1) {
+    const repoArrTile = (typeof repoItems !== 'undefined') ? repoItems : [];
+    const repoVistoTile = (typeof _repoUltimoVisto !== 'undefined') ? _repoUltimoVisto : null;
+    const limiteTile = repoVistoTile ? new Date(repoVistoTile).getTime() : 0;
+    const unico = repoArrTile.find(i =>
+      (typeof _repoUltimaActividad === 'function' ? _repoUltimaActividad(i) : 0) > limiteTile
+    );
+    if (unico) {
+      repoNuevoItemId = unico.id;
+      repoNuevoTitulo = unico.titulo || 'sin título';
+      const creado  = unico.created_at ? new Date(unico.created_at) : null;
+      const editado = (unico.updated_at && unico.updated_at !== unico.created_at) ? new Date(unico.updated_at) : null;
+      repoNuevoFueEditado = !!(editado && creado && editado > creado);
+      repoNuevoAutor = repoNuevoFueEditado ? (unico.editado_por || unico.subido_por) : unico.subido_por;
+    }
+  }
 
   const kbArr = (typeof soluciones !== 'undefined') ? soluciones : [];
   const kbParaRevisar = kbArr.filter(s => {
@@ -537,8 +563,11 @@ function renderSaludoPanel() {
     {
       bucket: 'notif',
       count: repoNuevos, color: '#2d6a2d', icon: '📁',
-      msg: `Hay <strong>${repoNuevos}</strong> item${repoNuevos !== 1 ? 's' : ''} nuevo${repoNuevos !== 1 ? 's' : ''} en el Repositorio.`,
-      cta: 'Ver repositorio →', accion: '_saludoIrARepositorio()',
+      msg: repoNuevoItemId
+        ? `<strong>${escapeHtmlSaludo(repoNuevoAutor || 'Alguien del equipo')}</strong> ${repoNuevoFueEditado ? 'editó' : 'agregó'} "${escapeHtmlSaludo(repoNuevoTitulo)}" en el Repositorio.`
+        : `Hay <strong>${repoNuevos}</strong> item${repoNuevos !== 1 ? 's' : ''} nuevo${repoNuevos !== 1 ? 's' : ''} en el Repositorio.`,
+      cta: 'Ver repositorio →',
+      accion: repoNuevoItemId ? `_saludoIrARepoItem('${repoNuevoItemId}')` : '_saludoIrARepositorio()',
     },
     {
       bucket: 'dia',
@@ -765,6 +794,30 @@ function _saludoIrAImplMias() {
 
 function _saludoIrARepositorio() {
   goTo(_saludoNavBtn('repositorio'), 'repositorio');
+}
+
+// Igual que _saludoIrARepositorio() pero además hace scroll hasta el item
+// puntual (nuevo o editado) y lo resalta un ratito — así cuando el aviso es
+// sobre un solo item, no hay que andar buscándolo entre todos los demás.
+function _saludoIrARepoItem(itemId) {
+  // Limpiar filtros para garantizar que el item sea visible en la lista.
+  if (typeof repoFiltro !== 'undefined')   repoFiltro = '';
+  if (typeof repoBusqueda !== 'undefined') repoBusqueda = '';
+  if (typeof repoAutor !== 'undefined')    repoAutor = '';
+  const buscador = document.getElementById('repo-search');
+  if (buscador) buscador.value = '';
+
+  goTo(_saludoNavBtn('repositorio'), 'repositorio');
+  if (typeof renderRepoAll === 'function') renderRepoAll();
+
+  setTimeout(() => {
+    const el = document.getElementById('repo-card-' + itemId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('repo-card--highlight');
+      setTimeout(() => el.classList.remove('repo-card--highlight'), 3000);
+    }
+  }, 150);
 }
 
 function _saludoIrABiblioteca() {
