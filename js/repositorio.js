@@ -23,6 +23,7 @@ const REPO_CATS = {
   convenios:     { label: 'Convenios',          emoji: '📋', color: '#7c3aed', bg: '#f5f3ff' },
   errores:       { label: 'Errores de Salario', emoji: '🐛', color: '#dc2626', bg: '#fef2f2' },
   clientes:      { label: 'Para clientes',      emoji: '📢', color: '#d97706', bg: '#fffbeb' },
+  launcher:      { label: 'Para Launcher',      emoji: '🚀', color: '#0f766e', bg: '#f0fdfa' },
 };
 
 // Helper defensivo: devuelve la config de una categoría, con fallback para IDs
@@ -234,7 +235,8 @@ function _renderRepoChips() {
     chip('modulo', 'Módulos', '🧩') +
     chip('convenios', 'Convenios', '📋') +
     chip('errores', 'Errores de Salario', '🐛') +
-    chip('clientes', 'Para clientes', '📢');
+    chip('clientes', 'Para clientes', '📢') +
+    chip('launcher', 'Para Launcher', '🚀');
 }
 
 // ── Render lista ──────────────────────────────────────────────────────────────
