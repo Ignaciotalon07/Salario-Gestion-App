@@ -239,9 +239,17 @@ body {
 #dashboard .metrics-grid .metric-card { padding: 14px 14px; }
 #dashboard .metrics-grid .metric-value { font-size: 26px; }
 #consultas-page .metrics-grid { grid-template-columns: repeat(5,1fr); }
-/* Reportes: 5 o 6 cards según haya filtro de cliente — se acomodan solas en
-   la fila, sin dejar una card huérfana sola en la fila de abajo. */
-#reportes .metrics-grid { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+/* Reportes: 5 o 6 cards según haya filtro de cliente. Usa flexbox en vez de
+   grid parejo para poder darle más o menos ancho a cada card según su
+   contenido — "Repetidas" (un % cortito) no necesita el mismo lugar que
+   "Cliente que más consultó" (un nombre que puede ser largo). */
+#reportes .metrics-grid { display: flex; flex-wrap: wrap; gap: 20px 28px; }
+#reportes .metrics-grid .metric-card { flex: 1 1 170px; }
+/* Ancho fijo (sin grow/shrink) para que no dependan de cuántas cards les
+   toquen en la misma fila — así "Cliente que más consultó" siempre tiene
+   lugar de sobra para el nombre, sin importar el resto. */
+#reportes .metrics-grid .metric-card--narrow { flex: 0 0 120px; }
+#reportes .metrics-grid .metric-card--wide   { flex: 0 0 300px; }
 .metric-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-lg); padding: 16px 18px;

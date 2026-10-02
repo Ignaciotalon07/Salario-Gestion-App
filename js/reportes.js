@@ -107,6 +107,10 @@ function generarReporte() {
 
   const filtradas = todas
     .filter(c => {
+      // Este reporte es pura y exclusivamente de clientes: afuera las horas
+      // internas (programación interna) y cualquier registro sin cliente.
+      if (c.tipoConsulta === 'programacion_interna' || c.tipo_consulta === 'programacion_interna') return false;
+      if (!c.cliente) return false;
       const t = new Date(c.timestamp);
       if (t < rango.desde || t > rango.hasta) return false;
       if (clienteFiltro && c.cliente !== clienteFiltro) return false;
@@ -172,7 +176,7 @@ function _renderRepMetrics(filtradas, rango, clienteFiltro) {
   const cards = [
     { label: 'Consultas',         value: total,                                   sub: rango.label },
     { label: 'Tiempo total',      value: minTotal > 0 ? fmtMinutos(minTotal) : '—', sub: 'del equipo' },
-    { label: 'Repetidas',         value: pctRep + '%',                            sub: repetidas + ' de ' + total },
+    { label: 'Repetidas',         value: pctRep + '%',                            sub: repetidas + ' de ' + total, size: 'narrow' },
     { label: 'Más consultado',    value: topCat ? topCat[0] : '—',                sub: topCat ? topCat[1] + ' consulta' + (topCat[1] !== 1 ? 's' : '') : '' },
     { label: 'Quién más atendió', value: topAsesor ? topAsesor[0] : '—',          sub: topAsesor ? topAsesor[1] + ' consulta' + (topAsesor[1] !== 1 ? 's' : '') : '' },
   ];
@@ -180,10 +184,18 @@ function _renderRepMetrics(filtradas, rango, clienteFiltro) {
   if (!clienteFiltro) {
     const clientesDistintos = new Set(filtradas.map(c => c.cliente).filter(Boolean)).size;
     cards.push({ label: 'Clientes atendidos', value: clientesDistintos, sub: 'distintos en el período' });
+
+    const topCliente = _repPorCliente(filtradas)[0];
+    cards.push({
+      label: 'Cliente que más consultó',
+      value: topCliente ? topCliente[0] : '—',
+      sub: topCliente ? topCliente[1].count + ' consulta' + (topCliente[1].count !== 1 ? 's' : '') : '',
+      size: 'wide',
+    });
   }
 
   cont.innerHTML = cards.map(c => `
-    <div class="metric-card">
+    <div class="metric-card${c.size ? ' metric-card--' + c.size : ''}">
       <div class="metric-label">${escapeHtmlPanel(c.label)}</div>
       <div class="metric-value" style="font-size:19px;line-height:1.25">${escapeHtmlPanel(String(c.value))}</div>
       <div class="metric-sub">${escapeHtmlPanel(c.sub || '')}</div>
@@ -341,7 +353,34 @@ function exportarReporteExcel() {
     { Metrica: 'Por asesor', Valor: '' },
     ...Object.entries(porAsesor).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ Metrica: k, Valor: v })),
   ];
+
+  if (!clienteFiltro) {
+    resumen.push(
+      { Metrica: '', Valor: '' },
+      { Metrica: 'Por tipo de consulta', Valor: '' },
+      ..._repTiposTop(filtradas).map(([k, v]) => ({ Metrica: k, Valor: v })),
+    );
+  }
+
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumen), 'Resumen');
+
+  // Hojas extra solo para el reporte de "Todos los clientes" — ranking y
+  // clientes sin consultas en el período (mismas secciones que trae el PDF).
+  if (!clienteFiltro) {
+    const totalGeneral = filtradas.length;
+    const ranking = _repPorCliente(filtradas).slice(0, 5).map(([nombre, d]) => ({
+      Cliente: nombre,
+      Consultas: d.count,
+      '% del total': Math.round((d.count / totalGeneral) * 100) + '%',
+      Tiempo: d.minutos > 0 ? fmtMinutos(d.minutos) : '—',
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ranking), 'Top 5 soporte');
+
+    const inactivos = _repClientesInactivos(filtradas).map(nombre => ({ Cliente: nombre }));
+    if (inactivos.length > 0) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(inactivos), 'Sin consultas');
+    }
+  }
 
   const nombreArchivo = 'reporte_' +
     (clienteFiltro ? clienteFiltro.replace(/[^a-zA-Z0-9]/g, '_') + '_' : '') +
@@ -384,6 +423,50 @@ function _repCategoriasTop(arr, n) {
     if (l) porCategoria[l] = (porCategoria[l] || 0) + 1;
   });
   return Object.entries(porCategoria).sort((a, b) => b[1] - a[1]).slice(0, n || 999);
+}
+
+// Corta un texto a N caracteres con "…" — usado en las stat cards del PDF,
+// que son angostas y no admiten nombres largos de cliente/categoría.
+function _repTruncar(str, n) {
+  if (!str) return str;
+  return str.length > n ? str.slice(0, n - 1) + '…' : str;
+}
+
+// ── Helpers para el reporte mensual de "Todos los clientes" ──
+// (el reporte individual por cliente no usa nada de esto)
+
+// [cliente, {count, minutos}] ordenado de más a menos consultas.
+function _repPorCliente(arr) {
+  const map = {};
+  arr.forEach(c => {
+    const nombre = c.cliente || 'Sin cliente';
+    if (!map[nombre]) map[nombre] = { count: 0, minutos: 0 };
+    map[nombre].count++;
+    map[nombre].minutos += sumaMinutos([c]);
+  });
+  return Object.entries(map).sort((a, b) => b[1].count - a[1].count);
+}
+
+// [tipo, count] ordenado de más a menos, usando REP_TIPO_LABELS.
+function _repTiposTop(arr) {
+  const porTipo = {};
+  arr.forEach(c => {
+    const l = REP_TIPO_LABELS[c.tipoConsulta] || c.tipoConsulta;
+    if (l) porTipo[l] = (porTipo[l] || 0) + 1;
+  });
+  return Object.entries(porTipo).sort((a, b) => b[1] - a[1]);
+}
+
+// Nombres de clientes (del maestro `clientes`) sin ninguna consulta en el
+// período filtrado — señal de posible inactividad o riesgo de abandono.
+function _repClientesInactivos(filtradas) {
+  const todos = (typeof clientes !== 'undefined') ? clientes : [];
+  const conConsultas = new Set(filtradas.map(c => c.cliente).filter(Boolean));
+  return todos
+    .map(c => c.nombre)
+    .filter(Boolean)
+    .filter(nombre => !conConsultas.has(nombre))
+    .sort((a, b) => a.localeCompare(b, 'es'));
 }
 
 // Rango del mes calendario inmediatamente anterior al mes en el que arranca
@@ -455,6 +538,24 @@ function _repTextoNarrativo(rango, clienteFiltro, filtradas, periodo) {
         ? `Durante ${rangoLabelMin} se registraron ${total} consulta${total !== 1 ? 's' : ''} en total entre todos los clientes, principalmente sobre ${topCats.map(e => e[0]).join(', ')}.`
         : `Durante ${rangoLabelMin} se registraron ${total} consulta${total !== 1 ? 's' : ''} en total entre todos los clientes.`
     );
+
+    const porCliente = _repPorCliente(filtradas);
+    if (porCliente.length > 0) {
+      const [nombreTop, dataTop] = porCliente[0];
+      const empatados = porCliente.filter(([, d]) => d.count === dataTop.count);
+      parrafos.push(
+        empatados.length === 1
+          ? `El cliente que más consultó fue ${nombreTop}, con ${dataTop.count} consulta${dataTop.count !== 1 ? 's' : ''}.`
+          : `${empatados.length} clientes empataron en primer lugar con ${dataTop.count} consulta${dataTop.count !== 1 ? 's' : ''} cada uno: ${empatados.map(([n]) => n).join(', ')}.`
+      );
+    }
+
+    const inactivos = _repClientesInactivos(filtradas);
+    if (inactivos.length > 0) {
+      parrafos.push(
+        `${inactivos.length} cliente${inactivos.length !== 1 ? 's' : ''} no ${inactivos.length !== 1 ? 'registraron' : 'registró'} ninguna consulta en este período (ver detalle al final del reporte).`
+      );
+    }
   }
 
   return parrafos;
@@ -585,9 +686,36 @@ async function generarReporteConsultasPDF() {
       { label: 'TIEMPO TOTAL',    valor: minTotal > 0 ? fmtMinutos(minTotal) : '—' },
       { label: 'REPETIDAS',       valor: `${repetidas} (${pctRep}%)` },
     ];
-    const statColW = 150;
+
+    // Extra: solo en el reporte de "todos los clientes" — quién más consultó
+    // y sobre qué, para tener la respuesta a simple vista sin leer el resto.
+    // Estos dos (y "Repetidas", que si no queda muy angosta al lado) llevan
+    // un ancho de columna propio en vez del parejo de siempre, porque un
+    // nombre de cliente necesita bastante más lugar que un "16 (7%)".
+    let porClienteStats = [];
+    if (!clienteFiltro) {
+      porClienteStats = _repPorCliente(filtradas);
+      const topCliente  = porClienteStats[0];
+      const topCategoria = _repCategoriasTop(filtradas, 1)[0];
+      stats[0].w = 110; // TOTAL CONSULTAS
+      stats[1].w = 120; // TIEMPO TOTAL
+      stats[2].w = 85;  // REPETIDAS
+      stats.push({
+        label: 'CLIENTE QUE MÁS CONSULTÓ',
+        valor: topCliente ? `${_repTruncar(topCliente[0], 20)} (${topCliente[1].count})` : '—',
+        w: 210,
+      });
+      stats.push({
+        label: 'MÁS CONSULTADO',
+        valor: topCategoria ? `${_repTruncar(topCategoria[0], 20)} (${topCategoria[1]})` : '—',
+        w: 170,
+      });
+    }
+
+    const statColW = Math.min(150, (pageW - margin * 2) / stats.length);
+    let sx = margin;
     stats.forEach((s, i) => {
-      const sx = margin + i * statColW;
+      const w = s.w || statColW;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(140);
@@ -601,6 +729,7 @@ async function generarReporteConsultasPDF() {
         doc.setLineWidth(0.7);
         doc.line(sx - 14, y - 9, sx - 14, y + 14);
       }
+      sx += w;
     });
     y += 34;
     doc.setDrawColor(230, 230, 225);
@@ -608,8 +737,12 @@ async function generarReporteConsultasPDF() {
     doc.line(margin, y, pageW - margin, y);
     y += 24;
 
-    const seccion = (titulo) => {
-      checkPageBreak(32);
+    // alturaExtra: cuando la sección va seguida de un párrafo (u otro
+    // contenido) que sabemos de antemano, se pasa su altura acá para que el
+    // salto de página se evalúe ANTES de dibujar el título — así nunca
+    // queda el título solo al pie de una hoja y el texto en la siguiente.
+    const seccion = (titulo, alturaExtra = 0) => {
+      checkPageBreak(32 + alturaExtra);
       // Marca de acento naranja a la izquierda del título de sección.
       doc.setFillColor(NARANJA[0], NARANJA[1], NARANJA[2]);
       doc.rect(margin, y - 9, 3, 12, 'F');
@@ -633,43 +766,144 @@ async function generarReporteConsultasPDF() {
     // ── Resumen del período (texto narrativo) ──
     const narrativa = _repTextoNarrativo(rango, clienteFiltro, filtradas, periodo);
     if (narrativa.length > 0) {
-      seccion('Resumen del período');
+      const alturaPrimerParrafo = doc.splitTextToSize(narrativa[0], pageW - margin * 2).length * 14 + 8;
+      seccion('Resumen del período', alturaPrimerParrafo);
       narrativa.forEach(p => parrafo(p));
     }
 
-    // ── Detalle de consultas ──
-    seccion('Detalle de consultas');
-    y -= 5; // el autoTable ya trae su propio espaciado superior
+    if (clienteFiltro) {
+      // ── Reporte individual: queda exactamente como estaba ──
+      seccion('Detalle de consultas');
+      y -= 5; // el autoTable ya trae su propio espaciado superior
 
-    const rows = filtradas.map(c => [
-      new Date(c.timestamp).toLocaleDateString('es-AR'),
-      c.cliente || '—',
-      c.asesor || '—',
-      REP_TIPO_LABELS[c.tipoConsulta] || c.tipoConsulta || '—',
-      [_repCatLabel(c.categoria), c.subtema].filter(Boolean).join(' › ') || '—',
-      c.descripcion || '—',
-      c.tiempo ? fmtHHMM(c.tiempo) : '—'
-    ]);
+      const rows = filtradas.map(c => [
+        new Date(c.timestamp).toLocaleDateString('es-AR'),
+        c.cliente || '—',
+        c.asesor || '—',
+        REP_TIPO_LABELS[c.tipoConsulta] || c.tipoConsulta || '—',
+        [_repCatLabel(c.categoria), c.subtema].filter(Boolean).join(' › ') || '—',
+        c.descripcion || '—',
+        c.tiempo ? fmtHHMM(c.tiempo) : '—'
+      ]);
 
-    doc.autoTable({
-      startY: y,
-      head: [['Fecha', 'Cliente', 'Asesor', 'Tipo', 'Categoría', 'Descripción', 'Tiempo']],
-      body: rows,
-      styles: { fontSize: 8, cellPadding: 5, lineColor: [235, 231, 222], lineWidth: 0.5 },
-      headStyles: { fillColor: NARANJA, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
-      alternateRowStyles: { fillColor: [250, 247, 241] },
-      columnStyles: { 5: { cellWidth: 220 } },
-      margin: { left: margin, right: margin }
-    });
+      doc.autoTable({
+        startY: y,
+        head: [['Fecha', 'Cliente', 'Asesor', 'Tipo', 'Categoría', 'Descripción', 'Tiempo']],
+        body: rows,
+        styles: { fontSize: 8, cellPadding: 5, lineColor: [235, 231, 222], lineWidth: 0.5 },
+        headStyles: { fillColor: NARANJA, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+        alternateRowStyles: { fillColor: [250, 247, 241] },
+        columnStyles: { 5: { cellWidth: 220 } },
+        margin: { left: margin, right: margin }
+      });
 
-    y = doc.lastAutoTable.finalY + 20;
+      y = doc.lastAutoTable.finalY + 20;
+    } else {
+      // ── Reporte de "Todos los clientes": ranking, distribución por tipo,
+      // detalle agrupado por cliente, y clientes inactivos ──
+
+      // Ranking de clientes — solo el top 5, no el listado completo
+      seccion('Top 5 clientes que más consumieron soporte');
+      y -= 5;
+      const totalGeneral = filtradas.length;
+      const rankingRows = porClienteStats.slice(0, 5).map(([nombre, d]) => [
+        nombre,
+        String(d.count),
+        `${Math.round((d.count / totalGeneral) * 100)}%`,
+        d.minutos > 0 ? fmtMinutos(d.minutos) : '—',
+      ]);
+      doc.autoTable({
+        startY: y,
+        head: [['Cliente', 'Consultas', '% del total', 'Tiempo']],
+        body: rankingRows,
+        styles: { fontSize: 8, cellPadding: 5, lineColor: [235, 231, 222], lineWidth: 0.5 },
+        headStyles: { fillColor: NARANJA, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+        alternateRowStyles: { fillColor: [250, 247, 241] },
+        margin: { left: margin, right: margin }
+      });
+      y = doc.lastAutoTable.finalY + 24;
+
+      // Clientes inactivos — antes de la distribución por tipo
+      const inactivos = _repClientesInactivos(filtradas);
+      if (inactivos.length > 0) {
+        const textoInactivos = `${inactivos.length} cliente${inactivos.length !== 1 ? 's' : ''} no ${inactivos.length !== 1 ? 'registraron' : 'registró'} ninguna consulta durante ${rango.label.charAt(0).toLowerCase() + rango.label.slice(1)}: ${inactivos.join(', ')}.`;
+        const alturaInactivos = doc.splitTextToSize(textoInactivos, pageW - margin * 2).length * 14 + 8;
+        seccion('Clientes sin consultas en el período', alturaInactivos);
+        parrafo(textoInactivos);
+      }
+
+      // Distribución por tipo de consulta
+      seccion('Distribución por tipo de consulta');
+      y -= 5;
+      const tiposTop = _repTiposTop(filtradas);
+      const tiposRows = tiposTop.map(([tipo, cant]) => [
+        tipo, String(cant), `${Math.round((cant / totalGeneral) * 100)}%`
+      ]);
+      doc.autoTable({
+        startY: y,
+        head: [['Tipo de consulta', 'Cantidad', '% del total']],
+        body: tiposRows,
+        styles: { fontSize: 8, cellPadding: 5, lineColor: [235, 231, 222], lineWidth: 0.5 },
+        headStyles: { fillColor: NARANJA, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+        alternateRowStyles: { fillColor: [250, 247, 241] },
+        margin: { left: margin, right: margin },
+        tableWidth: 320,
+      });
+      y = doc.lastAutoTable.finalY + 24;
+
+      // Detalle agrupado por cliente — un bloque por cliente (mismo orden
+      // que el ranking: de más a menos consultas), con su propio
+      // mini-resumen y su tabla de detalle debajo.
+      seccion('Detalle por cliente');
+      y += 4;
+
+      porClienteStats.forEach(([nombreCliente, d]) => {
+        const consultasCliente = filtradas.filter(c => (c.cliente || 'Sin cliente') === nombreCliente);
+        const topCatCliente = _repCategoriasTop(consultasCliente, 1)[0];
+
+        checkPageBreak(34);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10.5);
+        doc.setTextColor(30);
+        doc.text(nombreCliente, margin, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(120);
+        const subLinea = `${d.count} consulta${d.count !== 1 ? 's' : ''}` +
+          (d.minutos > 0 ? ` · ${fmtMinutos(d.minutos)}` : '') +
+          (topCatCliente ? ` · Más consultado: ${topCatCliente[0]}` : '');
+        doc.text(subLinea, pageW - margin, y, { align: 'right' });
+        y += 10;
+
+        const rowsCliente = consultasCliente.map(c => [
+          new Date(c.timestamp).toLocaleDateString('es-AR'),
+          c.asesor || '—',
+          REP_TIPO_LABELS[c.tipoConsulta] || c.tipoConsulta || '—',
+          [_repCatLabel(c.categoria), c.subtema].filter(Boolean).join(' › ') || '—',
+          c.descripcion || '—',
+          c.tiempo ? fmtHHMM(c.tiempo) : '—'
+        ]);
+
+        doc.autoTable({
+          startY: y,
+          head: [['Fecha', 'Asesor', 'Tipo', 'Categoría', 'Descripción', 'Tiempo']],
+          body: rowsCliente,
+          styles: { fontSize: 8, cellPadding: 5, lineColor: [235, 231, 222], lineWidth: 0.5 },
+          headStyles: { fillColor: [90, 90, 85], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+          alternateRowStyles: { fillColor: [250, 247, 241] },
+          columnStyles: { 4: { cellWidth: 240 } },
+          margin: { left: margin, right: margin }
+        });
+        y = doc.lastAutoTable.finalY + 18;
+      });
+    }
 
     // ── Cierre ──
     checkPageBreak(40);
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(10);
     doc.setTextColor(90);
-    parrafo('Ante cualquier consulta sobre este reporte, quedamos a disposición del equipo de Salario.');
+    parrafo('Ante cualquier consulta sobre este reporte, quedamos a disposición. — Equipo Salario');
 
     // ── Notas opcionales ──
     // Solo se salta de hoja si no queda lugar en la actual; si hay espacio
