@@ -597,9 +597,10 @@ AS $$
 DECLARE
   insertadas INTEGER;
 BEGIN
-  -- Paso 1: insertar las tareas con duracion
-  INSERT INTO implementacion_tareas (cliente_id, orden, tarea, responsable_tipo, duracion_dias)
-  SELECT p_cliente_id, p.orden, p.tarea, p.responsable_tipo, COALESCE(p.duracion_dias, 3)
+  -- Inserta las tareas con duración y SIN predecesoras (se configuran a
+  -- mano por cliente). Ver migración 043_impl_sin_predecesoras.sql.
+  INSERT INTO implementacion_tareas (cliente_id, orden, tarea, responsable_tipo, duracion_dias, fase, predecesoras_ids)
+  SELECT p_cliente_id, p.orden, p.tarea, p.responsable_tipo, COALESCE(p.duracion_dias, 3), COALESCE(p.fase, 'relevamiento'), ARRAY[]::UUID[]
   FROM implementacion_plantilla p
   WHERE p.tipo = p_tipo
     AND NOT EXISTS (
@@ -609,23 +610,6 @@ BEGIN
   ORDER BY p.orden;
 
   GET DIAGNOSTICS insertadas = ROW_COUNT;
-
-  -- Paso 2: mapear predecesoras_orden → predecesoras_ids (UUIDs reales del cliente)
-  UPDATE implementacion_tareas t
-  SET predecesoras_ids = (
-    SELECT COALESCE(array_agg(t2.id ORDER BY t2.orden), ARRAY[]::UUID[])
-    FROM implementacion_plantilla p
-    JOIN unnest(p.predecesoras_orden) AS pred_orden ON TRUE
-    JOIN implementacion_tareas t2 ON t2.cliente_id = p_cliente_id AND t2.orden = pred_orden
-    WHERE p.orden = t.orden AND p.tipo = p_tipo
-  )
-  WHERE t.cliente_id = p_cliente_id
-    AND (t.predecesoras_ids IS NULL OR cardinality(t.predecesoras_ids) = 0)
-    AND EXISTS (
-      SELECT 1 FROM implementacion_plantilla p
-      WHERE p.orden = t.orden AND p.tipo = p_tipo
-        AND cardinality(p.predecesoras_orden) > 0
-    );
 
   RETURN insertadas;
 END;
