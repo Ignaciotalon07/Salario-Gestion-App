@@ -14,6 +14,19 @@ let _consultaArchivosStaged = [];  // File objects pendientes para adjuntar a la
 
 // ────────── Mapeo DB <-> UI ──────────
 
+// La columna conexion_remota es de tipo TEXT en la base, así que puede traer
+// 'true' / 'false' (lo que escribe la app hoy) o 'si' / 'no' (registros más
+// viejos), o null. Se normaliza a un booleano real para que todo lo que la
+// lee (métricas, detalle de consulta, score del cliente) interprete igual.
+// Ojo: no alcanza con `valor || false`, porque el texto 'false' o 'no' es
+// "verdadero" para JavaScript.
+function _esConexionRemotaSi(valor) {
+  if (valor === true) return true;
+  if (valor === null || valor === undefined) return false;
+  const v = String(valor).trim().toLowerCase();
+  return v === 'true' || v === 'si' || v === 'sí' || v === '1';
+}
+
 function dbRowToConsulta(row) {
   return {
     id:          row.id,
@@ -26,10 +39,90 @@ function dbRowToConsulta(row) {
     solucionId:    row.solucion_id,
     tiempo:        row.tiempo_resolucion ?? null,
     material:      row.material || null,
-    remota:        row.conexion_remota || false,
+    remota:        _esConexionRemotaSi(row.conexion_remota),
     tipoConsulta:  row.tipo_consulta || 'soporte',
     timestamp:     row.created_at
   };
+}
+
+// ────────── Eliminar consulta (descontando el uso de la solución) ──────────
+//
+// Punto único para borrar una consulta de la DB. Si la consulta tenía una
+// solución de la base asociada (y por lo tanto le había sumado 1 uso al
+// registrarse), se le resta ese uso al borrarla. Lanza error si falla el
+// borrado; el descuento del uso es "best effort" y no corta el flujo.
+async function eliminarConsultaDB(id) {
+  // Leer la solución asociada ANTES de borrar (después ya no está en la DB,
+  // y el realtime puede sacarla del array en memoria).
+  let solucionId = null;
+  let asesor = null;
+  let timestamp = null;
+  const enMemoria = (typeof consultas !== 'undefined')
+    ? consultas.find(c => String(c.id) === String(id))
+    : null;
+  if (enMemoria) {
+    solucionId = enMemoria.solucionId || enMemoria.solucion_id || null;
+    asesor     = enMemoria.asesor || null;
+    timestamp  = enMemoria.timestamp || null;
+  } else {
+    try {
+      const { data } = await sb().from('consultas')
+        .select('solucion_id, asesor, created_at').eq('id', id).maybeSingle();
+      if (data) { solucionId = data.solucion_id; asesor = data.asesor; timestamp = data.created_at; }
+    } catch (e) { /* si no se puede leer, se borra igual sin descontar */ }
+  }
+
+  // ¿Esta consulta CREÓ la solución (en vez de usar una que ya existía)?
+  // No hay un campo que lo marque, así que se deduce, y solo se borra si se
+  // cumple TODO esto (para no llevarse por delante una solución cargada a mano):
+  //   - la solución la cargó el mismo asesor de la consulta
+  //   - se creó en el mismo momento que la consulta (±2 min)
+  //   - tenía 1 uso o menos (el de esta consulta)
+  //   - ninguna otra consulta la usa
+  let borrarSolucion = false;
+  let solucion = null;
+  if (solucionId && typeof soluciones !== 'undefined') {
+    solucion = soluciones.find(s => s.id === solucionId) || null;
+    if (solucion && asesor && timestamp && solucion.createdAt) {
+      const mismaPersona = solucion.autor === asesor;
+      const mismoMomento = Math.abs(new Date(solucion.createdAt) - new Date(timestamp)) <= 120000;
+      const pocosUsos    = (solucion.usos || 0) <= 1;
+      if (mismaPersona && mismoMomento && pocosUsos) {
+        try {
+          const { data: otras } = await sb().from('consultas')
+            .select('id').eq('solucion_id', solucionId).neq('id', id).limit(1);
+          borrarSolucion = !otras || otras.length === 0;
+        } catch (e) { borrarSolucion = false; } // ante la duda, no se borra
+      }
+    }
+  }
+
+  await dbDelete('consultas', id);
+
+  if (!solucionId) return;
+
+  if (borrarSolucion) {
+    // La solución nació con esta consulta: se borra junto con ella.
+    try {
+      const paths = ((typeof kbArchivos !== 'undefined' && kbArchivos[solucionId]) || []).map(a => a.storage_path);
+      if (paths.length) await sb().storage.from('soluciones-archivos').remove(paths);
+      await dbDelete('soluciones', solucionId); // los registros de archivos caen por CASCADE
+      soluciones = soluciones.filter(s => s.id !== solucionId);
+      if (typeof kbArchivos !== 'undefined') delete kbArchivos[solucionId];
+      if (typeof kbActiva !== 'undefined' && kbActiva === solucionId && typeof cerrarKB === 'function') cerrarKB();
+      if (typeof renderKBList === 'function') renderKBList();
+      if (typeof actualizarMetricasKB === 'function') actualizarMetricasKB();
+      return;
+    } catch (e) {
+      console.warn('No se pudo borrar la solución creada por la consulta', e);
+      // si falla, cae al descuento de uso de abajo
+    }
+  }
+
+  if (typeof decrementarUsoSolucion === 'function') {
+    try { await decrementarUsoSolucion(solucionId); }
+    catch (e) { console.warn('No se pudo descontar el uso de la solución', e); }
+  }
 }
 
 // ────────── Modal de registrar consulta ──────────

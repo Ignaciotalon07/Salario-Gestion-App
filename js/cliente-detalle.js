@@ -587,7 +587,7 @@ async function eliminarConsultaDesdeModal(id) {
   // Si es un ID temporal (no guardado aún en DB), solo lo quitamos del array
   if (!String(id).startsWith('_temp_')) {
     try {
-      await dbDelete('consultas', id);
+      await eliminarConsultaDB(id); // borra y descuenta el uso de la solución asociada
     } catch (e) {
       console.error('Error eliminando consulta', e);
       toast('No se pudo eliminar la consulta: ' + (e.message || e));

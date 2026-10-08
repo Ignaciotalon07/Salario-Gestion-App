@@ -1198,7 +1198,7 @@ function verMasAsesorInternas() {
 
 async function eliminarRegistroAsesor(id) {
   try {
-    await dbDelete('consultas', id);
+    await eliminarConsultaDB(id); // borra y descuenta el uso de la solución asociada
     if (typeof consultas !== 'undefined') {
       consultas = consultas.filter(c => String(c.id) !== String(id));
     }
@@ -1309,7 +1309,7 @@ function _abrirDetalleRegistroAsesor(id) {
         ${!esInterna ? `
         <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
           <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Remota</div>
-          <div style="font-size:13px;font-weight:500">${c.conexionRemota || c.conexion_remota ? 'Sí' : 'No'}</div>
+          <div style="font-size:13px;font-weight:500">${c.remota === true || c.remota === 'si' || c.conexionRemota || c.conexion_remota ? 'Sí' : 'No'}</div>
         </div>
         <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
           <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">⏱ Tiempo</div>

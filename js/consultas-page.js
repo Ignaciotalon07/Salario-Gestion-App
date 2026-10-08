@@ -700,7 +700,7 @@ async function _cpConfirmarEliminacion(id) {
   if (btn) { btn.disabled = true; btn.textContent = 'Eliminando...'; }
 
   try {
-    await dbDelete('consultas', id);
+    await eliminarConsultaDB(id); // borra y descuenta el uso de la solución asociada
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = '🗑 Eliminar consulta'; btn.onclick = () => eliminarConsultaDesdeDetalle(id); }
     if (typeof toast === 'function') toast('No se pudo eliminar. Intentá de nuevo.');

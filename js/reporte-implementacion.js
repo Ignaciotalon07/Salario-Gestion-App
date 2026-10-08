@@ -135,12 +135,24 @@ async function _rimplCapturarGantt(clienteId) {
 
     try {
       const bg = getComputedStyle(document.body).backgroundColor || '#ffffff';
+      const ESCALA_CAPTURA = 1.5;
+
+      // Posiciones (en píxeles de la imagen final) donde termina cada fila
+      // del Gantt. Si algún día el diagrama es tan alto que hay que partirlo
+      // en varias hojas, se corta en estos puntos y no por el medio de una
+      // fila. Se miden con el layout ya sin recortes, igual que la captura.
+      const topGantt = ganttEl.getBoundingClientRect().top;
+      const cortes = Array.from(ganttEl.querySelectorAll('.gantt-row'))
+        .map(r => Math.round((r.getBoundingClientRect().bottom - topGantt) * ESCALA_CAPTURA))
+        .filter(v => v > 0);
+
       canvas = await html2canvas(ganttEl, {
         backgroundColor: bg,
-        scale: 1.5,
+        scale: ESCALA_CAPTURA,
         width: ganttEl.scrollWidth,
         windowWidth: ganttEl.scrollWidth,
       });
+      canvas._cortesFilas = cortes;
     } catch (e) {
       console.warn('No se pudo capturar el Gantt', e);
     } finally {
@@ -183,7 +195,18 @@ function _rimplAgregarCanvasPaginado(doc, canvas, margin, startY) {
       ? Math.max(1, Math.floor(((pageH - margin) - startY) / scale))
       : pageHeightInCanvasPx;
 
-    const sliceHeight = Math.min(hDisponibleCanvasPx, canvas.height - renderedHeight);
+    let sliceHeight = Math.min(hDisponibleCanvasPx, canvas.height - renderedHeight);
+
+    // Si todavía queda más por dibujar después de este tramo, lo cortamos en
+    // el final de la última fila que entra completa (en vez de a mitad de
+    // una fila). Si no hay ningún corte posible, se mantiene el corte duro.
+    if (renderedHeight + sliceHeight < canvas.height && Array.isArray(canvas._cortesFilas)) {
+      const limite = renderedHeight + sliceHeight;
+      const mejorCorte = canvas._cortesFilas
+        .filter(c => c > renderedHeight && c <= limite)
+        .pop();
+      if (mejorCorte) sliceHeight = mejorCorte - renderedHeight;
+    }
 
     const sliceCanvas = document.createElement('canvas');
     sliceCanvas.width  = canvas.width;
@@ -304,7 +327,10 @@ async function generarReporteImplPDF() {
     // Marca de acento a la izquierda del título de sección (naranja por
     // defecto, o el color que se pase — ej. rojo para "Atención").
     const seccion = (titulo, colorAcento) => {
-      checkPageBreak(32);
+      // Reserva lugar para el título + al menos un par de líneas debajo, así
+      // un título nunca queda solo al pie de una hoja con su contenido en la
+      // siguiente.
+      checkPageBreak(32 + 36);
       y += 6;
       const c = colorAcento || NARANJA;
       doc.setFillColor(c[0], c[1], c[2]);
@@ -379,15 +405,62 @@ async function generarReporteImplPDF() {
     // actual (título + un tramo útil del diagrama); si entra, se dibuja a
     // continuación del texto.
     if (ganttCanvas) {
-      const ALTO_TITULO_GANTT   = 30;  // lo que ocupa el título de sección
-      const ESPACIO_MINIMO_GANTT = 160 + ALTO_TITULO_GANTT;
-      const espacioDisponible = (pageH - margin) - y;
-      if (espacioDisponible < ESPACIO_MINIMO_GANTT) {
+      // Objetivo: el Gantt nunca se parte por el medio, y no queda una hoja
+      // con dos líneas de texto seguida de otra con el Gantt. En orden:
+      //   1) Si entra entero en lo que queda de la hoja → ahí mismo.
+      //   2) Si casi entra (hay que achicarlo hasta un 25%) → se achica y entra.
+      //   3) Si no → hoja nueva con título + Gantt (achicado si hace falta para
+      //      que entre en UNA hoja, hasta un 40%).
+      //   4) Si es tan alto que no se puede achicar tanto → se parte en hojas,
+      //      pero siempre entre filas, nunca por el medio de una.
+      // Excepción al punto 3: si la hoja actual casi no tiene contenido
+      // (recién arrancó), no se salta de hoja: se evita dejar una hoja vacía.
+      const ALTO_TITULO_GANTT = 30;
+      const FACTOR_MIN_EN_HOJA_ACTUAL = 0.75;
+      const FACTOR_MIN_UNA_HOJA       = 0.6;
+      const HOJA_CASI_VACIA_HASTA     = margin + 140;
+
+      const anchoUtil   = pageW - margin * 2;
+      const escalaBase  = anchoUtil / ganttCanvas.width;       // pt por px de la imagen
+      const altoGantt   = ganttCanvas.height * escalaBase;     // alto a ancho completo
+
+      const hojaCasiVacia   = y <= HOJA_CASI_VACIA_HASTA;
+      const espacioActual   = (pageH - margin) - y - ALTO_TITULO_GANTT;
+      const espacioHojaNueva = (pageH - margin * 2) - ALTO_TITULO_GANTT;
+
+      let escala = escalaBase;
+      let paginarPorFilas = false;
+
+      if (altoGantt <= espacioActual) {
+        // 1) entra tal cual
+      } else if (espacioActual > 160 && espacioActual / altoGantt >= FACTOR_MIN_EN_HOJA_ACTUAL) {
+        // 2) se achica un poco y entra en la hoja actual
+        escala = escalaBase * (espacioActual / altoGantt);
+      } else if (hojaCasiVacia) {
+        // hoja recién arrancada: se queda acá, achicado si se puede
+        const factor = espacioActual / altoGantt;
+        if (factor >= FACTOR_MIN_UNA_HOJA) escala = escalaBase * factor;
+        else paginarPorFilas = true;
+      } else {
+        // 3) hoja nueva
         doc.addPage('a4', 'landscape');
         y = margin;
+        if (altoGantt > espacioHojaNueva) {
+          const factor = espacioHojaNueva / altoGantt;
+          if (factor >= FACTOR_MIN_UNA_HOJA) escala = escalaBase * factor;
+          else paginarPorFilas = true; // 4)
+        }
       }
+
       seccion(`Diagrama de Gantt — Actualizado al ${formatFechaImpl(hoy)}`);
-      _rimplAgregarCanvasPaginado(doc, ganttCanvas, margin, y);
+
+      if (paginarPorFilas) {
+        _rimplAgregarCanvasPaginado(doc, ganttCanvas, margin, y);
+      } else {
+        const anchoDibujo = ganttCanvas.width * escala;
+        const xDibujo = margin + (anchoUtil - anchoDibujo) / 2; // centrado si se achicó
+        doc.addImage(ganttCanvas.toDataURL('image/png'), 'PNG', xDibujo, y, anchoDibujo, ganttCanvas.height * escala);
+      }
     }
 
     // ── Notas opcionales (debajo del Gantt) ──

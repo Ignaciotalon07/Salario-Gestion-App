@@ -522,6 +522,24 @@ async function incrementarUsoSolucion(id) {
   }
 }
 
+// Resta 1 al contador de usos (nunca baja de 0). Se usa al eliminar una
+// consulta que había sumado un uso a esta solución, para deshacer ese +1.
+async function decrementarUsoSolucion(id) {
+  const s = soluciones.find(x => x.id === id);
+  if (!s) return; // la solución ya no existe: nada que descontar
+  try {
+    const nuevoTotal = Math.max(0, (s.usos || 0) - 1);
+    await dbUpdate('soluciones', id, { usos: nuevoTotal });
+    s.usos = nuevoTotal;
+    if (kbActiva === id) verKBDetalle(id); // refrescar detalle
+    renderKBList();
+    actualizarMetricasKB();
+  } catch (e) {
+    console.error('Error descontando uso', e);
+    // Igual que el incremento: acción secundaria, no interrumpe al usuario
+  }
+}
+
 // ────────── Copiar pasos al portapapeles ──────────
 
 async function copiarPasosWA(id) {
