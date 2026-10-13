@@ -4947,6 +4947,284 @@ input[type=date]:focus {
   gap: 6px;
 }
 
+/* ── Card del detalle de cliente, versión DESKTOP (banner) ──
+   Franja de color arriba (el color sale del avatar de cada cliente), avatar
+   grande que la pisa, nombre + badges, botones a la derecha, y debajo —
+   separados por una línea — los datos como columnas etiqueta/valor.
+   En mobile/tablet se mantiene el diseño de siempre: el bloque de datos y
+   los botones de abajo están ocultos y se usan las líneas y botones
+   originales. */
+.detalle-datos,
+.detalle-vivo,
+.detalle-acciones-fila { display: none; }
+/* Botón Whaticket dentro de la fila de datos: solo desktop, pegado a la derecha */
+.detalle-datos__wa { display: none; }
+
+/* Estilo del botón Whaticket (desktop y mobile): azul con degradé, sombra
+   suave y flechita que se mueve al pasar el mouse. */
+.detalle-datos__wa .btn-sm,
+.detalle-acciones-fila .btn-sm {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 6px 13px;
+  border: none; border-radius: 9px;
+  font-size: 12.5px; font-weight: 700; letter-spacing: .01em; line-height: 1.3;
+  color: #fff !important; text-decoration: none;
+  background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, .3), inset 0 1px 0 rgba(255,255,255,.25);
+  transition: transform .15s, box-shadow .15s, filter .15s;
+}
+.detalle-datos__wa .btn-sm::after,
+.detalle-acciones-fila .btn-sm::after {
+  content: '↗'; font-size: 13px; transition: transform .15s;
+}
+.detalle-datos__wa .btn-sm:hover,
+.detalle-acciones-fila .btn-sm:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(37, 99, 235, .42), inset 0 1px 0 rgba(255,255,255,.25);
+  filter: brightness(1.05);
+}
+.detalle-datos__wa .btn-sm:hover::after,
+.detalle-acciones-fila .btn-sm:hover::after { transform: translate(2px, -2px); }
+.detalle-datos__wa .btn-sm:active,
+.detalle-acciones-fila .btn-sm:active { transform: scale(.97); }
+
+/* Sin URL de Whaticket: gris apagado; al hacer clic pide la URL para vincularla */
+.detalle-datos__wa .btn-wa-off,
+.detalle-acciones-fila .btn-wa-off {
+  background: var(--surface2);
+  color: var(--text3) !important;
+  box-shadow: none;
+  border: 1px solid var(--border);
+  font-family: inherit;
+  cursor: pointer;
+  opacity: .8;
+}
+.detalle-datos__wa .btn-wa-off::after,
+.detalle-acciones-fila .btn-wa-off::after { content: none; }
+.detalle-datos__wa .btn-wa-off:hover,
+.detalle-acciones-fila .btn-wa-off:hover {
+  transform: none; box-shadow: none; filter: none;
+  opacity: 1; color: var(--text2) !important; border-color: var(--text3);
+}
+
+/* Punto verde "en vivo" (también se usa en el modal de convenios/empresas) */
+.detalle-vivo__tag {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--green, #16a34a);
+}
+.detalle-vivo__dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--green, #16a34a);
+  box-shadow: 0 0 0 0 rgba(22,163,74,.5); animation: vivoPulso 2s infinite;
+}
+@keyframes vivoPulso {
+  70% { box-shadow: 0 0 0 7px rgba(22,163,74,0); }
+  100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); }
+}
+
+@media (min-width: 901px) {
+  .detalle-header__body {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    column-gap: 22px;
+    align-items: start;
+    padding: 80px 28px 22px;   /* 80px de arriba = alto de la franja + aire */
+  }
+  /* La franja de color */
+  .detalle-header__body::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 64px;
+    background: linear-gradient(110deg,
+      color-mix(in srgb, var(--cli-color, var(--accent)) 30%, var(--surface)),
+      color-mix(in srgb, var(--cli-color, var(--accent)) 8%, var(--surface)));
+    border-bottom: 1px solid color-mix(in srgb, var(--cli-color, var(--accent)) 22%, var(--border));
+  }
+
+  /* Fila 1: avatar | nombre + badges | botones */
+  .detalle-header__body .av-lg {
+    grid-column: 1; grid-row: 1;
+    width: 76px !important;
+    height: 76px !important;
+    font-size: 26px !important;
+    margin-top: -52px;               /* sube y pisa la franja */
+    border: 4px solid var(--surface);
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+  .detalle-header__info { grid-column: 2; grid-row: 1; margin-top: -10px; }
+  .detalle-header__nombre { font-size: 26px; margin-bottom: 2px; letter-spacing: -0.4px; }
+  .detalle-header__badges { margin-top: 10px !important; }
+
+  /* En desktop el Whaticket va en la fila de datos (ver .detalle-datos__wa) */
+  .detalle-acciones-fila { display: none; }
+  .detalle-datos__wa { display: flex; align-items: center; margin-left: auto; padding-left: 28px; }
+
+  /* Se ocultan las versiones "mobile" de los datos y de los botones */
+  .detalle-header__body .dh-dato,
+  .detalle-header__body .dh-acciones-mobile { display: none !important; }
+
+  /* Fila 2: datos en columnas, separados por una línea */
+  .detalle-datos {
+    grid-column: 1 / -1; grid-row: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 48px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  /* Datos en vivo: van en la misma fila que los datos, después de una línea
+     vertical, con números grandes en el color del cliente. */
+  .detalle-vivo { display: contents; }   /* sus tarjetas pasan a ser columnas de la fila de datos */
+  .detalle-vivo__sep,
+  .detalle-vivo__tag,
+  .detalle-vivo__ver { display: none; }
+  /* Sin cards: texto limpio, columnas separadas por una línea finita.
+     Los datos vivos se distinguen por el número en el color del cliente. */
+  .detalle-datos { gap: 14px 0; }
+  .detalle-datos__item,
+  .detalle-vivo__item {
+    font: inherit; text-align: left; color: inherit;
+    background: none; border: none; margin: 0;
+    padding: 0 28px;
+    border-left: 1px solid var(--border);
+  }
+  .detalle-datos__item:first-child { padding-left: 0; border-left: none; }
+  .detalle-vivo__item--btn { cursor: pointer; }
+  .detalle-vivo__item--btn .detalle-vivo__v::after {
+    content: ' ›';
+    opacity: .55; display: inline-block; transition: transform .15s, opacity .15s;
+  }
+  .detalle-vivo__item--btn:hover .detalle-vivo__v::after { transform: translateX(3px); opacity: 1; }
+  .detalle-vivo__k { font-size: 10.5px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px; }
+  .detalle-vivo__v { font-size: 15px; font-weight: 700; color: var(--cli-color, var(--accent)); }
+
+  .detalle-datos__k {
+    font-size: 10.5px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 2px;
+  }
+  .detalle-datos__v {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+}
+
+/* ── Card del detalle de cliente, versión MOBILE / TABLET ──
+   Misma idea que el desktop (franja de color + avatar que la pisa), pero en
+   una sola columna: avatar, nombre y badges, datos en grilla de 2 columnas
+   (los datos vivos van en el color del cliente) y el botón de Whaticket
+   a todo el ancho. Se ocultan las líneas y botones "viejos". */
+@media (max-width: 900px) {
+  .detalle-header__body {
+    position: relative;
+    overflow: hidden;
+    display: block;
+    padding: 62px 18px 18px;
+  }
+  .detalle-header__body::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 52px;
+    background: linear-gradient(110deg,
+      color-mix(in srgb, var(--cli-color, var(--accent)) 30%, var(--surface)),
+      color-mix(in srgb, var(--cli-color, var(--accent)) 8%, var(--surface)));
+    border-bottom: 1px solid color-mix(in srgb, var(--cli-color, var(--accent)) 22%, var(--border));
+  }
+  .detalle-header__body .av-lg {
+    width: 64px !important;
+    height: 64px !important;
+    font-size: 22px !important;
+    margin-top: -48px;
+    border: 3px solid var(--surface);
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+  .detalle-header__info { margin-top: 10px; }
+  .detalle-header__nombre { font-size: 22px; margin-bottom: 0; letter-spacing: -0.3px; }
+  .detalle-header__badges { margin-top: 10px !important; }
+
+  /* Se ocultan las líneas de datos y los botones de la versión vieja */
+  .detalle-header__body .dh-dato,
+  .detalle-header__body .dh-acciones-mobile { display: none !important; }
+
+  /* Datos en grilla de 2 columnas */
+  .detalle-datos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 16px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+  .detalle-datos__item:first-child { grid-column: 1 / -1; }  /* razón social, ancho completo */
+  /* Datos vivos: fila de "mosaicos" iguales (ícono arriba, número grande al
+     centro, nombre abajo). Los que se abren llevan fondo tintado + flechita. */
+  .detalle-vivo {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 2px;
+  }
+  /* Estudios contables (4 mosaicos): grilla de 2x2 para que no se aprieten */
+  .detalle-vivo:has(> :nth-child(4)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .detalle-vivo__item { min-width: 0; }
+  .detalle-vivo__sep,
+  .detalle-vivo__tag,
+  .detalle-vivo__ver { display: none; }
+  .detalle-vivo__item {
+    font: inherit; color: inherit;
+    position: relative;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px;
+    margin: 0; padding: 12px 6px 10px;
+    text-align: center;
+    border-radius: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .detalle-vivo__item--btn {
+    cursor: pointer;
+    background: color-mix(in srgb, var(--cli-color, var(--accent)) 9%, var(--surface));
+    border-color: color-mix(in srgb, var(--cli-color, var(--accent)) 40%, var(--border));
+  }
+  .detalle-vivo__item--btn:active { transform: scale(.96); }
+  .detalle-vivo__item--btn::after {
+    content: '›';
+    position: absolute; right: 8px; top: 6px;
+    font-size: 16px; line-height: 1; color: var(--cli-color, var(--accent));
+  }
+  /* El label se parte: ícono arriba, nombre abajo del número */
+  .detalle-vivo__k { display: contents; }
+  .detalle-vivo__ico { order: 0; font-size: 18px; line-height: 1; margin-bottom: 2px; }
+  .detalle-vivo__v   { order: 1; display: flex; align-items: center; justify-content: center; gap: 5px;
+                       font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--cli-color, var(--accent)); }
+  .detalle-vivo__lbl { order: 2; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; }
+  .detalle-datos__k {
+    font-size: 10.5px; color: var(--text3);
+    text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px;
+  }
+  .detalle-datos__v { font-size: 14px; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+
+  /* Whaticket a todo el ancho */
+  .detalle-acciones-fila { display: flex; }
+  .detalle-acciones-fila .btn-sm {
+    flex: 1; justify-content: center; text-align: center;
+    margin-top: 16px; padding: 9px 14px; font-size: 13px;
+  }
+}
+
 /* Label de tipo en el bloque "Consultas por tipo" del detalle de asesor */
 .asesor-tipo-label {
   font-size: 11px;
@@ -6698,6 +6976,81 @@ input[type=date]:focus {
   background: linear-gradient(180deg, rgba(0,0,0,0) 55%, rgba(0,0,0,0.18) 100%);
 }
 /* Highlight cuando llegás por deep-link */
+/* ════════════════════════════════════
+   CONEXIONES (escritorio remoto del cliente) — modal del detalle de cliente
+════════════════════════════════════ */
+.conex-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.conex-dot--ok   { background: var(--green); }
+.conex-dot--pend { background: var(--text3); }
+
+.conex-resumen { font-size: 13px; color: var(--text2); margin-bottom: 14px; }
+.conex-lista   { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+
+.conex-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.conex-item__top {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 10px;
+}
+.conex-item__nombre { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; }
+
+/* Check "Instalado": verde si está tildado, gris si no */
+.conex-estado {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600;
+  padding: 4px 10px; border-radius: 999px;
+  cursor: pointer; user-select: none;
+  background: var(--surface); color: var(--text3);
+  border: 1px solid var(--border);
+}
+.conex-estado--on {
+  background: color-mix(in srgb, var(--green) 16%, transparent);
+  color: var(--green-text);
+  border-color: color-mix(in srgb, var(--green) 40%, transparent);
+}
+[data-theme="dark"] .conex-estado--on { color: #6fcf7f; }
+.conex-estado input { accent-color: var(--green); cursor: pointer; margin: 0; }
+
+.conex-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.conex-label  { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px; }
+.conex-valor  { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.conex-mono   { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; color: var(--text); overflow-wrap: anywhere; }
+.conex-icon-btn {
+  background: none; border: none; cursor: pointer;
+  font-size: 13px; padding: 2px 4px; border-radius: 6px; opacity: .75;
+}
+.conex-icon-btn:hover { opacity: 1; background: var(--hover); }
+
+.conex-item__acciones { display: flex; gap: 14px; margin-top: 10px; }
+.conex-link {
+  background: none; border: none; cursor: pointer;
+  font-size: 12px; color: var(--text2); padding: 0;
+}
+.conex-link:hover { color: var(--text); text-decoration: underline; }
+.conex-link--danger { color: var(--red); }
+
+.conex-form {
+  border: 1px dashed var(--border2);
+  border-radius: 12px;
+  padding: 14px;
+}
+.conex-form__titulo { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+.conex-form__campos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+@media (max-width: 600px) {
+  .conex-campos, .conex-form__campos { grid-template-columns: 1fr; }
+}
+
 .repo-card--highlight {
   animation: repo-flash 3s ease-out;
 }

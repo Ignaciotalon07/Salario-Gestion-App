@@ -420,6 +420,11 @@ async function vincularWhaticket(id) {
       if (CLIENTES_LOOKUP[c.nombre]) CLIENTES_LOOKUP[c.nombre].whaticket_url = url;
       renderClientes();
     }
+    // Si se vinculó desde el detalle del cliente, redibujarlo: el botón pasa a azul
+    if (typeof _detalleClienteId !== 'undefined' && _detalleClienteId === id
+        && typeof renderDetalleCliente === 'function') {
+      renderDetalleCliente(id);
+    }
   } catch (e) {
     console.error('Error vinculando whaticket', e);
     alert('No se pudo vincular: ' + e.message);

@@ -97,15 +97,69 @@ function _renderDetalleHeader(cliente) {
   const scoreBadge = `<span class="badge ${scoreClase}">Score ${cliente.score ?? 0}/10</span>`;
 
   // Razón social y CUIT
+  // Las 3 líneas de abajo (clase "dh-dato") son la versión de mobile; en
+  // desktop se ocultan y los mismos datos se muestran en el panel
+  // "detalle-datos" de la derecha (ver CSS, media query de escritorio).
   const razonLine = cliente.razon_social
-    ? `<div style="font-size:12px;color:var(--text3);margin-top:2px">📋 ${_escHtml(cliente.razon_social)}</div>`
+    ? `<div class="dh-dato" style="font-size:12px;color:var(--text3);margin-top:2px">📋 ${_escHtml(cliente.razon_social)}</div>`
     : '';
   const cuitLine = cliente.cuit
-    ? `<div style="font-size:12px;color:var(--text3);margin-top:1px">CUIT: ${_escHtml(cliente.cuit)}</div>`
+    ? `<div class="dh-dato" style="font-size:12px;color:var(--text3);margin-top:1px">CUIT: ${_escHtml(cliente.cuit)}</div>`
     : '';
   const idApiLine = cliente.idApi
-    ? `<div style="font-size:12px;color:var(--text3);margin-top:1px"><strong style="color:var(--text2)">ID CLIENTE: ${cliente.idApi}</strong></div>`
+    ? `<div class="dh-dato" style="font-size:12px;color:var(--text3);margin-top:1px"><strong style="color:var(--text2)">ID CLIENTE: ${cliente.idApi}</strong></div>`
     : '';
+
+  // Panel de datos (solo desktop): lista etiqueta/valor, solo con los datos que existan.
+  const datosFilas = [
+    cliente.razon_social ? ['Razón social', _escHtml(cliente.razon_social)] : null,
+    cliente.cuit         ? ['CUIT',         _escHtml(cliente.cuit)]         : null,
+    cliente.idApi        ? ['ID cliente',   _escHtml(String(cliente.idApi))] : null,
+    ['Tipo',             _escHtml(cliente.tipo || 'empresa')],
+  ].filter(Boolean);
+  const datosPanel = `
+    <div class="detalle-datos">
+      ${datosFilas.map(([k, v]) => `
+        <div class="detalle-datos__item">
+          <div class="detalle-datos__k">${k}</div>
+          <div class="detalle-datos__v">${v}</div>
+        </div>`).join('')}
+      __VIVO__
+    </div>`;
+
+  // Bloque "En vivo desde Salario" (solo desktop): legajos, convenios y, si es
+  // estudio contable, empresas. Hoy no hay datos (—); cuando se conecte la API
+  // solo hay que completar _datosSalarioCliente() y la UI se actualiza sola.
+  const vivo = _datosSalarioCliente(cliente);
+  const esEstudio = String(cliente.tipo || '').toLowerCase().startsWith('estudio');
+  const cantTxt = n => (n === null || n === undefined) ? '—' : n;
+  const vivoTarjeta = (icono, label, valor, onclick) => `
+    <${onclick ? 'button' : 'div'} class="detalle-vivo__item${onclick ? ' detalle-vivo__item--btn' : ''}" ${onclick ? `onclick="${onclick}"` : ''}>
+      <div class="detalle-vivo__k"><span class="detalle-vivo__ico">${icono}</span> <span class="detalle-vivo__lbl">${label}</span></div>
+      <div class="detalle-vivo__v">${valor}</div>
+      ${onclick ? '<div class="detalle-vivo__ver">Ver detalle →</div>' : ''}
+    </${onclick ? 'button' : 'div'}>`;
+  const vivoPanel = `
+    <div class="detalle-vivo">
+      ${vivoTarjeta('👥', 'Legajos', cantTxt(vivo.legajos))}
+      ${typeof renderTarjetaConexiones === 'function' ? renderTarjetaConexiones(cliente.id) : ''}
+      ${vivoTarjeta('📑', 'Convenios', cantTxt(vivo.convenios ? vivo.convenios.length : null), `abrirSalarioModal('convenios','${_escHtml(cliente.id)}')`)}
+      ${esEstudio ? vivoTarjeta('🏢', 'Empresas', cantTxt(vivo.empresas ? vivo.empresas.length : null), `abrirSalarioModal('empresas','${_escHtml(cliente.id)}')`) : ''}
+    </div>`;
+
+  const btnWhaticket = cliente.whaticket_url ? `
+      <a href="${_escHtml(cliente.whaticket_url)}" target="_blank" class="btn-sm">
+        💬 Whaticket
+      </a>` : `
+      <button type="button" class="btn-sm btn-wa-off" onclick="vincularWhaticket('${_escHtml(cliente.id)}')"
+        title="Sin URL de Whaticket. Click para agregarla">
+        💬 Whaticket
+      </button>`;
+  // Mobile: botón Conexiones + Whaticket. Desktop: Conexiones va en el bloque
+  // destacado, así que arriba a la derecha queda solo Whaticket.
+  const botonesAcciones = `
+    ${typeof renderBtnConexiones === 'function' ? renderBtnConexiones(cliente.id) : ''}
+    ${btnWhaticket}`;
 
   return `
     <div class="detalle-header">
@@ -113,7 +167,7 @@ function _renderDetalleHeader(cliente) {
         <button class="btn-secondary detalle-back" onclick="volverAClientes()">← Volver</button>
         <button class="btn-primary" onclick="irARegistrarConsulta('${_escHtml(cliente.nombre)}')">+ Consulta</button>
       </div>
-      <div class="detalle-header__body" style="width:100%">
+      <div class="detalle-header__body" style="width:100%;--cli-color:${textColores[idx]}">
         <div class="av-lg" style="background:${colores[idx]};color:${textColores[idx]};border-radius:14px;width:52px;height:52px;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           ${_escHtml(iniciales)}
         </div>
@@ -129,13 +183,55 @@ function _renderDetalleHeader(cliente) {
             <span class="badge" style="background:var(--surface2);color:var(--text2)">${_escHtml(cliente.tipo || 'empresa')}</span>
           </div>
         </div>
-        ${cliente.whaticket_url ? `
-          <a href="${_escHtml(cliente.whaticket_url)}" target="_blank" class="btn-sm" style="margin-left:auto;flex-shrink:0;">
-            💬 Whaticket
-          </a>` : ''}
+        <div class="dh-acciones-mobile" style="margin-left:auto;flex-shrink:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+          ${botonesAcciones}
+        </div>
+        ${datosPanel.replace('__VIVO__', vivoPanel + (btnWhaticket ? `<div class="detalle-datos__wa">${btnWhaticket}</div>` : ''))}
+        <div class="detalle-acciones-fila">
+          ${btnWhaticket}
+        </div>
       </div>
     </div>
   `;
+}
+
+// ────────── Datos en vivo de Salario (API, pendiente) ──────────
+
+// Punto único de conexión con la API de Salario. Devuelve null en cada campo
+// mientras no haya datos. Cuando la API esté lista, completar acá:
+//   legajos:   número
+//   convenios: [{ nombre, ... }]
+//   empresas:  [{ nombre, cuit, ... }]  (solo estudios contables)
+function _datosSalarioCliente(cliente) {
+  return {
+    legajos:   cliente.legajos   ?? null,
+    convenios: cliente.convenios ?? null,
+    empresas:  cliente.empresas  ?? null,
+  };
+}
+
+// Modal de convenios / empresas
+function abrirSalarioModal(tipo, clienteId) {
+  const c = (typeof clientes !== 'undefined' ? clientes : []).find(x => String(x.id) === String(clienteId));
+  if (!c) return;
+  const vivo = _datosSalarioCliente(c);
+  const esConv = tipo === 'convenios';
+  const lista = esConv ? vivo.convenios : vivo.empresas;
+  document.getElementById('salario-modal-titulo').textContent =
+    `${esConv ? '📑 Convenios' : '🏢 Empresas'} — ${c.nombre}`;
+  const itemTxt = it => typeof it === 'string' ? it : (it.nombre || it.razon_social || '—');
+  const itemSub = it => (typeof it === 'object' && it.cuit) ? `<span style="color:var(--text3);font-size:12px">CUIT ${_escHtml(it.cuit)}</span>` : '';
+  document.getElementById('salario-modal-body').innerHTML = lista === null || lista === undefined
+    ? `<div style="text-align:center;padding:28px 10px;color:var(--text3);font-size:14px">Sin datos todavía.<br>Se completará cuando se conecte la API de Salario.</div>`
+    : `<div class="detalle-vivo__tag" style="margin-bottom:12px"><span class="detalle-vivo__dot"></span>${lista.length} ${esConv ? 'convenio(s)' : 'empresa(s)'}</div>
+       ${lista.length ? lista.map(it => `
+         <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--border);font-size:14px">
+           <span>${_escHtml(itemTxt(it))}</span>${itemSub(it)}
+         </div>`).join('') : '<div style="color:var(--text3);font-size:14px">No hay registros.</div>'}`;
+  document.getElementById('salario-overlay').classList.add('kb-modal--open');
+}
+function cerrarSalarioModal() {
+  document.getElementById('salario-overlay').classList.remove('kb-modal--open');
 }
 
 // ────────── Stats ──────────

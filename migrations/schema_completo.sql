@@ -619,6 +619,32 @@ GRANT EXECUTE ON FUNCTION crear_implementacion_para_cliente(UUID, TEXT) TO authe
 
 
 -- ════════════════════════════════════════════════════════════════════
+-- 8b. CONEXIONES al escritorio remoto de cada cliente (migración 044)
+-- ════════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS cliente_conexiones (
+  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  cliente_id  uuid        NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+  usuario     text        NOT NULL,
+  clave       text,
+  instalado   boolean     NOT NULL DEFAULT false,
+  created_at  timestamptz DEFAULT now(),
+  updated_at  timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_cliente_conexiones_cliente ON cliente_conexiones(cliente_id);
+ALTER TABLE cliente_conexiones ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "team_cliente_conexiones_all" ON cliente_conexiones;
+CREATE POLICY "team_cliente_conexiones_all" ON cliente_conexiones
+  FOR ALL TO authenticated USING (is_team_member()) WITH CHECK (is_team_member());
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables
+                 WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'cliente_conexiones') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE cliente_conexiones;
+  END IF;
+END $$;
+
+
+-- ════════════════════════════════════════════════════════════════════
 -- 9. SEED — Equipo
 -- ════════════════════════════════════════════════════════════════════
 

@@ -15,7 +15,7 @@
     />
 
     <!-- Estilos -->
-    <link rel="stylesheet" href="css/styles.css?v=20261002d" />
+    <link rel="stylesheet" href="css/styles.css?v=20261013r" />
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -2372,13 +2372,14 @@
     <script src="js/storage.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/nav.js"></script>
-    <script src="js/clientes.js"></script>
+    <script src="js/clientes.js?v=20261013a"></script>
     <script src="js/pendientes.js"></script>
     <script src="js/consultas.js?v=20261008a"></script>
     <script src="js/kb.js"></script>
     <script src="js/implementacion.js"></script>
     <script src="js/reporte-implementacion.js?v=20261008a"></script>
-    <script src="js/cliente-detalle.js"></script>
+    <script src="js/cliente-detalle.js?v=20261013j"></script>
+    <script src="js/conexiones.js?v=20261013c"></script>
     <script src="js/asesor-detalle.js"></script>
     <script src="js/charts.js?v=20261008a"></script>
     <script src="js/alertas.js"></script>
@@ -2706,6 +2707,30 @@
   </div>
 
   
+  <!-- ════════════════════════════════════
+     MODAL — Conexiones (escritorio remoto) de un cliente
+     Contenido generado por js/conexiones.js
+  ════════════════════════════════════ -->
+  <div id="salario-overlay" class="kb-modal-overlay" onclick="cerrarSalarioModal()">
+    <div class="kb-modal-sheet" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="card-title" id="salario-modal-titulo" style="margin:0"></div>
+        <button onclick="cerrarSalarioModal()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">✕</button>
+      </div>
+      <div id="salario-modal-body"></div>
+    </div>
+  </div>
+
+  <div id="conexiones-overlay" class="kb-modal-overlay" onclick="cerrarConexiones()">
+    <div class="kb-modal-sheet" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="card-title" id="conexiones-titulo" style="margin:0">Conexiones</div>
+        <button onclick="cerrarConexiones()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">✕</button>
+      </div>
+      <div id="conexiones-body"></div>
+    </div>
+  </div>
+
   <!-- ════════════════════════════════════
      MODAL — Nuevo/Editar item Repositorio
   ════════════════════════════════════ -->
