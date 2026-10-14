@@ -5092,8 +5092,10 @@ input[type=date]:focus {
   100% { box-shadow: 0 0 0 0 rgba(22,163,74,0); }
 }
 
+/* OJO: estas reglas van con #cliente-detalle adelante para que NO afecten el
+   detalle de asesor (sección Equipo), que comparte las clases detalle-header__*. */
 @media (min-width: 901px) {
-  .detalle-header__body {
+  #cliente-detalle .detalle-header__body {
     position: relative;
     overflow: hidden;
     display: grid;
@@ -5104,7 +5106,7 @@ input[type=date]:focus {
     padding: 80px 28px 22px;   /* 80px de arriba = alto de la franja + aire */
   }
   /* La franja de color */
-  .detalle-header__body::before {
+  #cliente-detalle .detalle-header__body::before {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0;
@@ -5116,7 +5118,7 @@ input[type=date]:focus {
   }
 
   /* Fila 1: avatar | nombre + badges | botones */
-  .detalle-header__body .av-lg {
+  #cliente-detalle .detalle-header__body .av-lg {
     grid-column: 1; grid-row: 1;
     width: 76px !important;
     height: 76px !important;
@@ -5126,17 +5128,17 @@ input[type=date]:focus {
     box-shadow: var(--shadow);
     position: relative;
   }
-  .detalle-header__info { grid-column: 2; grid-row: 1; margin-top: -10px; }
-  .detalle-header__nombre { font-size: 26px; margin-bottom: 2px; letter-spacing: -0.4px; }
-  .detalle-header__badges { margin-top: 10px !important; }
+  #cliente-detalle .detalle-header__info { grid-column: 2; grid-row: 1; margin-top: -10px; }
+  #cliente-detalle .detalle-header__nombre { font-size: 26px; margin-bottom: 2px; letter-spacing: -0.4px; }
+  #cliente-detalle .detalle-header__badges { margin-top: 10px !important; }
 
   /* En desktop el Whaticket va en la fila de datos (ver .detalle-datos__wa) */
   .detalle-acciones-fila { display: none; }
   .detalle-datos__wa { display: flex; align-items: center; margin-left: auto; padding-left: 28px; }
 
   /* Se ocultan las versiones "mobile" de los datos y de los botones */
-  .detalle-header__body .dh-dato,
-  .detalle-header__body .dh-acciones-mobile { display: none !important; }
+  #cliente-detalle .detalle-header__body .dh-dato,
+  #cliente-detalle .detalle-header__body .dh-acciones-mobile { display: none !important; }
 
   /* Fila 2: datos en columnas, separados por una línea */
   .detalle-datos {
@@ -5195,13 +5197,13 @@ input[type=date]:focus {
    (los datos vivos van en el color del cliente) y el botón de Whaticket
    a todo el ancho. Se ocultan las líneas y botones "viejos". */
 @media (max-width: 900px) {
-  .detalle-header__body {
+  #cliente-detalle .detalle-header__body {
     position: relative;
     overflow: hidden;
     display: block;
     padding: 62px 18px 18px;
   }
-  .detalle-header__body::before {
+  #cliente-detalle .detalle-header__body::before {
     content: '';
     position: absolute; top: 0; left: 0; right: 0;
     height: 52px;
@@ -5210,7 +5212,7 @@ input[type=date]:focus {
       color-mix(in srgb, var(--cli-color, var(--accent)) 8%, var(--surface)));
     border-bottom: 1px solid color-mix(in srgb, var(--cli-color, var(--accent)) 22%, var(--border));
   }
-  .detalle-header__body .av-lg {
+  #cliente-detalle .detalle-header__body .av-lg {
     width: 64px !important;
     height: 64px !important;
     font-size: 22px !important;
@@ -5219,13 +5221,13 @@ input[type=date]:focus {
     box-shadow: var(--shadow);
     position: relative;
   }
-  .detalle-header__info { margin-top: 10px; }
-  .detalle-header__nombre { font-size: 22px; margin-bottom: 0; letter-spacing: -0.3px; }
-  .detalle-header__badges { margin-top: 10px !important; }
+  #cliente-detalle .detalle-header__info { margin-top: 10px; }
+  #cliente-detalle .detalle-header__nombre { font-size: 22px; margin-bottom: 0; letter-spacing: -0.3px; }
+  #cliente-detalle .detalle-header__badges { margin-top: 10px !important; }
 
   /* Se ocultan las líneas de datos y los botones de la versión vieja */
-  .detalle-header__body .dh-dato,
-  .detalle-header__body .dh-acciones-mobile { display: none !important; }
+  #cliente-detalle .detalle-header__body .dh-dato,
+  #cliente-detalle .detalle-header__body .dh-acciones-mobile { display: none !important; }
 
   /* Datos en grilla de 2 columnas */
   .detalle-datos {
@@ -5477,6 +5479,25 @@ input[type=date]:focus {
   border: 1px solid var(--border); border-radius: 10px;
   background: var(--surface2); color: var(--text2);
 }
+/* Modal "¿Qué estás subiendo?" */
+.docs-tipo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.docs-tipo-op {
+  font: inherit; font-size: 13.5px; font-weight: 600; color: var(--text2);
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  padding: 12px 14px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border); border-radius: 12px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.docs-tipo-op:hover { border-color: #f97316; color: var(--text); }
+.docs-tipo-op--sel {
+  border-color: #f97316; color: var(--text);
+  background: rgba(249,115,22,.10);
+}
+.docs-tipo-op__ico { font-size: 20px; }
+@media (max-width: 480px) { .docs-tipo-grid { grid-template-columns: 1fr; } }
+
 .docs-subir .docs-subir__btn {
   display: inline-flex; align-items: center; gap: 6px;
   font: inherit; font-size: 12px; font-weight: 600;

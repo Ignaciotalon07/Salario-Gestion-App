@@ -97,8 +97,9 @@ function _docPuedePreview(d) { return !d.url && _docEsPdf(d) || (_docEsImagen(d)
 // Tipo para los filtros: logo / firma (los elige el usuario) o por extensión
 function _docTipo(d) {
   if (d.url) return 'link';
-  if (d.categoria === 'logo')  return 'logo';
-  if (d.categoria === 'firma') return 'firma';
+  // Categorías que elige el usuario al subir (excepto "otro" y el viejo "documento",
+  // que se clasifican por extensión)
+  if (DOCS_CATS[d.categoria] && d.categoria !== 'otro') return d.categoria;
   const ext = _docExt(d.nombre);
   if (_docEsPdf(d)) return 'pdf';
   if (['xlsx','xls','csv','ods'].includes(ext)) return 'excel';
@@ -107,10 +108,23 @@ function _docTipo(d) {
   return 'otro';
 }
 
+// Opciones que se ofrecen al subir ("¿Qué estás subiendo?")
+const DOCS_CATS = {
+  logo:        { label: 'Logo',                  ico: '🏷️', tag: 'Logo' },
+  firma:       { label: 'Firma',                 ico: '✍️', tag: 'Firma' },
+  liquidacion: { label: 'PDF de liquidación',    ico: '📄', tag: 'Liquidación' },
+  control:     { label: 'Excel de control',      ico: '📊', tag: 'Control' },
+  explicativo: { label: 'Word explicativo',      ico: '📝', tag: 'Explicativo' },
+  otro:        { label: 'Otro documento',        ico: '📁', tag: '' },
+};
+
 const DOCS_TIPOS = {
   todos:  { label: 'Todos' },
   logo:   { label: '🏷️ Logos' },
   firma:  { label: '✍️ Firmas' },
+  liquidacion: { label: '📄 Liquidaciones' },
+  control:     { label: '📊 Controles' },
+  explicativo: { label: '📝 Explicativos' },
   pdf:    { label: '📄 PDF' },
   excel:  { label: '📊 Excel' },
   word:   { label: '📝 Word' },
@@ -122,6 +136,9 @@ const DOCS_TIPOS = {
 function _docIcono(d) {
   const t = _docTipo(d);
   if (t === 'link')  return '🔗';
+  if (t === 'liquidacion') return '📄';
+  if (t === 'control')     return '📊';
+  if (t === 'explicativo') return '📝';
   if (t === 'pdf')   return '📄';
   if (t === 'excel') return '📊';
   if (t === 'word')  return '📝';
@@ -197,8 +214,6 @@ function renderDocumentosCliente(c) {
         ${DOCS_TIPOS[k].label}${k === 'todos' ? ` (${todos.length})` : ` (${conteo[k]})`}
       </button>`).join('');
 
-  const cat = window._docsCategoria;
-
   return `
     <div class="docs-panel" id="docs-panel" data-cliente-id="${c.id}">
       <!-- Buscador + subir (también se puede arrastrar archivos sobre toda la sección) -->
@@ -211,11 +226,6 @@ function renderDocumentosCliente(c) {
                   onclick="docsLimpiarBusqueda('${c.id}')" title="Limpiar búsqueda">✕</button>
         </div>
         <div class="docs-subir">
-          <select class="docs-subir__sel" onchange="docsSetCategoria(this.value, true)" title="Cómo se guarda lo que subas">
-            <option value="documento" ${cat === 'documento' ? 'selected' : ''}>Como documento</option>
-            <option value="logo" ${cat === 'logo' ? 'selected' : ''}>Como logo</option>
-            <option value="firma" ${cat === 'firma' ? 'selected' : ''}>Como firma</option>
-          </select>
           <button class="docs-subir__btn" onclick="docsAbrirSelector('${c.id}')">
             <span class="docs-subir__ico">↑</span> Subir archivos
           </button>
@@ -263,7 +273,7 @@ function _renderDocCard(d) {
         ${thumb
           ? `<img src="${thumb}" alt="${_docEsc(d.nombre)}">`
           : `<span class="doc-card__ico">${_docIcono(d)}</span>`}
-        ${(tipo === 'logo' || tipo === 'firma') ? `<span class="doc-card__tag">${tipo === 'logo' ? 'Logo' : 'Firma'}</span>` : ''}
+        ${(DOCS_CATS[tipo] && DOCS_CATS[tipo].tag) ? `<span class="doc-card__tag">${DOCS_CATS[tipo].tag}</span>` : ''}
       </div>
       <div class="doc-card__name" title="${_docEsc(d.nombre)}">${_docEsc(d.nombre)}</div>
       <div class="doc-card__meta">${_docEsc(meta)}</div>
@@ -291,7 +301,7 @@ function docsPostRender() {
     }));
     drop.addEventListener('drop', (e) => {
       const files = e.dataTransfer && e.dataTransfer.files;
-      if (files && files.length) docsSubir(cid, Array.from(files));
+      if (files && files.length) docsPedirTipo(cid, Array.from(files));
     });
   }
   _docsCargarThumbs();
@@ -322,8 +332,6 @@ async function _docsCargarThumbs() {
 
 function docsSetFiltro(clienteId, tipo) {
   window._docsFiltro[clienteId] = tipo;
-  // Si filtra por Logos/Firmas, lo siguiente que suba probablemente sea de ese tipo
-  if (tipo === 'logo' || tipo === 'firma') window._docsCategoria = tipo;
   renderImplementacion();
 }
 
@@ -342,11 +350,6 @@ function docsLimpiarBusqueda(clienteId) {
   const input = document.getElementById('docs-buscador');
   if (input) { input.value = ''; input.focus(); }
   docsBuscar(clienteId, '');
-}
-
-function docsSetCategoria(cat, sinRedibujar) {
-  window._docsCategoria = cat;
-  if (!sinRedibujar) renderImplementacion();
 }
 
 // Leyenda que reemplaza a las fechas en el encabezado cuando se está en la pestaña Documentos
@@ -370,13 +373,91 @@ function docsAbrirSelector(clienteId) {
   input.multiple = true;
   input.onchange = (e) => {
     const files = Array.from(e.target.files || []);
-    if (files.length) docsSubir(clienteId, files);
+    if (files.length) docsPedirTipo(clienteId, files);
   };
   input.click();
 }
 
-async function docsSubir(clienteId, files) {
-  const categoria = window._docsCategoria || 'documento';
+// ────────── "¿Qué estás subiendo?" ──────────
+// Antes de subir, se le pregunta al usuario qué tipo de documento es
+// (logo, firma, PDF de liquidación, Excel de control, etc.). Se sugiere una
+// opción según la extensión, pero se puede cambiar. Aplica a todos los
+// archivos elegidos en esa tanda.
+
+window._docsPend = null;  // { clienteId, files, cat }
+
+function _docsSugerirCat(files) {
+  const exts = files.map(f => (f.name.split('.').pop() || '').toLowerCase());
+  const todosIgual = (lista) => exts.every(e => lista.includes(e));
+  if (todosIgual(['pdf']))                         return 'liquidacion';
+  if (todosIgual(['xlsx', 'xls', 'csv', 'ods']))   return 'control';
+  if (todosIgual(['docx', 'doc', 'odt', 'rtf']))   return 'explicativo';
+  if (todosIgual(['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'])) return 'logo';
+  return 'otro';
+}
+
+function docsPedirTipo(clienteId, files) {
+  cerrarDocsTipo();
+  window._docsPend = { clienteId, files, cat: _docsSugerirCat(files) };
+  const overlay = document.createElement('div');
+  overlay.id = 'docs-tipo-overlay';
+  overlay.className = 'kb-modal-overlay kb-modal--open';
+  overlay.onclick = (e) => { if (e.target === overlay) cerrarDocsTipo(); };
+  overlay.innerHTML = `<div class="kb-modal-sheet" onclick="event.stopPropagation()" style="max-width:480px">
+    <div id="docs-tipo-body"></div>
+  </div>`;
+  document.body.appendChild(overlay);
+  _docsRenderTipo();
+}
+
+function _docsRenderTipo() {
+  const p = window._docsPend;
+  const body = document.getElementById('docs-tipo-body');
+  if (!p || !body) return;
+  const nombres = p.files.length === 1
+    ? _docEsc(p.files[0].name)
+    : `${p.files.length} archivos`;
+  body.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div class="card-title" style="margin:0">¿Qué estás subiendo?</div>
+      <button onclick="cerrarDocsTipo()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">✕</button>
+    </div>
+    <div style="font-size:12.5px;color:var(--text3);margin-bottom:14px;overflow-wrap:anywhere">${nombres}</div>
+    <div class="docs-tipo-grid">
+      ${Object.keys(DOCS_CATS).map(k => `
+        <button class="docs-tipo-op ${p.cat === k ? 'docs-tipo-op--sel' : ''}" onclick="docsElegirTipo('${k}')">
+          <span class="docs-tipo-op__ico">${DOCS_CATS[k].ico}</span>
+          <span>${DOCS_CATS[k].label}</span>
+        </button>`).join('')}
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+      <button class="btn-secondary" onclick="cerrarDocsTipo()">Cancelar</button>
+      <button class="btn-primary" onclick="docsConfirmarSubida()">Subir</button>
+    </div>`;
+}
+
+function docsElegirTipo(k) {
+  if (!window._docsPend) return;
+  window._docsPend.cat = k;
+  _docsRenderTipo();
+}
+
+function cerrarDocsTipo() {
+  const o = document.getElementById('docs-tipo-overlay');
+  if (o) o.remove();
+  window._docsPend = null;
+}
+
+function docsConfirmarSubida() {
+  const p = window._docsPend;
+  if (!p) return;
+  const { clienteId, files, cat } = p;
+  cerrarDocsTipo();
+  docsSubir(clienteId, files, cat);
+}
+
+async function docsSubir(clienteId, files, categoria) {
+  categoria = categoria || 'otro';
   const subidoPor = (typeof currentMember !== 'undefined' && currentMember)
     ? (currentMember.nombre || currentMember.email) : 'Equipo';
   let ok = 0;

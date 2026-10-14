@@ -652,7 +652,7 @@ CREATE TABLE IF NOT EXISTS cliente_documentos (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   cliente_id    uuid        NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
   nombre        text        NOT NULL,
-  categoria     text        NOT NULL DEFAULT 'documento' CHECK (categoria IN ('documento','logo','firma')),
+  categoria     text        NOT NULL DEFAULT 'documento' CHECK (categoria IN ('documento','logo','firma','liquidacion','control','explicativo','otro')),
   storage_path  text,                 -- archivo subido (NULL si es un link)
   url           text,                 -- link externo, ej Google Drive (migración 046)
   tipo_mime     text,
