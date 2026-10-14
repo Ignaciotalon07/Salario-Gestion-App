@@ -5295,6 +5295,299 @@ input[type=date]:focus {
   }
 }
 
+/* ── Implementación: lista en cards + detalle a pantalla completa ── */
+.impl-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 20px;
+  margin-bottom: 8px;
+}
+.impl-mini {
+  --mini-c: #f97316;   /* naranja para todas (hover y "Ver detalle") */
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 24px 26px 22px;
+  min-height: 380px;
+  display: flex; flex-direction: column; gap: 22px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.impl-mini--vacia { min-height: 0; }
+.impl-mini:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--mini-c) 50%, var(--border));
+  box-shadow: 0 12px 26px rgba(0,0,0,.10);
+}
+.impl-mini--vacia { cursor: default; }
+.impl-mini--vacia:hover { transform: none; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+.impl-mini__top { display: flex; align-items: center; gap: 16px; }
+.impl-mini__avatar {
+  width: 60px; height: 60px; border-radius: 18px; flex-shrink: 0;
+  font-size: 19px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.impl-mini__id { flex: 1; min-width: 0; }
+.impl-mini__name {
+  font-size: 19px; font-weight: 700; line-height: 1.25; letter-spacing: -0.3px;
+  overflow-wrap: anywhere;
+}
+.impl-mini__meta { font-size: 13.5px; color: var(--text3); margin-top: 4px; }
+.impl-mini__fase { font-size: 15px; color: var(--text); font-weight: 700; line-height: 1.35; }
+.impl-mini__fase-lbl { color: var(--text3); font-weight: 500; margin-right: 2px; }
+
+/* Fila superior: tipo (texto chico) a la izquierda, estado a la derecha */
+.impl-mini__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.impl-mini__tipo {
+  font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--text3);
+}
+.impl-mini__sem { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; }
+.impl-mini__sem i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+/* Identidad */
+.impl-mini__ident { display: flex; align-items: center; gap: 14px; }
+
+/* Cuerpo: anillo de progreso + fase actual */
+.impl-mini__body { display: flex; align-items: center; justify-content: center; gap: 26px; flex: 1; }
+.impl-mini__ring { position: relative; width: 112px; height: 112px; flex-shrink: 0; }
+.impl-mini__ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.impl-mini__ring-bg { fill: none; stroke: var(--surface2); stroke-width: 9; }
+.impl-mini__ring-fg {
+  fill: none; stroke-width: 9; stroke-linecap: round;
+  transition: stroke-dashoffset .6s ease;
+}
+.impl-mini__ring-num {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; font-weight: 800; letter-spacing: -1px; color: var(--text);
+}
+.impl-mini__ring-num small { font-size: 14px; font-weight: 700; margin-left: 1px; color: var(--text3); }
+.impl-mini__fasebox { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.impl-mini__tareas { font-size: 13px; color: var(--text3); }
+
+/* Datos chicos abajo, sin cajas */
+.impl-mini__stats {
+  display: grid; grid-template-columns: repeat(3, auto); justify-content: space-between; gap: 16px;
+  padding-top: 16px; border-top: 1px solid var(--border);
+}
+.impl-mini__stats > div { display: flex; flex-direction: column; gap: 3px; }
+/* Próxima tarea: ocupa todo el ancho, arriba de Vencidas / Fin estimado */
+.impl-mini__proxima { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 3px; }
+.impl-mini__proxima span { font-size: 10.5px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; }
+.impl-mini__proxima b {
+  font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.impl-mini__proxima small { font-size: 12px; color: var(--text3); }
+.impl-mini__stats span { font-size: 10.5px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; }
+.impl-mini__stats b { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+
+.impl-mini__go {
+  font-size: 13.5px; font-weight: 600; color: var(--text3);
+  display: flex; align-items: center; gap: 6px;
+  transition: color .15s;
+}
+.impl-mini:hover .impl-mini__go { color: var(--mini-c); }
+.impl-mini__go i { font-style: normal; transition: transform .15s; }
+.impl-mini:hover .impl-mini__go i { transform: translateX(4px); }
+
+/* Pestañas del detalle del cliente: Tareas | Documentos */
+/* Solapas arriba de la card: la activa se "pega" a la card (mismo fondo) */
+.impl-detalle-tabs {
+  display: flex; align-items: flex-end; gap: 4px;
+  padding-left: 0;                   /* la primera solapa arranca al ras de la card */
+  position: relative; z-index: 2;
+}
+.impl-detalle-tab {
+  font: inherit; font-size: 14px; font-weight: 600;
+  background: var(--surface2);
+  color: var(--text3);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  padding: 11px 20px 10px;
+  margin-bottom: -1px;               /* tapa el borde superior de la card */
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+  line-height: 1.2;
+  transition: color .15s, background .15s;
+}
+.impl-detalle-tab:hover { color: var(--text); }
+.impl-detalle-tab.active {
+  background: var(--surface);
+  color: var(--text);
+  padding-bottom: 11px;              /* un poco más alta que las inactivas */
+  box-shadow: inset 0 2px 0 #f97316;  /* raya naranja arriba */
+}
+/* La card queda pegada a las solapas: sin esquina redondeada arriba a la izquierda
+   y sin separación vertical */
+#impl-detalle-card .impl-cliente-card--detalle { border-top-left-radius: 0; margin-top: 0; }
+.impl-detalle-tab__n {
+  font-size: 11px; font-weight: 700;
+  background: var(--surface2); color: var(--text3);
+  border-radius: 999px; padding: 1px 8px;
+}
+.impl-detalle-tab.active .impl-detalle-tab__n { background: rgba(249,115,22,.15); color: #f97316; }
+
+/* ── Documentos del cliente ── */
+.docs-panel { padding-top: 18px; display: flex; flex-direction: column; gap: 14px; }
+.docs-drop {
+  display: flex; align-items: center; gap: 16px;
+  border: 2px dashed var(--border2, var(--border));
+  border-radius: 16px;
+  padding: 20px 22px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.docs-drop:hover,
+.docs-drop--over { border-color: #f97316; background: rgba(249,115,22,.06); }
+.docs-drop__ico {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(249,115,22,.12); font-size: 20px;
+}
+.docs-drop__txt { font-size: 14px; color: var(--text); display: flex; flex-direction: column; gap: 3px; }
+.docs-drop__txt small { font-size: 12px; color: var(--text3); }
+.docs-cat { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.docs-cat__lbl { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text3); }
+/* Leyenda de la pestaña Documentos (reemplaza a las fechas del encabezado) */
+.docs-leyenda {
+  display: flex; align-items: flex-start; gap: 14px;
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: rgba(249,115,22,.07);
+  border: 1px solid rgba(249,115,22,.25);
+  border-left: 4px solid #f97316;
+}
+.docs-leyenda__ico { font-size: 22px; line-height: 1.2; }
+.docs-leyenda__txt { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text2); line-height: 1.5; }
+.docs-leyenda__txt b { font-size: 14px; color: var(--text); }
+
+/* Barra: buscador + subir */
+.docs-panel { border-radius: 14px; transition: background .15s, outline-color .15s; outline: 2px dashed transparent; outline-offset: 6px; }
+.docs-panel--over { background: rgba(249,115,22,.06); outline-color: #f97316; }
+.docs-barra { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.docs-barra .docs-buscador { flex: 1 1 320px; }
+.docs-subir { display: flex; gap: 8px; align-items: center; }
+.docs-subir__sel {
+  font-size: 12.5px; padding: 8px 10px; margin: 0;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface2); color: var(--text2);
+}
+.docs-subir .docs-subir__btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: inherit; font-size: 12px; font-weight: 600;
+  white-space: nowrap; cursor: pointer;
+  color: var(--text2);
+  padding: 6px 12px;
+  border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface2);
+  box-shadow: none;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.docs-subir .docs-subir__btn:hover { color: #f97316; border-color: #f97316; background: rgba(249,115,22,.08); }
+.docs-subir .docs-subir__btn:active { transform: scale(.97); }
+.docs-subir__ico { font-size: 13px; font-weight: 700; line-height: 1; }
+.docs-subir .docs-subir__sel { border-radius: 8px; padding: 6px 8px; font-size: 12px; }
+
+.docs-buscador {
+  position: relative; display: flex; align-items: center;
+}
+.docs-buscador input {
+  width: 100%; margin: 0;
+  padding: 11px 38px 11px 40px;
+  font-size: 14px;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--surface2); color: var(--text);
+}
+.docs-buscador input:focus { outline: none; border-color: #f97316; background: var(--surface); }
+.docs-buscador__ico { position: absolute; left: 14px; font-size: 14px; opacity: .6; pointer-events: none; }
+.docs-buscador__clear {
+  position: absolute; right: 8px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text3);
+  cursor: pointer; font-size: 12px; line-height: 1;
+}
+.docs-buscador__clear:hover { color: #f97316; border-color: #f97316; }
+.docs-count { font-size: 12px; color: var(--text3); margin-bottom: 10px; }
+.docs-filtros { display: flex; flex-wrap: wrap; gap: 6px; }
+.docs-filtros .filter-chip { font-size: 12px; padding: 5px 12px; }
+.docs-empty { text-align: center; color: var(--text3); font-size: 14px; line-height: 1.6; padding: 36px 10px; }
+.docs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 14px;
+}
+.doc-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 10px 10px 12px;
+  display: flex; flex-direction: column; gap: 6px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.doc-card:hover { border-color: #f97316; box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+.doc-card__thumb {
+  position: relative;
+  height: 120px; border-radius: 10px;
+  background: var(--surface2);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; cursor: pointer;
+}
+.doc-card__thumb img { width: 100%; height: 100%; object-fit: contain; }
+.doc-card__ico { font-size: 40px; }
+.doc-card__tag {
+  position: absolute; top: 6px; left: 6px;
+  font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  background: #f97316; color: #fff; border-radius: 999px; padding: 2px 8px;
+}
+.doc-card__thumb--link { flex-direction: column; gap: 6px; }
+.doc-card__host { font-size: 11px; color: var(--text3); font-weight: 600; }
+.doc-card__tag--link { background: var(--surface); color: var(--text2); border: 1px solid var(--border); }
+.doc-card__name {
+  font-size: 13px; font-weight: 600; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding: 0 2px;
+}
+.doc-card__meta { font-size: 11px; color: var(--text3); padding: 0 2px; min-height: 14px; }
+.doc-card__actions { display: flex; gap: 6px; margin-top: 4px; }
+.doc-act {
+  flex: 1; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+  background: var(--surface2); color: var(--text2);
+  border: 1px solid var(--border); border-radius: 8px; padding: 5px 6px;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.doc-act:hover { color: #f97316; border-color: #f97316; }
+.doc-act--del { flex: 0 0 34px; }
+.doc-act--del:hover { color: var(--red); border-color: var(--red); }
+
+@media (max-width: 600px) {
+  .impl-detalle-tabs { padding-left: 0; }
+  .impl-detalle-tab { padding: 10px 14px 9px; font-size: 13px; }
+  .docs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .docs-drop { padding: 16px; }
+}
+
+/* Detalle del cliente (pantalla completa) */
+.impl-detalle-toolbar { margin-bottom: 14px; }
+/* Los filtros dentro de la card usan los estilos originales de .impl-filters */
+.impl-cliente-card--detalle .impl-cliente-header { cursor: default; }
+/* En el detalle (card alta y ancha) el degradé decorativo de la esquina
+   derecha se corta con un borde duro: se saca. */
+.impl-cliente-card--detalle::before,
+[data-theme="dark"] #app-root .impl-cliente-card--detalle::before { display: none; }
+
+@media (max-width: 600px) {
+  .impl-mini-grid { grid-template-columns: 1fr; gap: 12px; }
+  .impl-mini { padding: 20px; gap: 18px; min-height: 0; }
+  .impl-mini__name { font-size: 17px; }
+  .impl-mini__ring { width: 96px; height: 96px; }
+  .impl-mini__ring-num { font-size: 26px; }
+}
+
 /* Label de tipo en el bloque "Consultas por tipo" del detalle de asesor */
 .asesor-tipo-label {
   font-size: 11px;

@@ -645,6 +645,45 @@ END $$;
 
 
 -- ════════════════════════════════════════════════════════════════════
+-- 8c. DOCUMENTOS de cada cliente (migración 045)
+--     Requiere crear a mano el bucket privado "cliente-documentos"
+-- ════════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS cliente_documentos (
+  id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  cliente_id    uuid        NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+  nombre        text        NOT NULL,
+  categoria     text        NOT NULL DEFAULT 'documento' CHECK (categoria IN ('documento','logo','firma')),
+  storage_path  text,                 -- archivo subido (NULL si es un link)
+  url           text,                 -- link externo, ej Google Drive (migración 046)
+  tipo_mime     text,
+  tamano_bytes  bigint,
+  subido_por    text,
+  created_at    timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_cliente_documentos_cliente ON cliente_documentos(cliente_id);
+ALTER TABLE cliente_documentos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "team_cliente_documentos_all" ON cliente_documentos;
+CREATE POLICY "team_cliente_documentos_all" ON cliente_documentos
+  FOR ALL TO authenticated USING (is_team_member()) WITH CHECK (is_team_member());
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables
+                 WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'cliente_documentos') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE cliente_documentos;
+  END IF;
+END $$;
+DROP POLICY IF EXISTS "clidoc_storage_select" ON storage.objects;
+DROP POLICY IF EXISTS "clidoc_storage_insert" ON storage.objects;
+DROP POLICY IF EXISTS "clidoc_storage_delete" ON storage.objects;
+CREATE POLICY "clidoc_storage_select" ON storage.objects
+  FOR SELECT TO authenticated USING (bucket_id = 'cliente-documentos' AND is_team_member());
+CREATE POLICY "clidoc_storage_insert" ON storage.objects
+  FOR INSERT TO authenticated WITH CHECK (bucket_id = 'cliente-documentos' AND is_team_member());
+CREATE POLICY "clidoc_storage_delete" ON storage.objects
+  FOR DELETE TO authenticated USING (bucket_id = 'cliente-documentos' AND is_team_member());
+
+
+-- ════════════════════════════════════════════════════════════════════
 -- 9. SEED — Equipo
 -- ════════════════════════════════════════════════════════════════════
 

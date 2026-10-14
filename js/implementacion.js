@@ -816,9 +816,217 @@ async function initImplementacion() {
 
 // ────────── Render ──────────
 
+// ────────── Navegación lista (cards) ↔ detalle del cliente ──────────
+// La sección tiene dos "pantallas": la lista de clientes en cards y el
+// detalle completo de UN cliente (tareas, filtros, Gantt, etc.).
+// window._implClienteAbierto = id del cliente abierto, o null para la lista.
+window._implClienteAbierto = window._implClienteAbierto || null;
+
+// Limpia los filtros de tareas (asesor / estado / esperando a) y sus controles
+function _resetFiltrosImpl() {
+  implFiltroAsesor = '';
+  implFiltroEstado = '';
+  implFiltroResp   = '';
+  document.querySelectorAll('[data-impl-filter]').forEach(b => {
+    b.classList.toggle('active', b.dataset.value === '');
+  });
+  document.querySelectorAll('.impl-estado-select, .ifm-select').forEach(s => { s.value = ''; });
+}
+
+// Pestañas del detalle del cliente: 'tareas' (lo de siempre) | 'documentos'
+window._implTab = window._implTab || 'tareas';
+
+function setImplTab(tab) {
+  window._implTab = tab;
+  renderImplementacion();
+}
+
+function renderImplTabs(c, totalTareas) {
+  const nDocs = (typeof getCantDocsCliente === 'function') ? getCantDocsCliente(c.id) : 0;
+  const tab = window._implTab;
+  return `
+    <div class="impl-detalle-tabs">
+      <button class="impl-detalle-tab ${tab !== 'documentos' ? 'active' : ''}" onclick="setImplTab('tareas')">
+        📋 Tareas <span class="impl-detalle-tab__n">${totalTareas}</span>
+      </button>
+      <button class="impl-detalle-tab ${tab === 'documentos' ? 'active' : ''}" onclick="setImplTab('documentos')">
+        📁 Documentos <span class="impl-detalle-tab__n">${nDocs}</span>
+      </button>
+    </div>`;
+}
+
+function abrirClienteImpl(clienteId) {
+  _resetFiltrosImpl();
+  window._implTab = 'tareas';
+  window._implClienteAbierto = clienteId;
+  renderImplementacion();
+  window.scrollTo({ top: 0 });
+}
+
+function cerrarClienteImpl() {
+  _resetFiltrosImpl();
+  window._implClienteAbierto = null;
+  renderImplementacion();
+  window.scrollTo({ top: 0 });
+}
+
+// Card compacta de la lista: resumen del cliente. Al tocarla se abre el detalle.
+function renderClienteImplMiniCard(c) {
+  const tareasCliente = implTareas
+    .filter(t => t.cliente_id === c.id)
+    .sort((a, b) => a.orden - b.orden);
+  const total     = tareasCliente.length;
+  const completas = tareasCliente.filter(t => t.estado === 'completada').length;
+  const vencidas  = tareasCliente.filter(isTareaVencida).length;
+  const progreso  = total > 0 ? Math.round((completas / total) * 100) : 0;
+  const progresoColor = progreso >= 80 ? 'var(--green)' : progreso >= 40 ? 'var(--amber)' : 'var(--red)';
+  const tipoLabel = TIPO_LABELS[c.tipo] || c.tipo;
+  const tipoIcon  = ({ empresa: '🏢', estudio: '📊', colegio: '🎓', municipalidad: '🏛️' })[c.tipo] || '◆';
+
+  // Cliente sin etapas creadas todavía
+  if (total === 0) {
+    return `
+      <div class="impl-mini impl-mini--vacia" data-mini-id="${c.id}" data-tipo="${c.tipo}">
+        <div class="impl-mini__top">
+          <div class="av av-${c.tipo} impl-mini__avatar">${escapeHtmlImpl(c.iniciales)}</div>
+          <div class="impl-mini__id">
+            <div class="impl-mini__name">${escapeHtmlImpl(c.nombre)}</div>
+            <div class="impl-mini__meta">${tipoIcon} ${escapeHtmlImpl(tipoLabel)}</div>
+          </div>
+        </div>
+        <div class="impl-mini__fase">Sin tareas de implementación creadas</div>
+        <button class="btn-primary btn-primary--sm" onclick="iniciarImplementacionConModal('${c.id}')">+ Crear etapas</button>
+      </div>`;
+  }
+
+  const semaforo = calcularSemaforo(c, tareasCliente, progreso);
+  const eta = calcularETACliente(tareasCliente);
+  const finTxt = (eta && eta.fechaFin) ? formatFechaImpl(eta.fechaFin) : '—';
+
+  // Fase actual (la primera que no está completa)
+  let faseTxt = '✓ Implementación finalizada';
+  if (progreso < 100) {
+    const fases = calcularFases(tareasCliente, getFasesParaCliente(c.id));
+    const fa = fases.find(f => f.estado === 'activa') || fases.find(f => f.total > 0 && f.completas < f.total);
+    // Número de fase = posición en la lista de fases del cliente (igual que "Fase N" en el detalle)
+    const nFase = fa ? fases.indexOf(fa) + 1 : 0;
+    faseTxt = fa
+      ? `<span class="impl-mini__fase-lbl">Fase actual:</span> ${nFase} - ${escapeHtmlImpl(fa.nombre)}`
+      : 'Sin fase activa';
+  }
+
+  // Fases completadas / total (ej: 3/5)
+  const fasesCalc = calcularFases(tareasCliente, getFasesParaCliente(c.id));
+  const fasesOk   = fasesCalc.filter(f => f.estado === 'completa').length;
+
+  // Próxima tarea: la primera sin completar, respetando el orden de las fases
+  // El número es el mismo que se ve en el detalle (secuencial a través de todas las fases)
+  let proxima = null;
+  let numProxima = 0;
+  let seq = 0;
+  for (const f of getFasesParaCliente(c.id)) {
+    tareasCliente
+      .filter(t => (t.fase || 'relevamiento') === f.key)
+      .sort((a, b) => a.orden - b.orden)
+      .forEach(t => {
+        seq++;
+        if (!proxima && t.estado !== 'completada') { proxima = t; numProxima = seq; }
+      });
+  }
+  const proximaHtml = proxima
+    ? `<div class="impl-mini__proxima">
+         <span>Próxima tarea</span>
+         <b title="${escapeHtmlImpl(proxima.tarea)}">${numProxima}. ${escapeHtmlImpl(proxima.tarea)}</b>
+         ${proxima.fecha_estimada ? `<small>${isTareaVencida(proxima) ? '⏰ Venció' : 'Vence'} ${formatFechaImpl(proxima.fecha_estimada)}</small>` : ''}
+       </div>`
+    : '';
+
+  // Anillo de progreso (SVG): circunferencia de r=44 → 276.5
+  const circ = 276.5;
+  const offset = (circ * (1 - progreso / 100)).toFixed(1);
+
+  return `
+    <div class="impl-mini" data-mini-id="${c.id}" data-tipo="${c.tipo}" onclick="abrirClienteImpl('${c.id}')">
+      <div class="impl-mini__head">
+        <span class="impl-mini__tipo">${tipoIcon} ${escapeHtmlImpl(tipoLabel)}</span>
+        <span class="impl-mini__sem" style="color:${semaforo.color}" title="${semaforo.detalle}">
+          <i style="background:${semaforo.color}"></i>${semaforo.label}
+        </span>
+      </div>
+
+      <div class="impl-mini__ident">
+        <div class="av av-${c.tipo} impl-mini__avatar">${escapeHtmlImpl(c.iniciales)}</div>
+        <div class="impl-mini__id">
+          <div class="impl-mini__name">${escapeHtmlImpl(c.nombre)}</div>
+          <div class="impl-mini__meta">Resp: ${escapeHtmlImpl(c.asesor || '—')}</div>
+        </div>
+      </div>
+
+      <div class="impl-mini__body">
+        <div class="impl-mini__ring">
+          <svg viewBox="0 0 100 100">
+            <circle class="impl-mini__ring-bg" cx="50" cy="50" r="44"/>
+            <circle class="impl-mini__ring-fg" cx="50" cy="50" r="44" stroke="${progresoColor}"
+              stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/>
+          </svg>
+          <div class="impl-mini__ring-num">${progreso}<small>%</small></div>
+        </div>
+        <div class="impl-mini__fasebox">
+          <div class="impl-mini__fase">${faseTxt}</div>
+          <div class="impl-mini__tareas">${completas} de ${total} tareas completadas</div>
+        </div>
+      </div>
+
+      <div class="impl-mini__stats">
+        ${proximaHtml}
+        <div><span>Vencidas</span><b style="${vencidas > 0 ? 'color:var(--red)' : ''}">${vencidas}</b></div>
+        <div><span>Fases</span><b>${fasesOk}/${fasesCalc.length}</b></div>
+        <div><span>Fin estimado</span><b>${finTxt}</b></div>
+      </div>
+
+      <div class="impl-mini__go">Ver detalle <i>→</i></div>
+    </div>`;
+}
+
 function renderImplementacion() {
   const cont = document.getElementById('impl-clientes-list');
   if (!cont) return;
+
+  // ¿Hay un cliente abierto? Entonces se muestra su detalle a pantalla
+  // completa y se oculta la lista (si el cliente ya no existe, vuelve a la lista).
+  const listaView   = document.getElementById('impl-lista-view');
+  const detalleView = document.getElementById('impl-detalle-view');
+  const clienteAbierto = window._implClienteAbierto
+    ? (typeof clientes !== 'undefined' ? clientes : []).find(x => x.id === window._implClienteAbierto)
+    : null;
+  if (window._implClienteAbierto && !clienteAbierto) window._implClienteAbierto = null;
+  if (listaView && detalleView) {
+    const modoDetalle = !!clienteAbierto;
+    listaView.style.display   = modoDetalle ? 'none' : '';
+    detalleView.style.display = modoDetalle ? '' : 'none';
+    if (modoDetalle) {
+      const slot = document.getElementById('impl-detalle-card');
+      if (slot) {
+        // El bloque de filtros se guarda en su "holder" antes de redibujar la
+        // card (para que no se destruya) y después se mete adentro de ella.
+        const filtros = document.getElementById('impl-detalle-filtros');
+        const holder  = document.getElementById('impl-filtros-holder');
+        if (filtros && holder && filtros.parentNode !== holder) holder.appendChild(filtros);
+        slot.innerHTML = renderClienteImplCard(clienteAbierto, true);
+        // Pestañas (Tareas | Documentos) arriba de la card, como solapas
+        const tabsSlot = document.getElementById('impl-detalle-tabs');
+        if (tabsSlot) {
+          const nTareas = implTareas.filter(t => t.cliente_id === clienteAbierto.id).length;
+          tabsSlot.innerHTML = renderImplTabs(clienteAbierto, nTareas);
+        }
+        const destino = slot.querySelector('#impl-detalle-filtros-slot');
+        if (filtros && destino) destino.appendChild(filtros);
+        if (window._implTab === 'documentos' && typeof docsPostRender === 'function') docsPostRender();
+      }
+      return;
+    }
+  }
+
   renderPanelHoy();
 
   // Todos los clientes con area='impl' O que tienen tareas en implTareas (graduados que pasaron a soporte)
@@ -838,22 +1046,16 @@ function renderImplementacion() {
   });
 
   // Render metricas (siempre sobre el total, no afectado por filtros)
-  renderImplMetrics(todosImpl);
+  renderImplMetrics(todosImpl, enProgreso.length);
 
   // 1. Filtro por nombre (search) — solo aplica a en progreso
   let implClientes = implFiltroNombre
     ? enProgreso.filter(c => (c.nombre || '').toLowerCase().includes(implFiltroNombre))
     : enProgreso.slice();
 
-  // 2. Filtros a nivel tarea
-  const hayFiltroTarea = implFiltroAsesor || implFiltroEstado || implFiltroResp;
-  if (hayFiltroTarea) {
-    const me = (typeof getCurrentUserName === 'function') ? getCurrentUserName() : null;
-    implClientes = implClientes.filter(c => {
-      const tareasCli = implTareas.filter(t => t.cliente_id === c.id);
-      return tareasCli.some(t => tareaMatcheaFiltros(t, me));
-    });
-  }
+  // 2. Los filtros de tareas (asesor / estado / esperando a) ya no se aplican
+  //    en la lista: viven dentro del detalle de cada cliente.
+  const hayFiltroTarea = false;
 
   // Actualizar contador del buscador
   const countEl = document.getElementById('impl-buscador-count');
@@ -880,7 +1082,7 @@ function renderImplementacion() {
   } else {
     cont.innerHTML = enProgreso.length > 0
       ? `<div style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:12px">Implementaciones en progreso</div>`
-        + implClientes.map(renderClienteImplCard).join('')
+        + `<div class="impl-mini-grid">${implClientes.map(c => renderClienteImplMiniCard(c)).join('')}</div>`
       : '';
   }
 
@@ -898,7 +1100,7 @@ function renderImplementacion() {
         <div style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:12px">
           🎓 Implementaciones finalizadas — ${graduados.length} cliente${graduados.length !== 1 ? 's' : ''}
         </div>
-        <div style="opacity:0.85">${graduados.map(renderClienteImplCard).join('')}</div>
+        <div class="impl-mini-grid" style="opacity:0.85">${graduados.map(c => renderClienteImplMiniCard(c)).join('')}</div>
       </div>`;
   } else {
     graduadosEl.innerHTML = '';
@@ -1044,8 +1246,10 @@ function tareaMatcheaFiltros(t, me) {
   return true;
 }
 
-function renderImplMetrics(implClientes) {
-  const total = implClientes.length;
+// totalEnProgreso: cantidad de clientes con implementación en curso (sin los finalizados).
+// Las demás métricas siguen calculándose sobre todos los clientes.
+function renderImplMetrics(implClientes, totalEnProgreso) {
+  const total = (totalEnProgreso !== undefined) ? totalEnProgreso : implClientes.length;
   const tareasDeEstosClientes = implTareas.filter(t => implClientes.some(c => c.id === t.cliente_id));
   const totalTareas = tareasDeEstosClientes.length;
   const completas = tareasDeEstosClientes.filter(t => t.estado === 'completada').length;
@@ -1061,7 +1265,9 @@ function renderImplMetrics(implClientes) {
   set('impl-m-progreso', progreso + '%');
 }
 
-function renderClienteImplCard(c) {
+// detalle=true → se muestra dentro de la pantalla de detalle del cliente:
+// siempre expandida, sin colapsar al tocar el header.
+function renderClienteImplCard(c, detalle = false) {
   const tareasCliente = implTareas
     .filter(t => t.cliente_id === c.id)
     .sort((a, b) => a.orden - b.orden);
@@ -1141,14 +1347,14 @@ function renderClienteImplCard(c) {
   //   - Por default, todas las cards arrancan COLAPSADAS
   //   - Si el usuario hizo click para expandir, se queda expandida
   //   - Si hay filtros activos, auto-expandir para que el filtro sirva de algo
-  const isCollapsed = hayFiltroTarea ? false : !window._implClienteExpanded[c.id];
+  const isCollapsed = detalle ? false : (hayFiltroTarea ? false : !window._implClienteExpanded[c.id]);
 
   const subtituloProgreso = `${completas} de ${totalTareas}${vencidas > 0 ? ` · <span style="color:var(--red);font-weight:600">⏰ ${vencidas} vencida${vencidas !== 1 ? 's' : ''}</span>` : ''}${hayFiltroTarea ? ` · <span style="color:var(--accent-text)">${tareasVisibles.length} con filtro</span>` : ''}`;
   const semaforo = calcularSemaforo(c, tareasCliente, progreso);
 
   return `
-    <div class="card impl-cliente-card ${isCollapsed ? 'impl-cliente-card--collapsed' : ''}" data-cliente-id="${c.id}" data-tipo="${c.tipo}">
-      <div class="impl-cliente-header" onclick="toggleClienteCollapse('${c.id}', event)" title="${isCollapsed ? 'Click para ver tareas' : 'Click para ocultar tareas'}">
+    <div class="card impl-cliente-card ${isCollapsed ? 'impl-cliente-card--collapsed' : ''} ${detalle ? 'impl-cliente-card--detalle' : ''}" data-cliente-id="${c.id}" data-tipo="${c.tipo}">
+      <div class="impl-cliente-header" ${detalle ? '' : `onclick="toggleClienteCollapse('${c.id}', event)" title="${isCollapsed ? 'Click para ver tareas' : 'Click para ocultar tareas'}"`}>
 
         <!-- Type badge en el tope -->
         <div class="impl-cliente-type-badge type-${c.tipo}">${tipoIcon} ${escapeHtmlImpl(tipoLabel)}</div>
@@ -1184,6 +1390,7 @@ function renderClienteImplCard(c) {
           </div>
         </div>
 
+        ${(detalle && window._implTab === 'documentos') ? renderDocsLeyenda(c) : `
         <!-- 3 mini-cards de fechas -->
         <div class="impl-cliente-stats">
           <label class="impl-cliente-stat" onclick="event.stopPropagation();">
@@ -1199,13 +1406,15 @@ function renderClienteImplCard(c) {
             <div class="impl-cliente-stat-value">${finCalcStr}</div>
             ${estadoStr ? `<div class="impl-cliente-stat-sub">${estadoStr}</div>` : ''}
           </div>
-        </div>
+        </div>`}
 
         <!-- Hint visual de "click para expandir" cuando esta colapsada -->
         ${isCollapsed ? `<div class="impl-cliente-expand-hint">Ver ${totalTareas} tareas <span style="font-size:9px">▾</span></div>` : ''}
       </div>
 
       <div class="impl-cliente-body">
+        ${(detalle && window._implTab === 'documentos') ? renderDocumentosCliente(c) : `
+        ${detalle ? '<div id="impl-detalle-filtros-slot"></div>' : ''}
         ${renderClienteViewToggle(c)}
         ${window._implEditMode[c.id]
           ? `<div class="impl-edit-banner">
@@ -1222,7 +1431,7 @@ function renderClienteImplCard(c) {
           ? renderGanttCliente(tareasVisibles, c, getEscalaCliente(c.id))
           : renderListaFases(c, tareasCliente, tareasVisibles)}
         ${renderGoLive(c.id, tareasCliente, progreso)}
-        ${renderActividadCliente(c.id)}
+        ${renderActividadCliente(c.id)}`}
       </div>
     </div>`;
 }
@@ -2676,16 +2885,15 @@ async function eliminarFaseCliente(clienteId, faseId, event) {
 // Llamado desde el botón "Ir a la tarea" en la sección Pendientes.
 // Navega a Implementación, expande el cliente y hace scroll hasta la tarea.
 function irATareaImpl(tareaId, clienteId) {
-  // 1. Limpiar filtros para garantizar que el cliente sea visible
+  // 1. Limpiar filtros para garantizar que se vea la tarea
   implFiltroNombre = '';
-  implFiltroAsesor = '';
-  implFiltroEstado = '';
-  implFiltroResp   = '';
   const searchInput = document.getElementById('impl-buscador');
   if (searchInput) searchInput.value = '';
-  document.querySelectorAll('[data-impl-filter]').forEach(b => b.classList.remove('active'));
+  _resetFiltrosImpl();
 
-  // 2. Expandir el cliente
+  // 2. Abrir el detalle del cliente (pantalla completa), en la pestaña Tareas
+  window._implTab = 'tareas';
+  window._implClienteAbierto = clienteId;
   if (!window._implClienteExpanded) window._implClienteExpanded = {};
   window._implClienteExpanded[clienteId] = true;
 
