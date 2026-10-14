@@ -15,7 +15,7 @@
     />
 
     <!-- Estilos -->
-    <link rel="stylesheet" href="css/styles.css?v=20261014w" />
+    <link rel="stylesheet" href="css/styles.css?v=20261015r" />
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -1454,10 +1454,14 @@
                   Seguimiento de clientes en proceso de onboarding
                 </div>
               </div>
-              <button class="btn-secondary" onclick="togglePlantillasPanel()">
-                📋 Plantillas
-              </button>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <!-- Botón "Mi día" (¿Qué hago hoy?) — lo dibuja renderPanelHoy() -->
+                <div id="impl-panel-hoy"></div>
+              </div>
             </div>
+
+            <!-- Tarjetas de acceso: Inicio | Disponibilidad | Documentos (las dibuja renderImplNav) -->
+            <div id="impl-nav-lista"></div>
 
             <!-- Panel de plantillas (oculto por default) -->
             <div id="plantillas-panel" style="display: none">
@@ -1551,21 +1555,21 @@
               </div>
             </div>
 
-            <!-- Panel "¿Qué hago hoy?" — generado por renderPanelHoy() en implementacion.js -->
-            <div id="impl-panel-hoy"></div>
-
-            <div class="filter-row" style="flex-wrap: wrap; gap: 8px;">
-              <input
-                type="text"
-                id="impl-buscador"
-                placeholder="Buscar cliente en implementación..."
-                style="width: 260px; max-width: 320px; margin-bottom: 0; flex-shrink: 1"
-                oninput="filterImplementacion(this.value)"
-              />
-              <span
-                id="impl-buscador-count"
-                style="font-size: 12px; color: var(--text3)"
-              ></span>
+            <!-- Título de la sección a la izquierda, buscador a la derecha -->
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+              <div style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase">Implementaciones en progreso</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+                <span
+                  id="impl-buscador-count"
+                  style="font-size: 12px; color: var(--text3)"
+                ></span>
+                <input
+                  type="text"
+                  id="impl-buscador"
+                  placeholder="Buscar cliente en implementación..."
+                  style="width: 260px; max-width: 100%; margin-bottom: 0"
+                  oninput="filterImplementacion(this.value)"
+                />              </div>
             </div>
 
             <div id="impl-clientes-list">
@@ -1596,6 +1600,18 @@
               </div>
             </div>
            </div><!-- /impl-lista-view -->
+
+           <!-- Pantalla 3: Disponibilidad de implementación (se llena desde implementacion-disponibilidad.js) -->
+           <div id="impl-disp-view" style="display:none">
+            <div class="page-header">
+              <div>
+                <div class="page-title">Disponibilidad de implementación</div>
+                <div class="page-sub">Cuándo arranca y termina cada cliente, y en qué meses hay lugar para sumar nuevos</div>
+              </div>
+            </div>
+            <div id="impl-nav-disp"></div>
+            <div id="impl-disp-body"></div>
+           </div><!-- /impl-disp-view -->
 
            <!-- Pantalla 2: detalle completo de UN cliente (se llena desde implementacion.js) -->
            <div id="impl-detalle-view" style="display:none">
@@ -2365,11 +2381,12 @@
     <script src="js/pendientes.js"></script>
     <script src="js/consultas.js?v=20261008a"></script>
     <script src="js/kb.js"></script>
-    <script src="js/implementacion.js?v=20261014n"></script>
+    <script src="js/implementacion.js?v=20261015l"></script>
     <script src="js/reporte-implementacion.js?v=20261008a"></script>
     <script src="js/cliente-detalle.js?v=20261013j"></script>
     <script src="js/conexiones.js?v=20261013c"></script>
     <script src="js/cliente-documentos.js?v=20261014g"></script>
+    <script src="js/implementacion-disponibilidad.js?v=20261015j"></script>
     <script src="js/asesor-detalle.js"></script>
     <script src="js/charts.js?v=20261008a"></script>
     <script src="js/alertas.js"></script>

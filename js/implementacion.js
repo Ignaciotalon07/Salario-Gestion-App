@@ -67,56 +67,129 @@ function renderPanelHoy() {
     t.asesor === me && t.estado === 'en_progreso'
   );
 
-  if (!me || (urgentes.length === 0 && esperandoCliente.length === 0 && enProgreso.length === 0)) {
-    cont.innerHTML = '';
-    return;
-  }
+  if (!me) { cont.innerHTML = ''; return; }
 
-  const seccion = (titulo, icono, tareas, colorAcento) => {
-    if (tareas.length === 0) return '';
-    const items = tareas.slice(0, 4).map(t => {
-      const cli = (typeof clientes !== 'undefined') ? clientes.find(c => c.id === t.cliente_id) : null;
-      const nombreCli = cli ? cli.nombre : '—';
-      const fecha = t.fecha_estimada
-        ? `<span style="font-size:10px;color:${isTareaVencida(t) ? 'var(--red)' : 'var(--text3)'}">
-            ${isTareaVencida(t) ? '⏰' : '📅'} ${formatFechaImpl(new Date(t.fecha_estimada))}
-           </span>`
-        : '';
-      return `<div class="hoy-item">
-        <span class="hoy-item__cliente">${escapeHtmlImpl(nombreCli)}</span>
-        <span class="hoy-item__tarea">${escapeHtmlImpl(t.tarea)}</span>
-        ${fecha}
-      </div>`;
-    }).join('');
-    const mas = tareas.length > 4 ? `<div style="font-size:11px;color:var(--text3);padding:4px 0">+${tareas.length - 4} más</div>` : '';
-    return `<div class="hoy-seccion">
-      <div class="hoy-seccion__titulo" style="color:${colorAcento}">${icono} ${titulo} <span class="hoy-count">${tareas.length}</span></div>
-      ${_panelHoyExpandido ? items + mas : ''}
+  // Mis tareas abiertas (asignadas a mí, no completadas)
+  const mias = implTareas.filter(t => t.asesor === me && t.estado !== 'completada');
+  const vencidas = mias.filter(t => isTareaVencida(t));
+
+  // Texto relativo de la fecha: "hace 3 d", "hoy", "mañana", "en 4 d"
+  const relFecha = (t) => {
+    if (!t.fecha_estimada) return '';
+    const f = new Date(t.fecha_estimada); f.setHours(0,0,0,0);
+    const d = Math.round((f - hoy) / 86400000);
+    const txt = d < 0 ? `hace ${-d} d` : d === 0 ? 'hoy' : d === 1 ? 'mañana' : `en ${d} d`;
+    const col = d < 0 ? 'var(--red)' : d <= 1 ? 'var(--amber)' : 'var(--text3)';
+    return `<span style="font-size:11px;font-weight:600;color:${col};white-space:nowrap">${txt}</span>`;
+  };
+
+  // Mini-contadores de arriba del panel
+  const stat = (n, label, color) => `
+    <div style="flex:1;text-align:center;padding:10px 4px;border-radius:10px;background:var(--surface2)">
+      <div style="font-size:20px;font-weight:800;color:${color}">${n}</div>
+      <div style="font-size:10.5px;color:var(--text3);margin-top:1px">${label}</div>
+    </div>`;
+
+  // Tareas agrupadas por cliente: primero los que tienen más vencidas
+  const porCliente = {};
+  mias.forEach(t => { (porCliente[t.cliente_id] = porCliente[t.cliente_id] || []).push(t); });
+  const grupos = Object.keys(porCliente).map(cid => {
+    const cli = (typeof clientes !== 'undefined') ? clientes.find(c => String(c.id) === String(cid)) : null;
+    const tareas = porCliente[cid].slice().sort((a, b) => {
+      const va = isTareaVencida(a) ? 0 : 1, vb = isTareaVencida(b) ? 0 : 1;
+      if (va !== vb) return va - vb;
+      return new Date(a.fecha_estimada || '2999-01-01') - new Date(b.fecha_estimada || '2999-01-01');
+    });
+    return { cid, nombre: cli ? cli.nombre : '—', tareas,
+             venc: tareas.filter(t => isTareaVencida(t)).length,
+             prog: tareas.filter(t => t.estado === 'en_progreso').length };
+  }).sort((a, b) => b.venc - a.venc || a.nombre.localeCompare(b.nombre));
+
+  const filaTarea = (t) => {
+    const fase = IMPL_FASES.find(f => f.key === (t.fase || 'relevamiento'));
+    const venc = isTareaVencida(t);
+    const dot = venc ? 'var(--red)' : t.estado === 'en_progreso' ? 'var(--blue)' : 'var(--text3)';
+    const estado = venc ? 'Vencida' : t.estado === 'en_progreso' ? 'En progreso' : 'Pendiente';
+    return `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:8px;cursor:pointer"
+                 onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"
+                 onclick="_panelHoyExpandido=false;renderPanelHoy();irATareaImpl('${t.id}','${t.cliente_id}')">
+      <span style="width:8px;height:8px;border-radius:50%;background:${dot};margin-top:5px;flex-shrink:0"></span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12.5px;color:var(--text);line-height:1.3">${String(t.orden ?? '').padStart(2, '0')} · ${escapeHtmlImpl(t.tarea)}</div>
+        <div style="font-size:10.5px;color:var(--text3);margin-top:2px">${estado}${fase ? ' · ' + fase.icono + ' ' + fase.nombre : ''}</div>
+      </div>
+      ${relFecha(t)}
     </div>`;
   };
 
-  cont.innerHTML = `
-    <div class="card hoy-panel" style="margin-bottom:16px">
-      <div class="hoy-header" onclick="_panelHoyExpandido=!_panelHoyExpandido;renderPanelHoy()">
-        <div class="hoy-header__left">
-          <span class="hoy-titulo">🎯 ¿Qué hacés hoy?</span>
-          <span style="font-size:11px;color:var(--text3)">${me}</span>
+  const drawerHtml = `
+    <div class="hoy-overlay" onclick="cerrarPanelHoy()" style="position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:900"></div>
+    <aside class="hoy-drawer" style="position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);z-index:901;background:var(--surface);
+                  border-left:1px solid var(--border);box-shadow:-12px 0 32px rgba(0,0,0,.18);display:flex;flex-direction:column;text-align:left">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px">
+        <div>
+          <div style="font-size:16px;font-weight:700;color:var(--text)">🎯 Mi día</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">Implementación · ${escapeHtmlImpl(me)}</div>
         </div>
-        <div class="hoy-header__chips">
-          ${urgentes.length > 0        ? `<span class="hoy-chip hoy-chip--red">⏰ ${urgentes.length} urgente${urgentes.length !== 1 ? 's' : ''}</span>` : ''}
-          ${esperandoCliente.length > 0 ? `<span class="hoy-chip hoy-chip--amber">👤 ${esperandoCliente.length} esperando cliente</span>` : ''}
-          ${enProgreso.length > 0       ? `<span class="hoy-chip hoy-chip--blue">▶ ${enProgreso.length} en progreso</span>` : ''}
-          <span class="hoy-chevron">${_panelHoyExpandido ? '▴' : '▾'}</span>
-        </div>
+        <button class="btn-sm" onclick="cerrarPanelHoy()">✕</button>
       </div>
-      ${_panelHoyExpandido ? `
-        <div class="hoy-body">
-          ${seccion('Urgentes esta semana', '⏰', urgentes, 'var(--red)')}
-          ${seccion('Esperando al cliente', '👤', esperandoCliente, 'var(--amber)')}
-          ${seccion('En progreso', '▶', enProgreso, 'var(--accent)')}
-        </div>` : ''}
-    </div>`;
+      <div style="display:flex;gap:8px;padding:0 18px 14px">
+        ${stat(mias.length, 'Mis tareas', 'var(--text)')}
+        ${stat(enProgreso.length, 'En progreso', 'var(--blue)')}
+        ${stat(vencidas.length, 'Vencidas', vencidas.length ? 'var(--red)' : 'var(--text3)')}
+        ${stat(esperandoCliente.length, 'Esperan cliente', 'var(--amber)')}
+      </div>
+      <div style="flex:1;overflow:auto;padding:0 10px 16px;border-top:1px solid var(--border)">
+        ${grupos.length === 0
+          ? `<div style="text-align:center;color:var(--text3);padding:40px 10px;font-size:13px">No tenés tareas de implementación abiertas. 🎉</div>`
+          : grupos.map(g => `
+            <div style="padding:14px 8px 4px">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                <span style="font-size:13px;font-weight:700;color:var(--text)">${escapeHtmlImpl(g.nombre)}</span>
+                <span style="font-size:11px;color:var(--text3);white-space:nowrap">
+                  ${g.tareas.length} tarea${g.tareas.length !== 1 ? 's' : ''}
+                  ${g.prog ? ` · <span style="color:var(--blue)">${g.prog} en progreso</span>` : ''}
+                  ${g.venc ? ` · <span style="color:var(--red);font-weight:600">${g.venc} vencida${g.venc !== 1 ? 's' : ''}</span>` : ''}
+                </span>
+              </div>
+            </div>
+            ${g.tareas.map(filaTarea).join('')}`).join('')}
+      </div>
+    </aside>`;
+
+  // Botón "Mi día · N" arriba a la derecha; al tocarlo se abre el panel lateral
+  const total = mias.length;
+  cont.innerHTML = `
+    <button class="btn-secondary" style="display:inline-flex;align-items:center;gap:7px;padding:7px 12px;font-size:13px"
+            onclick="abrirPanelHoy()">
+      🎯 Mi día
+      <span style="background:${vencidas.length ? 'var(--red)' : 'var(--text3)'};color:#fff;border-radius:999px;font-size:11px;font-weight:700;padding:1px 7px">${total}</span>
+    </button>
+    ${_panelHoyExpandido ? `<div class="${_panelHoyAnim ? 'hoy-anim-' + _panelHoyAnim : ''}">${drawerHtml}</div>` : ''}`;
+  // La animación se reproduce una sola vez (si no, cada re-render la repetiría)
+  if (_panelHoyAnim === 'in') _panelHoyAnim = '';
 }
+
+// Abrir con animación de entrada
+let _panelHoyAnim = '';
+function abrirPanelHoy() {
+  _panelHoyExpandido = true;
+  _panelHoyAnim = 'in';
+  renderPanelHoy();
+}
+
+// Cerrar con animación de salida (espera a que termine antes de sacarlo del DOM)
+function cerrarPanelHoy() {
+  if (!_panelHoyExpandido || _panelHoyAnim === 'out') return;
+  _panelHoyAnim = 'out';
+  renderPanelHoy();
+  setTimeout(() => { _panelHoyExpandido = false; _panelHoyAnim = ''; renderPanelHoy(); }, 230);
+}
+
+// Cerrar el panel "Mi día" con Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') cerrarPanelHoy();
+});
 
 // ────────── Semáforo de salud del proyecto ──────────
 // Compara el ritmo actual de avance con el deadline.
@@ -833,6 +906,42 @@ function _resetFiltrosImpl() {
   document.querySelectorAll('.impl-estado-select, .ifm-select').forEach(s => { s.value = ''; });
 }
 
+// ────────── Tarjetas de acceso: Inicio | Disponibilidad | Documentos ──────────
+// Se muestran arriba en la lista y en Disponibilidad. Cada tarjeta lleva a una
+// sección de Implementación. "Documentos" todavía no existe (Próximamente).
+function renderImplNav() {
+  const secciones = [
+    { k: 'inicio', ico: '👥', titulo: 'Clientes',       desc: 'Tareas, fases, fechas y avance de cada cliente' },
+    { k: 'disp',   ico: '📅', titulo: 'Disponibilidad', desc: 'Gantt general y carga por mes' },
+    { k: 'docs',   ico: '📁', titulo: 'Documentos',     desc: 'Material estándar de implementación', pronto: true },
+    { k: 'feedback', ico: '💬', titulo: 'Feedback',    desc: 'Opiniones de los clientes sobre la implementación', pronto: true },
+  ];
+  const html = (activa) => `
+    <div class="impl-nav">
+      ${secciones.map(s => `
+        <button class="impl-nav__card ${s.k === activa ? 'impl-nav__card--on' : ''} ${s.pronto ? 'impl-nav__card--pronto' : ''}"
+                title="${s.pronto ? 'Próximamente' : s.desc}"
+                ${s.pronto ? 'disabled' : `onclick="irImplSeccion('${s.k}')"`}>
+          <span class="impl-nav__ico">${s.ico}</span>
+          <b>${s.titulo}</b>${s.pronto ? '<em>Pronto</em>' : ''}
+        </button>`).join('')}
+    </div>`;
+  const a = document.getElementById('impl-nav-lista');
+  const b = document.getElementById('impl-nav-disp');
+  if (a) a.innerHTML = html('inicio');
+  if (b) b.innerHTML = html('disp');
+}
+
+function irImplSeccion(k) {
+  if (k === 'disp') { abrirDisponibilidadImpl(); return; }
+  if (k === 'inicio') {
+    window._implDispAbierta = false;
+    window._implVolverADisp = false;
+    renderImplementacion();
+    window.scrollTo({ top: 0 });
+  }
+}
+
 // Pestañas del detalle del cliente: 'tareas' (lo de siempre) | 'documentos'
 window._implTab = window._implTab || 'tareas';
 
@@ -858,6 +967,7 @@ function renderImplTabs(c, totalTareas) {
 function abrirClienteImpl(clienteId) {
   _resetFiltrosImpl();
   window._implTab = 'tareas';
+  window._implDispAbierta = false;
   window._implClienteAbierto = clienteId;
   renderImplementacion();
   window.scrollTo({ top: 0 });
@@ -866,6 +976,9 @@ function abrirClienteImpl(clienteId) {
 function cerrarClienteImpl() {
   _resetFiltrosImpl();
   window._implClienteAbierto = null;
+  // Si se abrió desde Disponibilidad, volver ahí
+  window._implDispAbierta = !!window._implVolverADisp;
+  window._implVolverADisp = false;
   renderImplementacion();
   window.scrollTo({ top: 0 });
 }
@@ -1002,8 +1115,16 @@ function renderImplementacion() {
   if (window._implClienteAbierto && !clienteAbierto) window._implClienteAbierto = null;
   if (listaView && detalleView) {
     const modoDetalle = !!clienteAbierto;
-    listaView.style.display   = modoDetalle ? 'none' : '';
+    const modoDisp    = !!window._implDispAbierta && !modoDetalle;
+    const dispView    = document.getElementById('impl-disp-view');
+    renderImplNav();
+    listaView.style.display   = (modoDetalle || modoDisp) ? 'none' : '';
     detalleView.style.display = modoDetalle ? '' : 'none';
+    if (dispView) dispView.style.display = modoDisp ? '' : 'none';
+    if (modoDisp && typeof renderDisponibilidadImpl === 'function') {
+      renderDisponibilidadImpl();
+      return;
+    }
     if (modoDetalle) {
       const slot = document.getElementById('impl-detalle-card');
       if (slot) {
@@ -1076,13 +1197,10 @@ function renderImplementacion() {
     const msg = implFiltroNombre
       ? `No hay clientes en implementación que coincidan con "<strong>${escapeHtmlImpl(implFiltroNombre)}</strong>".`
       : 'Ningún cliente tiene tareas que coincidan con los filtros actuales.';
-    cont.innerHTML = `
-      <div style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:12px">Implementaciones en progreso</div>
-      <div class="card" style="text-align:center;color:var(--text3);padding:32px">${msg}</div>`;
+    cont.innerHTML = `<div class="card" style="text-align:center;color:var(--text3);padding:32px">${msg}</div>`;
   } else {
     cont.innerHTML = enProgreso.length > 0
-      ? `<div style="font-size:12px;font-weight:600;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:12px">Implementaciones en progreso</div>`
-        + `<div class="impl-mini-grid">${implClientes.map(c => renderClienteImplMiniCard(c)).join('')}</div>`
+      ? `<div class="impl-mini-grid">${implClientes.map(c => renderClienteImplMiniCard(c)).join('')}</div>`
       : '';
   }
 
@@ -2893,6 +3011,8 @@ function irATareaImpl(tareaId, clienteId) {
 
   // 2. Abrir el detalle del cliente (pantalla completa), en la pestaña Tareas
   window._implTab = 'tareas';
+  window._implDispAbierta = false;
+  window._implVolverADisp = false;
   window._implClienteAbierto = clienteId;
   if (!window._implClienteExpanded) window._implClienteExpanded = {};
   window._implClienteExpanded[clienteId] = true;
