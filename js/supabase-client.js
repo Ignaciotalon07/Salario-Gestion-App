@@ -96,17 +96,28 @@ async function isTeamMember(user) {
 
 // ────────── DB helpers (para Fase B) ──────────
 
+// Supabase devuelve como máximo 1000 filas por pedido. Para no perder registros
+// (ej: consultas, que ya pasan las 1000), se pide por páginas hasta traer todo.
 async function dbList(table, opts = {}) {
-  let q = sb().from(table).select('*');
-  if (opts.filter) {
-    Object.entries(opts.filter).forEach(([k, v]) => { q = q.eq(k, v); });
+  const PAGINA = 1000;
+  const todas = [];
+  for (let desde = 0; ; desde += PAGINA) {
+    let q = sb().from(table).select('*');
+    if (opts.filter) {
+      Object.entries(opts.filter).forEach(([k, v]) => { q = q.eq(k, v); });
+    }
+    if (opts.orderBy) {
+      q = q.order(opts.orderBy, { ascending: opts.ascending !== false });
+    }
+    // Desempate por id: sin un orden estable, las páginas podrían repetir o saltear filas
+    q = q.order('id', { ascending: true }).range(desde, desde + PAGINA - 1);
+    const { data, error } = await q;
+    if (error) throw error;
+    const filas = data || [];
+    todas.push(...filas);
+    if (filas.length < PAGINA) break;
   }
-  if (opts.orderBy) {
-    q = q.order(opts.orderBy, { ascending: opts.ascending !== false });
-  }
-  const { data, error } = await q;
-  if (error) throw error;
-  return data || [];
+  return todas;
 }
 
 async function dbInsert(table, row) {
