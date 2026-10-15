@@ -831,6 +831,51 @@ function suscribirRepositorio() {
       renderRepoAll();
       _cargarThumbnails();
     }).subscribe();
+
+  _repoIniciarRespaldo();
+}
+
+// ── Respaldo del tiempo real ──────────────────────────────────────────────────
+// A veces el canal de tiempo real se corta en silencio (pestaña en segundo plano
+// mucho rato, red intermitente, etc.) y la novedad recién aparecía al recargar.
+// Para que el aviso llegue igual, se consulta la base de datos cada 45 s y al
+// volver a la pestaña; si hay algo que el canal no trajo, se avisa igual.
+let _repoRespaldoIniciado = false;
+function _repoIniciarRespaldo() {
+  if (_repoRespaldoIniciado) return;
+  _repoRespaldoIniciado = true;
+  setInterval(repoResincronizar, 45000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) repoResincronizar(); });
+  window.addEventListener('online', repoResincronizar);
+}
+
+async function repoResincronizar() {
+  try {
+    const { data } = await sb().from('repositorio_items').select('*').order('created_at', { ascending: false });
+    if (!data) return;
+    const previos = new Map(repoItems.map(i => [i.id, i]));
+    const nuevos   = data.filter(i => !previos.has(i.id));
+    const editados = data.filter(i => previos.has(i.id) && previos.get(i.id).updated_at !== i.updated_at);
+    const borrados = repoItems.length - (data.length - nuevos.length);
+    if (!nuevos.length && !editados.length && borrados === 0) return;
+
+    repoItems = data;
+    // Archivos de los items (por si cambiaron)
+    const { data: archRows } = await sb().from('repositorio_archivos').select('*').order('created_at', { ascending: true });
+    repoArchivos = {};
+    (archRows || []).forEach(a => { (repoArchivos[a.item_id] = repoArchivos[a.item_id] || []).push(a); });
+
+    if (typeof avisoRepositorioNovedad === 'function') {
+      nuevos.forEach(i => avisoRepositorioNovedad(i, false));
+      editados.forEach(i => {
+        if (i.editado_por && i.created_at && new Date(i.updated_at) > new Date(i.created_at)) avisoRepositorioNovedad(i, true);
+      });
+    }
+    renderRepoAll();
+    _updateRepoBadge();
+    _cargarThumbnails();
+    if (typeof renderSaludoPanel === 'function') renderSaludoPanel();
+  } catch (e) { console.warn('No se pudo resincronizar el Repositorio', e); }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
