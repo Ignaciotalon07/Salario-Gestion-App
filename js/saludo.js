@@ -518,6 +518,20 @@ function renderSaludoPanel() {
     }
   }
 
+  // Hora de la novedad del Repositorio (la más reciente entre las no vistas)
+  let repoNuevoCuando = null;
+  if (repoNuevos > 0 && typeof _repoUltimaActividad === 'function' && typeof repoItems !== 'undefined') {
+    const limiteR = (typeof _repoUltimoVisto !== 'undefined' && _repoUltimoVisto) ? new Date(_repoUltimoVisto).getTime() : 0;
+    const t = Math.max(...repoItems.map(_repoUltimaActividad).filter(v => v > limiteR), 0);
+    if (t) repoNuevoCuando = new Date(t).toISOString();
+  }
+
+  // Pendientes que otra persona me generó/reasignó (ver avisos.js)
+  const pendAsig = (typeof window._pendAsignados !== 'undefined' ? window._pendAsignados : []).slice(0, 4);
+
+  // Pendientes míos con más de 50 días sin cerrar (aviso de una sola vez)
+  const pendViejos = (typeof pendViejosActivos === 'function') ? pendViejosActivos(me, pendArr) : [];
+
   const kbArr = (typeof soluciones !== 'undefined') ? soluciones : [];
   const kbParaRevisar = kbArr.filter(s => {
     const dias = s.updatedAt || s.createdAt
@@ -566,9 +580,32 @@ function renderSaludoPanel() {
       msg: repoNuevoItemId
         ? `<strong>${escapeHtmlSaludo(repoNuevoAutor || 'Alguien del equipo')}</strong> ${repoNuevoFueEditado ? 'editó' : 'agregó'} "${escapeHtmlSaludo(repoNuevoTitulo)}" en el Repositorio.`
         : `Hay <strong>${repoNuevos}</strong> item${repoNuevos !== 1 ? 's' : ''} nuevo${repoNuevos !== 1 ? 's' : ''} en el Repositorio.`,
+      hace: repoNuevoCuando,
+      prio: true,   // novedad activa: va arriba de todo
       cta: 'Ver repositorio →',
       accion: repoNuevoItemId ? `_saludoIrARepoItem('${repoNuevoItemId}')` : '_saludoIrARepositorio()',
     },
+    // Pendiente(s) con más de 50 días: "¿te olvidaste de cerrarlo?"
+    ...(pendViejos.length > 0 ? [{
+      bucket: 'notif',
+      count: pendViejos.length, color: '#c0392b', icon: '⏳',
+      msg: pendViejos.length === 1
+        ? `Tenés un pendiente vencido por más de <strong>${PEND_VIEJO_DIAS} días</strong>: ${escapeHtmlSaludo(pendViejos[0].cliente || '')}. ¿Te olvidaste de cerrarlo?`
+        : `Tenés <strong>${pendViejos.length}</strong> pendientes vencidos por más de <strong>${PEND_VIEJO_DIAS} días</strong>. ¿Te olvidaste de cerrarlos?`,
+      prio: true,
+      cta: pendViejos.length === 1 ? 'Revisarlo →' : 'Revisarlos →',
+      accion: `_saludoIrAPendienteViejo('${pendViejos.length === 1 ? pendViejos[0].id : ''}')`,
+    }] : []),
+    // Un tile por cada pendiente que otra persona me generó o reasignó
+    ...pendAsig.map(a => ({
+      bucket: 'notif',
+      count: 1, color: '#e67e22', icon: '📌',
+      msg: `<strong>${escapeHtmlSaludo(a.autor || 'Alguien del equipo')}</strong> ${a.reasignado ? 'te reasignó' : 'te ha generado'} un pendiente: ${escapeHtmlSaludo(a.cliente || '')}.`,
+      hace: a.cuando,
+      prio: true,   // novedad activa: va arriba de todo
+      cta: 'Ver pendiente →',
+      accion: `_saludoIrAPendienteAsignado('${a.pid}')`,
+    })),
     {
       bucket: 'dia',
       count: kbParaRevisar, color: '#7c3aed', icon: '📚',
@@ -576,6 +613,10 @@ function renderSaludoPanel() {
       cta: 'Ver base de soluciones →', accion: '_saludoIrABiblioteca()',
     },
   ].filter(t => t.count > 0);
+
+  // Las novedades activas (pendiente que te generaron, item nuevo del Repositorio)
+  // van siempre primero; el resto conserva su orden.
+  tiles.sort((a, b) => (b.prio ? 1 : 0) - (a.prio ? 1 : 0));
 
   const notifTiles = tiles.filter(t => t.bucket === 'notif');
   const diaTiles = tiles.filter(t => t.bucket === 'dia');
@@ -597,9 +638,9 @@ function renderSaludoPanel() {
         <span class="saludo-tiles-toggle__chev" id="saludo-tiles-chev">${_saludoTilesExpanded ? '▲' : '▼'}</span>
       </button>
       <div class="saludo-tiles${_saludoTilesExpanded ? ' saludo-tiles--open' : ''}" id="saludo-tiles-list">${tiles.map(t => `
-        <button class="saludo-tile" style="--tile-color:${t.color}" onclick="${t.accion}">
+        <button class="saludo-tile${_saludoClaseNuevo(t)}" style="--tile-color:${t.color}" onclick="${t.accion}">
           <span class="saludo-tile__icon">${t.icon}</span>
-          <div class="saludo-tile__msg">${t.msg}</div>
+          <div class="saludo-tile__msg">${t.msg}${_saludoHaceHTML(t.hace)}</div>
           <div class="saludo-tile__cta">${t.cta}</div>
         </button>`).join('')}</div>`
     : '';
@@ -702,16 +743,80 @@ function renderSaludoPanel() {
   // que es "tu día a día" ya se ve directo en pantalla, no se repite acá. ──
   const notifCont = document.getElementById('saludo-notif-content');
   if (notifCont) {
-    const notifItems = notifTiles.map(t => ({ color: t.color, icon: t.icon, msg: t.msg, cta: t.cta, accion: t.accion }));
+    const notifItems = notifTiles.map(t => ({ color: t.color, icon: t.icon, msg: t.msg + _saludoHaceHTML(t.hace), cta: t.cta, accion: t.accion, nuevo: _saludoClaseNuevo(t) }));
     notifCont.innerHTML = notifItems.length === 0
       ? `<div class="saludo-notif-empty">Por ahora no tenés nada pendiente en esta lista. 🙌</div>`
       : `<div class="saludo-notif-tiles">${notifItems.map(n => `
-      <button class="saludo-tile" style="--tile-color:${n.color}" onclick="${n.accion ? n.accion + ';' : ''}toggleSaludoNotif();">
+      <button class="saludo-tile${n.nuevo}" style="--tile-color:${n.color}" onclick="${n.accion ? n.accion + ';' : ''}toggleSaludoNotif();">
         <span class="saludo-tile__icon">${n.icon}</span>
         <div class="saludo-tile__msg">${n.msg}</div>
         ${n.cta ? `<div class="saludo-tile__cta">${n.cta}</div>` : ''}
       </button>`).join('')}</div>`;
   }
+}
+
+// Las novedades activas (prio) parpadean unos segundos la primera vez que
+// aparecen, para notar cuál es lo nuevo. Se recuerda cuándo se vio cada una
+// por primera vez: mientras no pasen 6 s, sigue con la animación aunque
+// el panel se vuelva a dibujar.
+const _saludoNovedadesVistas = {};
+function _saludoClaseNuevo(t) {
+  if (!t.prio) return '';
+  const k = t.accion + '|' + (t.hace || '');
+  if (!_saludoNovedadesVistas[k]) _saludoNovedadesVistas[k] = Date.now();
+  return (Date.now() - _saludoNovedadesVistas[k] < 6000) ? ' saludo-tile--nuevo' : '';
+}
+
+// "hace 5 min" / "hace 2 h" / "hace 3 días" a partir de una fecha ISO
+function _saludoHaceTiempo(iso) {
+  const min = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+  if (min < 1)  return 'hace instantes';
+  if (min < 60) return `hace ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24)   return `hace ${h} h`;
+  const d = Math.floor(h / 24);
+  return `hace ${d} día${d !== 1 ? 's' : ''}`;
+}
+
+function _saludoHaceHTML(iso) {
+  return iso ? ` <span class="saludo-tile__hace">🕒 ${_saludoHaceTiempo(iso)}</span>` : '';
+}
+
+// Botón "Revisarlo →" del aviso de 50 días: abre mis pendientes (y resalta el
+// pendiente si es uno solo). Entrar a Pendientes ya marca el aviso como visto.
+function _saludoIrAPendienteViejo(pid) {
+  goTo(_saludoNavBtn('pendientes'), 'pendientes');
+  setTimeout(() => {
+    if (typeof setViewMode === 'function') setViewMode('mis');
+    if (!pid) return;
+    setTimeout(() => {
+      const el = document.querySelector(`[data-pend-id="${pid}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.transition = 'box-shadow .3s';
+        el.style.boxShadow = '0 0 0 3px rgba(192,57,43,.6)';
+        setTimeout(() => { el.style.boxShadow = ''; }, 2500);
+      }
+    }, 150);
+  }, 50);
+}
+
+// Botón "Ver pendiente →": marca el aviso como visto y abre mis pendientes
+function _saludoIrAPendienteAsignado(pid) {
+  if (typeof pendAsignadoMarcarVisto === 'function') pendAsignadoMarcarVisto(pid);
+  goTo(_saludoNavBtn('pendientes'), 'pendientes');
+  setTimeout(() => {
+    if (typeof setViewMode === 'function') setViewMode('mis');
+    setTimeout(() => {
+      const el = document.querySelector(`[data-pend-id="${pid}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.transition = 'box-shadow .3s';
+        el.style.boxShadow = '0 0 0 3px rgba(230,126,34,.6)';
+        setTimeout(() => { el.style.boxShadow = ''; }, 2500);
+      }
+    }, 150);
+  }, 50);
 }
 
 // Separa el emoji inicial de un mensaje ("📌 Tenés...") de su texto, para

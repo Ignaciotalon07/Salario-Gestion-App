@@ -4057,6 +4057,28 @@ input[type=date]:focus {
    PANEL ¿QUÉ HAGO HOY?
 ════════════════════════════════════ */
 
+/* Popup de cierre de semana (viernes) — js/avisos.js */
+@keyframes avisoPop     { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: scale(1); } }
+@keyframes avisoCampana { 0%,100% { transform: rotate(0); } 15% { transform: rotate(18deg); } 30% { transform: rotate(-16deg); }
+                          45% { transform: rotate(12deg); } 60% { transform: rotate(-8deg); } 75% { transform: rotate(0); } }
+@keyframes avisoPulso   { 0%,100% { box-shadow: 0 0 0 0 rgba(249,115,22,.55), 0 20px 50px rgba(0,0,0,.3); }
+                          50%     { box-shadow: 0 0 0 14px rgba(249,115,22,0), 0 20px 50px rgba(0,0,0,.3); } }
+.aviso-viernes-overlay {
+  position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.55); padding: 16px;
+}
+.aviso-viernes-card {
+  width: min(440px, 100%); text-align: center; padding: 28px 26px 24px;
+  background: var(--surface); border: 2px solid #f97316; border-radius: 20px;
+  animation: avisoPop .3s ease-out, avisoPulso 1.8s ease-in-out .3s infinite;
+}
+.aviso-viernes-campana { font-size: 46px; display: inline-block; transform-origin: 50% 8%; animation: avisoCampana 1.4s ease-in-out infinite; }
+.aviso-viernes-titulo  { font-size: 22px; font-weight: 800; color: var(--text); margin: 6px 0 10px; }
+.aviso-viernes-texto   { font-size: 14px; line-height: 1.7; color: var(--text2); text-align: left; background: var(--surface2);
+                         border-radius: 12px; padding: 12px 16px; margin-bottom: 18px; }
+.aviso-viernes-acciones { display: flex; flex-direction: column; gap: 8px; }
+.aviso-viernes-acciones button { width: 100%; justify-content: center; }
+
 /* Panel lateral "Mi día": entra y sale deslizando */
 @keyframes hoyDrawerIn  { from { transform: translateX(100%); } to { transform: translateX(0); } }
 @keyframes hoyDrawerOut { from { transform: translateX(0); }    to { transform: translateX(100%); } }
@@ -4340,6 +4362,16 @@ input[type=date]:focus {
   color: var(--tile-color, var(--accent));
   font-weight: 800;
 }
+.saludo-tile__hace {
+  display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 600;
+  color: var(--text3); white-space: nowrap;
+}
+/* Novedad recién llegada: parpadea unos segundos */
+@keyframes saludoNuevo {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); }
+  50%      { box-shadow: 0 0 0 4px rgba(249,115,22,.55); background-color: rgba(249,115,22,.14); }
+}
+.saludo-tile--nuevo { animation: saludoNuevo 1s ease-in-out 5; }
 .saludo-tile__cta {
   flex: none;
   font-size: 12px;

@@ -2004,6 +2004,7 @@ function handlePendienteChange(payload) {
       const me = getCurrentUserName();
       if (newRow.asesor === me) {
         toast(`Te asignaron un pendiente: ${newRow.cliente_nombre}`);
+        if (typeof avisoPendienteAsignado === 'function') avisoPendienteAsignado(newRow.cliente_nombre, false);
         notificar('Nuevo pendiente asignado', `${newRow.cliente_nombre}: ${newRow.descripcion.substring(0, 80)}`);
       } else {
         toast(`Nuevo pendiente del equipo: ${newRow.cliente_nombre}`);
@@ -2028,6 +2029,7 @@ function handlePendienteChange(payload) {
       const me = getCurrentUserName();
       if (oldAsesor !== newRow.asesor && newRow.asesor === me) {
         toast(`Te reasignaron un pendiente: ${newRow.cliente_nombre}`);
+        if (typeof avisoPendienteAsignado === 'function') avisoPendienteAsignado(newRow.cliente_nombre, true);
         notificar('Pendiente reasignado a vos', `${newRow.cliente_nombre}: ${newRow.descripcion.substring(0, 80)}`);
       }
     }
@@ -2036,6 +2038,12 @@ function handlePendienteChange(payload) {
     delete notasByPendiente[oldRow.id];
     renderPendientes();
     updatePendCount();
+  }
+  // Actualizar el aviso "X te generó un pendiente" del Panel general
+  // (el evento del audit log se guarda un instante después, por eso el delay)
+  if (eventType !== 'DELETE' && typeof refrescarPendAsignados === 'function') {
+    setTimeout(refrescarPendAsignados, 1500);
+    setTimeout(refrescarPendAsignados, 5000);   // por si el audit log tardó en guardarse
   }
   // Recalcular alertas cada vez que cambia un pendiente
   if (typeof refreshAlertas === 'function') refreshAlertas();

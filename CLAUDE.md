@@ -22,10 +22,16 @@ Atienden 200+ clientes vía WhatsApp / Whaticket. La app centraliza:
 - Pendientes con audit log
 - Base de soluciones (knowledge base)
 - **Implementación**: cronograma de 23 etapas por cliente nuevo, con
-  Gantt visual, predecesoras, fechas calculadas, audit log, notas y archivos adjuntos
+  Gantt visual, predecesoras, fechas calculadas, audit log, notas y archivos adjuntos.
+  Tiene 3 pantallas: lista de clientes (cards), detalle de un cliente
+  (pestañas Tareas / Documentos) y **Disponibilidad** (Gantt general con
+  carga por mes, capacidad máxima y simulador de cliente nuevo)
 - **Repositorio**: archivos y recursos compartidos por el programador,
   organizados por categoría, con asignación de pendientes al equipo
 - Alertas dinámicas (vencimientos, clientes sin actividad, etc.)
+- **Avisos llamativos** (sonido, parpadeo de pestaña, popup de viernes) y
+  avisos en el Panel general ("X te ha generado un pendiente", novedades del
+  Repositorio con "hace X min")
 - Configuración (tema oscuro, plantilla editable)
 
 ## Stack
@@ -42,7 +48,7 @@ Atienden 200+ clientes vía WhatsApp / Whaticket. La app centraliza:
   al instante a todos los miembros del equipo.
 - **Storage**: Supabase Storage para archivos adjuntos. Límite de 50 MB por
   archivo (plan free). Buckets: `implementacion-archivos`, `soluciones-archivos`,
-  `repositorio-archivos`.
+  `repositorio-archivos`, `cliente-documentos`.
 
 ## Estructura
 
@@ -66,7 +72,21 @@ Salario Gestion/
 │   ├── consultas.js         ← Form de registrar consulta (Supabase + realtime)
 │   ├── consultas-page.js    ← Métricas avanzadas de consultas (rankings, historial, gráficos)
 │   ├── kb.js                ← Base de soluciones (Supabase + realtime + archivos adjuntos)
-│   ├── implementacion.js    ← 23 etapas, Gantt, propagación, plantilla, métricas, archivos
+│   ├── implementacion.js    ← 23 etapas, Gantt, propagación, plantilla, métricas, archivos,
+│   │                           pantallas lista/detalle, accesos (barra segmentada), botón + panel
+│   │                           lateral "Mi día"
+│   ├── implementacion-disponibilidad.js ← Gantt general: carga por mes, capacidad máx., zoom,
+│   │                           simulador, barras grises "por arrancar", pan con arrastre
+│   ├── cliente-documentos.js ← Pestaña Documentos por cliente (archivos + links de Drive,
+│   │                           tipo de documento, buscador, leyenda)
+│   ├── conexiones.js        ← Conexiones del cliente (tarjeta + modal)
+│   ├── reporte-implementacion.js ← Reporte semanal de implementación
+│   ├── asesor-detalle.js    ← Detalle de cada asesor (sección Equipo)
+│   ├── hitos.js             ← Celebraciones por hitos de registros
+│   ├── reportes.js          ← Sección Reportes
+│   ├── saludo.js            ← Saludo + cartelito + "Tu día" + tiles/campanita del Panel general
+│   ├── avisos.js            ← Sonido (Web Audio), parpadeo de título, popup de viernes,
+│   │                           avisos de pendientes asignados por otros
 │   ├── repositorio.js       ← Repositorio de archivos del programador + badge por usuario
 │   ├── alertas.js           ← Alertas dinámicas (vencimientos, inactividad, etc.)
 │   └── charts.js            ← Chart.js para el panel general
@@ -103,7 +123,24 @@ Salario Gestion/
     ├── 030_implementacion_archivos.sql ← Archivos adjuntos a tareas de implementación
     ├── 031_soluciones_archivos.sql ← Archivos adjuntos a soluciones KB
     ├── 032_repositorio.sql         ← Tablas repositorio_items + repositorio_archivos
-    └── 033_repositorio_visto.sql   ← Último acceso por usuario al repositorio (badge "nuevo")
+    ├── 033_repositorio_visto.sql   ← Último acceso por usuario al repositorio (badge "nuevo")
+    ├── 034_*  035_*  036_*         ← Hay varios archivos con el mismo número (recalculo_masivo,
+    │                                 tipo_pendiente_internos, limpiar_pendientes_aivel_bloqueados,
+    │                                 repositorio_editado_por, programacion_interna,
+    │                                 repositorio_categorias, implementacion_consulta,
+    │                                 consultas_tipo_implementacion, repositorio_extras).
+    │                                 Todos son idempotentes; no renumerar.
+    ├── 037_clientes_id_api.sql     ← id_api de Salario en clientes
+    ├── 038_soluciones_votos.sql    ← Votos en la KB
+    ├── 040_normalizar_categorias_consultas.sql
+    ├── 041_hitos_consultas.sql
+    ├── 042_repositorio_categoria_launcher.sql
+    ├── 043_impl_sin_predecesoras.sql
+    ├── 044_cliente_conexiones.sql
+    ├── 045_cliente_documentos.sql  ← Tabla + bucket `cliente-documentos` (crear a mano, privado)
+    ├── 046_cliente_documentos_links.sql ← Links de Google Drive en documentos
+    ├── 047_cliente_documentos_categorias.sql ← Tipo de documento (logo, firma, pdf, etc.)
+    └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 
 ## Convenciones
@@ -215,6 +252,75 @@ Salario Gestion/
     de Daniel Ferro fue eliminado completamente (nav, página, script). La
     tabla `facturas` en Supabase existe como legacy pero no se usa.
 
+13. **Implementación — 3 pantallas** dentro de `#implementacion`:
+    `#impl-lista-view` (cards de clientes), `#impl-disp-view` (Disponibilidad)
+    y `#impl-detalle-view` (un cliente, a pantalla completa). Estado en
+    `window._implClienteAbierto`, `_implDispAbierta`, `_implVolverADisp`,
+    `_implTab` ('tareas' | 'documentos'). `renderImplementacion()` alterna
+    vistas y llama a `renderImplNav()`. Los filtros de tareas viven en un nodo
+    que se mueve entre `#impl-filtros-holder` y el slot del detalle en cada render.
+    Navegación entre secciones: **barra segmentada a todo el ancho** arriba
+    (Clientes / Disponibilidad / Documentos / Feedback). Las dos últimas están
+    deshabilitadas ("Pronto").
+
+14. **Disponibilidad**: capacidad máxima de implementaciones simultáneas = **4**
+    (`DISP_CAPACIDAD_DEFAULT`, editable y guardada en `localStorage`). El Gantt
+    muestra solo clientes en curso (los finalizados no) y los "por arrancar" como
+    barras grises. La barra no es clickeable, el nombre del cliente sí. Hay
+    zoom (trimestre/semestre/año), simulador de cliente nuevo y arrastre para
+    desplazar. "Cómo se usa" es un `<details>` colapsado.
+
+15. **Mi día**: botón arriba a la derecha del header de Implementación (donde
+    estaba "Plantillas") que abre un **panel lateral derecho** con animación.
+    Muestra SOLO tareas de implementación asignadas al usuario, separadas por
+    cliente (abiertas, en progreso, vencidas, esperan cliente). Para que una
+    tarea aparezca hay que asignarla al asesor desde la pestaña Tareas.
+
+16. **Sección Consultas = solo soporte**: `_cpTodas()` en `consultas-page.js`
+    excluye `tipo_consulta` `programacion_interna` e `implementacion`. Las horas
+    de implementación se guardan en `consultas` al cerrar un pendiente de
+    implementación y SÍ cuentan en las métricas de **Equipo** (no tocar), pero
+    no en la sección Consultas.
+
+17. **`dbList` pagina de a 1000** (`supabase-client.js`): Supabase corta a 1000
+    filas por pedido. Antes "Registros este año" se trababa en 1000. Usa
+    `.order('id')` como desempate; toda tabla leída con `dbList` necesita `id`.
+
+18. **Avisos llamativos** (`js/avisos.js`):
+    - Sonido con Web Audio (sin archivos): `avisoSonido('mensaje' | 'alerta')`.
+      Se silencia con `localStorage.avisos_silencio = '1'`. Si la pestaña no
+      tuvo ningún clic, el navegador bloquea el audio: aparece un botón
+      "Tocá acá para activar los sonidos".
+    - Parpadeo del título de la pestaña: `avisoParpadearTitulo(texto, debeParar)`.
+    - Repositorio: cuando OTRA persona sube/edita, suena y parpadea hasta
+      entrar a la sección (hook en el realtime de `repositorio.js`).
+    - Pendiente asignado/reasignado a mí: suena (+ parpadeo si la pestaña
+      está oculta). Hook en `handlePendienteChange` de `pendientes.js`.
+    - **Viernes 16:00+, solo Ignacio Talon y Matias Ferro**: popup grande con
+      campana ("actualizá las tareas de Implementación y mandá los Gantt"),
+      alarma que se repite cada 3,5 s mientras estés en otra pestaña, botones
+      Ir / Ya lo hice / Recordarme en 30 min. Probar: `avisoViernesMostrar()`.
+
+19. **Avisos en el Panel general**: tiles "novedades activas" (`prio: true` en
+    `saludo.js`) van SIEMPRE primero. Son: item nuevo del Repositorio y
+    "X te ha generado/reasignó un pendiente" (sale de `pendiente_eventos`
+    tipos `creado`/`reasignado` de los últimos 3 días, ver
+    `refrescarPendAsignados()` en `avisos.js`; no cuenta lo que creaste vos ni
+    las tareas de impl auto-generadas, que no loguean evento). Muestran
+    "hace X min/h/días" y parpadean 5 s al aparecer. Desaparecen al entrar a
+    Repositorio / Pendientes (o con el botón "Ver pendiente →").
+
+20. **Probar con 2 usuarios**: dos cuentas en el MISMO navegador comparten la
+    sesión de Supabase y ambas pestañas pasan a ser el último usuario logueado
+    (los avisos "de otro" se filtran como propios). Usar ventana de incógnito
+    o dos perfiles de Chrome.
+
+21. **Gotchas de CSS ya sufridos**: reglas del tema oscuro con `#app-root` o
+    `[data-theme]` pisan estilos → usar `!important` o prefijo `#id`. Las clases
+    del detalle de cliente y del detalle de asesor se comparten → el banner está
+    scopeado con `#cliente-detalle`. Siempre subir el `?v=` de CSS/JS en
+    `index.html` al cambiarlos (cache).
+
 ## Login y usuarios
 
 Hay 6 cuentas en `team_members` (tabla en Supabase):
@@ -253,14 +359,28 @@ Cuando el usuario te pida cambios:
 - **Repositorio — links externos**: opción para agregar URL en lugar de
   archivo (útil para recursos que superan 50 MB). Discutido pero no
   implementado.
+- **Implementación → Documentos**: la tarjeta de acceso está deshabilitada
+  ("Pronto"). Ahí van a vivir las **Plantillas** de implementación. Mientras
+  tanto el panel de plantillas existe en el HTML (`#plantillas-panel`,
+  `togglePlantillasPanel()`) pero **no tiene botón que lo abra** (se sacó el
+  botón del header). Habilitar Documentos o devolver el botón.
+- **Implementación → Feedback**: tarjeta de acceso deshabilitada ("Pronto").
+  Idea: encuesta post-implementación por cliente. Sin definir.
+- **API de Salario** (Legajos, Convenios, Empresas en vivo): NO construida a
+  propósito. La UI está lista con datos vacíos (—); el punto de enganche es
+  `_datosSalarioCliente()` en `js/cliente-detalle.js`.
+- **Aviso del Repositorio repetido**: hoy suena una sola vez (solo el aviso de
+  los viernes insiste mientras estés en otra pestaña).
+- Backlog viejo: búsqueda semántica en KB, PWA.
 
 ## Levantar la base de datos desde cero
 
-1. En el dashboard de Supabase, crear los 3 buckets manualmente:
+1. En el dashboard de Supabase, crear los 4 buckets manualmente:
    Storage → New bucket → Private (no public)
    - `implementacion-archivos`
    - `soluciones-archivos`
    - `repositorio-archivos`
+   - `cliente-documentos`
 
 2. En el SQL Editor de Supabase, correr en orden:
    - `migrations/schema_completo.sql` — toda la estructura + equipo + plantilla de impl

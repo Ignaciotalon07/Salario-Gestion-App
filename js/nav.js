@@ -22,6 +22,14 @@ function goTo(btn, id) {
   if (id === 'repositorio' && typeof marcarRepositorioVisto === 'function') {
     marcarRepositorioVisto();
   }
+  // Entrar a Pendientes da por vistos los avisos "X te generó un pendiente"
+  if (id === 'pendientes' && typeof pendAsignadoMarcarTodosVistos === 'function') {
+    pendAsignadoMarcarTodosVistos();
+  }
+  // ...y también el aviso de "pendiente con más de 50 días"
+  if (id === 'pendientes' && typeof pendViejosMarcarVistos === 'function') {
+    pendViejosMarcarVistos();
+  }
   // Refrescar el saludo + "Tu día" cada vez que se entra al Panel general
   if (id === 'dashboard' && typeof renderSaludoPanel === 'function') {
     renderSaludoPanel();

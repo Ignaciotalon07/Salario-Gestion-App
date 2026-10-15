@@ -141,6 +141,9 @@ async function marcarRepositorioVisto() {
   );
   _repoUltimoVisto = ahora;
   _updateRepoBadge();
+  // Que el aviso del Panel general desaparezca una vez abierto el Repositorio
+  if (typeof renderSaludoPanel === 'function') renderSaludoPanel();
+  if (typeof avisoPararTitulo === 'function') avisoPararTitulo();
 }
 
 // Pinta de naranja, por unos segundos, las cards que eran nuevas al entrar a la
@@ -792,10 +795,19 @@ function suscribirRepositorio() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'repositorio_items' }, (payload) => {
       const { eventType, new: n, old: o } = payload;
       if (eventType === 'INSERT') {
-        if (!repoItems.find(i => i.id === n.id)) repoItems.unshift(n);
+        if (!repoItems.find(i => i.id === n.id)) {
+          repoItems.unshift(n);
+          // Aviso sonoro + parpadeo de pestaña si lo subió otra persona
+          if (typeof avisoRepositorioNovedad === 'function') avisoRepositorioNovedad(n, false);
+        }
       } else if (eventType === 'UPDATE') {
         const idx = repoItems.findIndex(i => i.id === n.id);
         if (idx !== -1) repoItems[idx] = n; else repoItems.unshift(n);
+        // Solo si realmente fue editado por otra persona (updated_at posterior a la creación)
+        if (n.editado_por && n.updated_at && n.created_at && new Date(n.updated_at) > new Date(n.created_at)
+            && typeof avisoRepositorioNovedad === 'function') {
+          avisoRepositorioNovedad(n, true);
+        }
       } else if (eventType === 'DELETE') {
         repoItems = repoItems.filter(i => i.id !== o.id);
         delete repoThumbs[o.id];
