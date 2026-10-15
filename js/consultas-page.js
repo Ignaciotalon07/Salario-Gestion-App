@@ -99,9 +99,7 @@ function _cpPeriodLabel(rango, offset) {
 // Excluye registros internos (programacion_interna): la sección Consultas
 // es exclusivamente para consultas a clientes.
 function _cpFilterPeriod(rango, offset) {
-  const all = (typeof consultas !== 'undefined')
-    ? consultas.filter(c => c.tipoConsulta !== 'programacion_interna' && c.tipo_consulta !== 'programacion_interna')
-    : [];
+  const all = _cpTodas();
   if (rango === 'todo') return all;
   const { desde, hasta } = _cpPeriodRange(rango, offset);
   return all.filter(c => { const t = new Date(c.timestamp); return t >= desde && t < hasta; });
@@ -396,7 +394,7 @@ function renderCpHistorial() {
   const countEl = document.getElementById('cp-hist-count');
   if (!cont) return;
 
-  const all     = (typeof consultas !== 'undefined') ? consultas : [];
+  const all     = _cpTodas();
   const buscar  = (document.getElementById('cp-buscar')?.value || '').trim().toLowerCase();
   const asesorF = document.getElementById('cp-filtro-asesor')?.value || '';
 
@@ -727,7 +725,7 @@ async function _cpConfirmarEliminacion(id) {
 // ════════════════════════════════════════════════════════════════
 
 function _cpRefreshMetricas() {
-  const all   = (typeof consultas !== 'undefined') ? consultas : [];
+  const all   = _cpTodas();
   const ahora = new Date();
   const hoy   = new Date(ahora); hoy.setHours(0, 0, 0, 0);
   const man   = new Date(hoy);   man.setDate(man.getDate() + 1);
@@ -826,10 +824,17 @@ function _cpUpdateMesNav() {
 // (excluye programación interna).
 // ════════════════════════════════════════════════════════════════
 
+// Esta sección es solo de consultas de soporte a clientes. Se excluyen los
+// registros internos (programacion_interna) y las horas de implementación
+// (tipo 'implementacion': se guardan en `consultas` al cerrar un pendiente de
+// implementación, pero no son consultas de soporte).
+const _CP_TIPOS_EXCLUIDOS = ['programacion_interna', 'implementacion'];
 function _cpTodas() {
-  return (typeof consultas !== 'undefined')
-    ? consultas.filter(c => c.tipoConsulta !== 'programacion_interna' && c.tipo_consulta !== 'programacion_interna')
-    : [];
+  if (typeof consultas === 'undefined') return [];
+  return consultas.filter(c => {
+    const t = c.tipoConsulta || c.tipo_consulta;
+    return !_CP_TIPOS_EXCLUIDOS.includes(t);
+  });
 }
 
 function _cpDateKey(d) {
