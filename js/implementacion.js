@@ -204,14 +204,6 @@ function calcularSemaforo(c, tareasCliente, progreso) {
     return { color: 'var(--green)', emoji: '🟢', label: 'Completado', detalle: 'Todas las tareas finalizadas' };
   }
 
-  // Ya pasó la fecha prevista de fin y todavía quedan tareas: está atrasado, sin importar el resto
-  const atrasoPlan = diasAtrasoPlan(tareasCliente);
-  if (atrasoPlan > 0) {
-    const etaNueva = calcularETACliente(tareasCliente);
-    return { color: 'var(--red)', emoji: '🔴', label: 'Atrasado',
-             detalle: `Pasó el plan hace ${atrasoPlan}d · nueva fecha estimada: ${etaNueva?.fechaFin ? formatFechaImpl(etaNueva.fechaFin) : '—'}` };
-  }
-
   // Con deadline: comparar ETA vs objetivo
   if (c.fecha_fin_objetivo) {
     const objetivo  = new Date(c.fecha_fin_objetivo); objetivo.setHours(0,0,0,0);
@@ -463,6 +455,33 @@ function proyectarFinCliente(tareasCliente) {
     if (!ultimoFin || fin > ultimoFin) ultimoFin = fin;
   }
   return ultimoFin;
+}
+
+// Plan original: cuándo terminaba el proyecto según el cronograma de arranque (inicio del proyecto +
+// duraciones de TODAS las tareas, una atrás de otra), sin tener en cuenta lo que se adelantó o atrasó.
+// Se usa solo para mostrarlo como referencia en gris.
+function planOriginalCliente(c, tareasCliente) {
+  if (!tareasCliente.length) return null;
+  let inicio = _parseDate(c.fecha_inicio_implementacion);
+  if (!inicio) {
+    const fechas = tareasCliente.map(t => _parseDate(t.fecha_inicio_calc)).filter(Boolean);
+    if (!fechas.length) return null;
+    inicio = new Date(Math.min(...fechas));
+  }
+  const fases = (typeof getFasesParaCliente === 'function') ? getFasesParaCliente(c.id) : [];
+  const faseOrden = {};
+  fases.forEach((f, i) => { faseOrden[f.key] = i; });
+  const orden = [...tareasCliente].sort((a, b) => {
+    const fA = faseOrden[a.fase || 'relevamiento'] ?? 999;
+    const fB = faseOrden[b.fase || 'relevamiento'] ?? 999;
+    return fA !== fB ? fA - fB : a.orden - b.orden;
+  });
+  let cursor = inicio, fin = inicio;
+  for (const t of orden) {
+    fin = _addDays(cursor, Math.max(1, t.duracion_dias || 1));
+    cursor = _addDays(fin, 1);
+  }
+  return fin;
 }
 
 // Días que lleva pasada la fecha prevista de fin (la última fecha estimada de lo que falta hacer).
@@ -1496,35 +1515,35 @@ function renderClienteImplCard(c, detalle = false) {
   if (eta && eta.fechaFin) {
     finCalcStr = formatFechaImpl(eta.fechaFin);
     if (c.fecha_fin_objetivo) {
-      const objetivo = new Date(c.fecha_fin_objetivo);
-      objetivo.setHours(0,0,0,0);
-      const dias = diasEntre(objetivo, eta.fechaFin);
-      const atrasoPlan = diasAtrasoPlan(tareasCliente);
+      // Se está tarde cuando el fin calculado pasa de la fecha objetivo
+      const objetivo = _parseDate(c.fecha_fin_objetivo);
+      const finCalc = new Date(eta.fechaFin); finCalc.setHours(0, 0, 0, 0);
+      const dias = diasEntre(objetivo, finCalc);
       if (progreso === 100) {
         estadoStr = `<span style="color:var(--green)">✓ Terminada</span>`;
       } else if (dias > 0) {
-        estadoStr = `<span style="color:var(--red)">⚠ ${dias}d tarde${atrasoPlan > 0 ? ` · plan original: ${formatFechaImpl(eta.fechaFinPlan)}` : ''}</span>`;
-      } else if (atrasoPlan > 0) {
-        estadoStr = `<span style="color:var(--red)">⚠ Plan original vencido (${formatFechaImpl(eta.fechaFinPlan)})</span>`;
+        estadoStr = `<span style="color:var(--red)">⚠ ${dias}d tarde</span>`;
       } else {
         estadoStr = `<span style="color:var(--green)">✓ En tiempo</span>`;
       }
     } else {
+      // Sin fecha objetivo no hay contra qué comparar: solo cuánto falta
       const hoy = new Date(); hoy.setHours(0,0,0,0);
       const dias = diasEntre(hoy, eta.fechaFin);
-      const atrasoPlan = diasAtrasoPlan(tareasCliente);
       if (progreso === 100) {
         estadoStr = `<span style="color:var(--green)">✓ Terminada</span>`;
       } else if (dias > 0) {
-        estadoStr = atrasoPlan > 0
-          ? `<span style="color:var(--red)">⚠ Faltan ${dias}d · plan original: ${formatFechaImpl(eta.fechaFinPlan)}</span>`
-          : `<span style="color:var(--text3)">Faltan ${dias}d</span>`;
+        estadoStr = `<span style="color:var(--text3)">Faltan ${dias}d</span>`;
       } else if (dias === 0) {
         estadoStr = `<span style="color:var(--amber)">Hoy</span>`;
       } else {
         estadoStr = `<span style="color:var(--red)">⚠ Vencido ${-dias}d</span>`;
       }
     }
+  }
+  const planOrig = (progreso === 100) ? null : planOriginalCliente(c, tareasCliente);
+  if (planOrig && estadoStr) {
+    estadoStr += ` <span style="color:var(--text3);font-weight:400" title="Fin según el cronograma de arranque (inicio + duraciones de todas las tareas), antes de adelantos o atrasos">· plan original: ${formatFechaImpl(planOrig)}</span>`;
   }
 
   // Filtros a nivel tarea: si hay filtro activo, solo mostrar las que matchean

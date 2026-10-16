@@ -188,8 +188,9 @@ function _dispDatos() {
       pctEsperado = Math.max(0, Math.min(100, Math.round((_dispDias(inicio, hoy) / totalDias) * 100)));
       const diff = progreso - pctEsperado;
       const sem = calcularSemaforo(c, tareas, progreso);
-      // Si la fecha de fin prevista ya pasó y sigue abierto, está atrasado aunque el % de avance sea alto
-      if (diff <= -10 || sem.color === 'var(--red)' || diasAtrasoPlan(tareas) > 0) estado = 'atrasado';
+      // Tarde = el fin calculado pasa de la fecha objetivo (si la tiene), o el avance viene bien por debajo de lo esperado
+      const objetivo = _parseDate(c.fecha_fin_objetivo);
+      if (diff <= -10 || sem.color === 'var(--red)' || (objetivo && fin > objetivo)) estado = 'atrasado';
       else if (diff >= 10) estado = 'adelantado';
     }
     return { c, total, completas, progreso, finalizado, vencidas, inicio, fin, estado, pctEsperado,
