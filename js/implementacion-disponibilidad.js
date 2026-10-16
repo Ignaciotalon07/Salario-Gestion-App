@@ -165,6 +165,16 @@ function _dispDatos() {
       if (comp.length) fin = new Date(Math.max(...comp));
     }
 
+    // Si lo que falta ya venció, el fin se proyecta desde hoy con las duraciones de las tareas pendientes
+    // (así la barra, la carga por mes y el simulador usan la fecha realista y no la vieja)
+    if (!(total > 0 && completas === total)) {
+      const etaP = calcularETACliente(tareas);
+      if (etaP && etaP.fechaFin) {
+        const f = new Date(etaP.fechaFin); f.setHours(0, 0, 0, 0);
+        if (!fin || f > fin) fin = f;
+      }
+    }
+
     // Estado: atrasado / en tiempo / adelantado (compara avance real vs. avance esperado por tiempo)
     let estado = 'tiempo';
     let pctEsperado = null;
@@ -178,7 +188,8 @@ function _dispDatos() {
       pctEsperado = Math.max(0, Math.min(100, Math.round((_dispDias(inicio, hoy) / totalDias) * 100)));
       const diff = progreso - pctEsperado;
       const sem = calcularSemaforo(c, tareas, progreso);
-      if (diff <= -10 || sem.color === 'var(--red)') estado = 'atrasado';
+      // Si la fecha de fin prevista ya pasó y sigue abierto, está atrasado aunque el % de avance sea alto
+      if (diff <= -10 || sem.color === 'var(--red)' || diasAtrasoPlan(tareas) > 0) estado = 'atrasado';
       else if (diff >= 10) estado = 'adelantado';
     }
     return { c, total, completas, progreso, finalizado, vencidas, inicio, fin, estado, pctEsperado,

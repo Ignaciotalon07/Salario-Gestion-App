@@ -596,6 +596,43 @@ function renderSaludoPanel() {
       cta: pendViejos.length === 1 ? 'Revisarlo →' : 'Revisarlos →',
       accion: `_saludoIrAPendienteViejo('${pendViejos.length === 1 ? pendViejos[0].id : ''}')`,
     }] : []),
+    // Ausencias (14 días antes): a los demás les avisa "X sale de vacaciones del A al B" todos los días
+    // (al abrirlo desaparece solo por ese día); a quien la cargó le muestra un cartelito
+    // motivacional distinto cada día, que NO desaparece al abrirlo.
+    ...((typeof ausSalidasProximas === 'function') ? ausSalidasProximas(AUS_VENTANA_SALIDAS).flatMap(a => {
+      if (a.mia) {
+        if (a.tipo !== 'vacaciones') return [];
+        return [{
+          bucket: 'dia', count: 1, color: '#0e9aa7', icon: '🌴',
+          msg: escapeHtmlSaludo(ausFraseVacaciones(a)),
+          cta: 'Ver mis ausencias →', accion: "_saludoIrAEquipoTab('ausencias')",
+        }];
+      }
+      const kDia = a.key + ':' + _ausISO(new Date());
+      if (ausAvisoVisto(kDia)) return [];
+      const tipo = { vacaciones: 'de vacaciones', licencia: 'de licencia', dia_suelto: 'un día', puente: 'de puente' }[a.tipo] || 'de vacaciones';
+      const cuando = a.faltan === 0 ? 'Hoy' : (a.faltan === 1 ? 'Mañana' : `En ${a.faltan} días`);
+      return [{
+        bucket: 'dia', count: 1, color: '#1a5fa5', icon: '🏖️',
+        msg: `${cuando} <strong>${escapeHtmlSaludo(a.miembro_nombre)}</strong> sale ${tipo}: ${a.dias === 1 ? `el ${_ausFmt(a.fecha_desde)}` : `del ${_ausFmt(a.fecha_desde)} al ${_ausFmt(a.fecha_hasta)}`}.`,
+        prio: true,
+        cta: 'Ver ausencias →', accion: `_saludoIrAEquipoTab('ausencias','${kDia}')`,
+      }];
+    }).slice(0, 5) : []),
+    // Áreas: "en 10 días hay que atender Implementación. Queda con 1/2 asesores. Falta X."
+    ...((typeof areasProximosAvisos === 'function') ? areasProximosAvisos(AUS_VENTANA_AREAS).filter(a => !ausAvisoVisto(a.key)).slice(0, 3).map(a => {
+      const cuando = a.dias === 0 ? (a.ini < _ausISO(new Date()) ? 'Ya' : 'Hoy') : (a.dias === 1 ? 'Mañana' : `En ${a.dias} días`);
+      const frase = a.dias === 0 && a.ini < _ausISO(new Date())
+        ? `Ya hay que atender <strong>${a.area}</strong>`
+        : `${cuando} hay que atender <strong>${a.area}</strong>`;
+      return {
+        bucket: 'dia',
+        count: 1, color: a.lv === 2 ? '#c0392b' : '#f97316', icon: a.lv === 2 ? '⚠️' : '🧩',
+        msg: `${frase}. ${escapeHtmlSaludo(a.detalle)}`,
+        prio: true,
+        cta: 'Ver áreas →', accion: `_saludoIrAEquipoTab('areas','${a.key}')`,
+      };
+    }) : []),
     // Un tile por cada pendiente que otra persona me generó o reasignó
     ...pendAsig.map(a => ({
       bucket: 'notif',
@@ -887,6 +924,13 @@ function _saludoIrACargarPendiente() {
     if (typeof setViewMode === 'function') setViewMode('mis');
     if (typeof showPendForm === 'function') showPendForm();
   }, 50);
+}
+
+function _saludoIrAEquipoTab(tab, key) {
+  if (key && typeof ausAvisoMarcarVisto === 'function') ausAvisoMarcarVisto(key); // al abrirla, deja de figurar
+  goTo(_saludoNavBtn('equipo'), 'equipo');
+  setTimeout(() => { if (typeof eqTab === 'function') eqTab(tab); }, 50);
+  setTimeout(() => { if (typeof renderSaludoPanel === 'function') renderSaludoPanel(); }, 100);
 }
 
 function _saludoIrAImplMias() {

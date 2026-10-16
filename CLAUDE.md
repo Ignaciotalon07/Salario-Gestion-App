@@ -82,6 +82,7 @@ Salario Gestion/
 │   ├── conexiones.js        ← Conexiones del cliente (tarjeta + modal)
 │   ├── reporte-implementacion.js ← Reporte semanal de implementación
 │   ├── asesor-detalle.js    ← Detalle de cada asesor (sección Equipo)
+│   ├── equipo-ausencias.js  ← Calendario de ausencias + formulario (sección Equipo)
 │   ├── hitos.js             ← Celebraciones por hitos de registros
 │   ├── reportes.js          ← Sección Reportes
 │   ├── saludo.js            ← Saludo + cartelito + "Tu día" + tiles/campanita del Panel general
@@ -142,6 +143,7 @@ Salario Gestion/
     ├── 047_cliente_documentos_categorias.sql ← Tipo de documento (logo, firma, pdf, etc.)
     ├── 048_impl_estructuracion.sql ← Tabla impl_estructuracion (tareas internas del equipo, sección 8d)
     ├── 049_impl_estructuracion_detalle.sql ← Campo opcional "detalle" en esas tareas
+    ├── 050_equipo_ausencias.sql    ← Tabla equipo_ausencias (vacaciones/licencias; todos ven, cada uno edita las suyas)
     └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 
@@ -198,6 +200,15 @@ Salario Gestion/
   explícitamente** qué migración corre y dónde. No asumir que ya lo hizo.
 
 ## Decisiones de diseño importantes
+
+0. **Implementación → Soporte es AUTOMÁTICO**: cuando se completan todas las
+   tareas de implementación, el cliente pasa solo de `impl` a `soporte` y queda
+   en la sección "Implementaciones finalizadas". No hace falta (ni se va a
+   hacer) un botón manual "Mover a soporte".
+
+0b. **Formulario "Nuevo cliente" (resuelto)**: pide nombre, CUIT, razón social,
+   tipo, área, link de WhatsApp (Whaticket) y una nota/detalle opcional. Ya no
+   pide autonomía (se guarda 'media' por defecto).
 
 1. **Permisos**: solo el asesor asignado a un pendiente/tarea puede
    modificar su estado o reasignarlo. Los demás pueden ver y agregar notas.
@@ -363,12 +374,32 @@ Cuando el usuario te pida cambios:
 
 ## Cosas que NO están terminadas
 
+- **Dominio propio** (PENDIENTE, decidido posponer): pasar de
+  `https://ignaciotalon07.github.io/Salario-Gestion-App/` a
+  `https://www.salariogestion.com.ar`. En el código no hay que cambiar nada
+  (no hay URLs hardcodeadas; el login usa `window.location.origin`). Pasos, en
+  orden: 0) backup (commit + tag `respaldo-antes-dominio`); 1) comprar el
+  dominio en nic.ar; 2) DNS: CNAME `www` → `ignaciotalon07.github.io`;
+  3) ANTES de activar en GitHub, sumar el dominio nuevo en Supabase (Auth → URL
+  Configuration → Redirect URLs) y en Google Cloud (OAuth → Authorized
+  JavaScript origins), sin quitar los viejos; 4) GitHub → Settings → Pages →
+  Custom domain + Enforce HTTPS; 5) recién ahí cambiar el Site URL de Supabase;
+  6) probar login en incógnito. Si falla: borrar el Custom domain en GitHub.
+- **Ausencias del equipo / cobertura** (EN CURSO, pasos 1, 2 y 3 de 5 hechos = migración
+  050 + `js/equipo-ausencias.js`: calendario de 12 meses con color por asesor, feriados AR
+  en `AUS_FERIADOS` (2026 y 2027; sumar los puentes 2027 cuando salga el decreto), formulario
+  inicio + cantidad de días, y cobertura por semana con `ausCoberturaDia(iso)` reutilizable; la sección Equipo tiene 3
+  pestañas: Asesores / Ausencias / Áreas, con `eqTab()`; la cobertura Gantt vive en Áreas). Reglas acordadas: Soporte = 2 personas (Daniel Colomer, Renzo Moretti),
+  Implementación = 2 (Ignacio Talon, Matias Ferro). Todos ven el mismo calendario
+  y cada uno carga solo las suyas. Tipos: vacaciones, licencia, día suelto, puente
+  (sin "medio día": se descartó). Si falta alguien de Soporte, baja UN implementador a
+  cubrir (Implementación pierde una persona); si falta alguien de Implementación
+  el área queda tocada (de Soporte NO suben a Implementación). Capacidad de
+  Implementación = 2 clientes por implementador disponible (4 con los dos). Alfred
+  (a Impl) y Daniel Ferro (a Soporte) son refuerzos excepcionales: NO se cuentan por
+  defecto. Pasos que faltan: 4) conectar con
+  la capacidad de Disponibilidad; 5) aviso en el Panel general.
 - **U10**: Email digest diario (requiere Resend + Edge Function de cron).
-- **Implementación → Soporte**: Botón "Mover a soporte" en cards de Impl
-  (cambia `area='impl'` → `'soporte'`, conserva tareas como histórico).
-- **Form adaptativo de cliente**: el form de "Nuevo cliente" sigue
-  pidiendo autonomía y nota inicial aunque el área sea Implementación.
-  Está en discusión si vale la pena hacerlo adaptativo.
 - **Repositorio — links externos**: opción para agregar URL en lugar de
   archivo (útil para recursos que superan 50 MB). Discutido pero no
   implementado.

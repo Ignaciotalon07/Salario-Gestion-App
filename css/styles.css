@@ -5675,6 +5675,114 @@ input[type=date]:focus {
   .estruct-estado, .estruct-acc { grid-column: 2; }
 }
 
+/* Ausencias del equipo (sección Equipo) */
+.aus-cal-anio { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.aus-cal-mes { border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+.aus-cal-titulo { font-size: 12.5px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.aus-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.aus-cal-dow { font-size: 9.5px; font-weight: 600; color: var(--text3); text-align: center; padding-bottom: 2px; }
+.aus-cal-dia { font-size: 10.5px; text-align: center; padding: 3px 0; border-radius: 4px; color: var(--text2); }
+.aus-cal-dia--finde { color: var(--text3); opacity: .7; }
+.aus-cal-dia--ocupado { color: #fff; font-weight: 700; cursor: help; text-shadow: 0 0 2px rgba(0,0,0,.45); }
+.aus-cal-dia--feriado { color: #c0392b; font-weight: 700; background: rgba(192,57,43,.13); box-shadow: inset 0 -3px 0 #c0392b; cursor: help; }
+.aus-cal-dia--puente { color: #b7791f; font-weight: 700; background: rgba(224,161,0,.16); box-shadow: inset 0 -3px 0 #e0a100; cursor: help; }
+.aus-cal-dia--ocupado.aus-cal-dia--feriado { color: #fff; }
+.aus-cal-dia--ocupado.aus-cal-dia--puente { color: #fff; }
+.aus-cal-dia[data-tip] { position: relative; }
+.aus-cal-dia[data-tip]:hover::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: #2b2b2b; color: #fff; font-size: 11.5px; font-weight: 500; line-height: 1.35; text-shadow: none;
+  padding: 6px 10px; border-radius: 8px; white-space: normal; width: max-content; max-width: 220px;
+  text-align: left; z-index: 50; pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.25);
+}
+.aus-cal-dia[data-tip]:hover { z-index: 40; }
+.aus-cal-dia--hoy { outline: 2px solid var(--accent); outline-offset: 0; }
+.aus-leyenda { display: flex; gap: 16px; flex-wrap: wrap; margin: 14px 0 4px; font-size: 12.5px; color: var(--text2); }
+.aus-ley i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -2px; }
+.aus-leyenda--fer { margin-top: 2px; }
+.aus-ley-fer, .aus-ley-puente { background: transparent !important; }
+.aus-ley i.aus-ley-fer { background: rgba(192,57,43,.13) !important; box-shadow: inset 0 -3px 0 #c0392b; }
+.aus-ley i.aus-ley-puente { background: rgba(224,161,0,.16) !important; box-shadow: inset 0 -3px 0 #e0a100; }
+/* Pestañas de Equipo: barra segmentada a todo el ancho (igual que la de Implementación) */
+.eq-tabs {
+  display: flex; width: 100%; margin-bottom: 18px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+}
+.eq-tab {
+  flex: 1; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--text3); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 10px;
+  background: none; border: 0; border-left: 1px solid var(--border); border-bottom: 3px solid transparent;
+  transition: color .15s, background .15s, border-color .15s;
+}
+.eq-tab__badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #f97316; color: #fff; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.eq-tab:first-child { border-left: 0; }
+.eq-tab:hover:not(.eq-tab--on) { color: var(--text); background: var(--surface2); }
+.eq-tab--on { color: #f97316 !important; background: rgba(249,115,22,.08); border-bottom-color: #f97316; }
+.eq-mes-row { display: flex; align-items: stretch; gap: 12px; margin-bottom: 20px; }
+.eq-mes-row .panel-mes-nav { flex: 1; margin-bottom: 0; }
+.eq-mes-row .btn-primary { white-space: nowrap; }
+@media (max-width: 600px) { .eq-mes-row { flex-direction: column; } }
+.eq-info-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+.eq-info { flex: 1; min-width: 260px; display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 10px;
+  background: var(--surface2); border: 1px solid var(--border); font-size: 12.5px; line-height: 1.45; color: var(--text2); }
+.eq-info b { color: var(--text); }
+.eq-info__ico { font-size: 16px; }
+.aus-hoy-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 8px; }
+.aus-hoy-card { border-radius: 10px; padding: 12px 14px; border-left: 4px solid var(--green); background: rgba(45,106,45,.07); }
+.aus-hoy-card--warn { border-left-color: #e0a100; background: rgba(224,161,0,.11); }
+.aus-hoy-card--crit { border-left-color: #c0392b; background: rgba(192,57,43,.11); }
+.aus-hoy-card__t { font-size: 12px; font-weight: 600; color: var(--text3); }
+.aus-hoy-card__v { font-size: 15px; font-weight: 700; color: var(--text); margin-top: 3px; }
+.am-resumen { display: flex; flex-direction: column; gap: 6px; margin: 16px 0 0; }
+.am-resumen__item { display: flex; align-items: center; gap: 9px; font-size: 13px; font-weight: 600; color: var(--text2); }
+.am-resumen__item--ok { color: var(--text3); font-weight: 500; }
+.am-mes__cerrado { color: var(--text3) !important; }
+.am-resumen__item--pasado { color: var(--text3); font-weight: 500; }
+.am-punto--quieto { animation: none !important; background: var(--text3) !important; }
+.am-punto { width: 10px; height: 10px; border-radius: 50%; background: #f97316; animation: am-titila 1.2s ease-in-out infinite; }
+@keyframes am-titila { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(249,115,22,.55); } 50% { opacity: .35; box-shadow: 0 0 0 6px rgba(249,115,22,0); } }
+.am-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.am-card { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: var(--surface); }
+.am-card--actual { border-color: #f97316; }
+.am-card--pasado { background: var(--surface2); }
+.am-mes { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.am-mes em { font-style: normal; font-size: 10px; font-weight: 700; color: #f97316; margin-left: 6px; text-transform: uppercase; letter-spacing: .04em; }
+.am-linea { display: flex; flex-direction: column; gap: 4px; padding: 7px 0 7px 10px; border-left: 3px solid var(--border); margin-top: 6px; }
+.am-linea--regular { border-left-color: #f97316; background: rgba(249,115,22,.07); border-radius: 0 8px 8px 0; }
+.am-linea--critico { border-left-color: #c0392b; background: rgba(192,57,43,.08); border-radius: 0 8px 8px 0; }
+.am-estado { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 8px; }
+.am-badge { font-size: 12px; font-weight: 700; }
+.am-badge--normal { color: #2d8a4e; }
+.am-badge--regular { color: #e8650a; }
+.am-badge--critico { color: #c0392b; }
+.am-area { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; }
+.am-ok { font-size: 13px; color: var(--text3); }
+.am-frases { display: flex; flex-direction: column; gap: 3px; }
+.am-frase { font-size: 12.5px; color: var(--text); line-height: 1.4; }
+@media (max-width: 1100px) { .am-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 700px) { .am-grid { grid-template-columns: 1fr; } }
+.aus-cg-avisos { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.aus-cg-aviso { font-size: 12.5px; color: var(--text2); padding: 7px 10px; border-radius: 8px; border-left: 4px solid var(--green); background: rgba(45,106,45,.06); }
+.aus-cg-aviso--warn { border-left-color: #e0a100; background: rgba(224,161,0,.10); }
+.aus-cg-aviso--crit { border-left-color: #c0392b; background: rgba(192,57,43,.10); }
+@media (max-width: 760px) { .aus-cg-fila { grid-template-columns: 90px 1fr; } .aus-cg-barra { font-size: 10px; } }
+.aus-subtitulo { font-size: 13px; font-weight: 700; color: var(--text); margin: 16px 0 4px; }
+.aus-lista { margin-top: 4px; }
+.aus-item { display: grid; grid-template-columns: 160px 130px 190px 1fr auto; gap: 12px; align-items: center; padding: 8px 4px; border-top: 1px solid var(--border); font-size: 13px; }
+.aus-punto { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
+.aus-item__tipo { font-weight: 600; font-size: 12px; color: var(--text2); white-space: nowrap; }
+.aus-item__quien { font-weight: 600; color: var(--text); }
+.aus-item__fechas { font-size: 12px; color: var(--text3); white-space: nowrap; }
+.aus-item__nota { font-size: 12px; color: var(--text3); min-width: 0; }
+.aus-item__acc { display: inline-flex; gap: 6px; }
+.aus-item__acc button { background: none; border: none; cursor: pointer; font-size: 14px; }
+@media (max-width: 1100px) { .aus-cal-anio { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 760px) {
+  .aus-cal-anio { grid-template-columns: repeat(2, 1fr); }
+  .aus-item { grid-template-columns: 1fr auto; gap: 4px 10px; }
+  .aus-item__tipo, .aus-item__fechas, .aus-item__nota { grid-column: 1; }
+}
+
 .disp-dot--atrasado   { background: var(--red); }
 .disp-dot--tiempo     { background: var(--green); }
 .disp-dot--adelantado { background: #3b82f6; }

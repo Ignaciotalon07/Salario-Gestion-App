@@ -15,7 +15,7 @@
     />
 
     <!-- Estilos -->
-    <link rel="stylesheet" href="css/styles.css?v=20261016d" />
+    <link rel="stylesheet" href="css/styles.css?v=20261016z" />
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -1712,16 +1712,27 @@
                 <div class="page-title">Equipo</div>
                 <div class="page-sub">Carga y rendimiento por asesor</div>
               </div>
-              <div class="panel-header-right">
-                <button class="btn-primary" onclick="abrirModalHoras()">+ Carga de horas</button>
-              </div>
             </div>
 
+            <!-- Pestañas de Equipo -->
+            <div class="eq-tabs" id="eq-tabs">
+              <button class="eq-tab eq-tab--on" data-tab="asesores" onclick="eqTab('asesores')">👥 Asesores</button>
+              <button class="eq-tab" data-tab="ausencias" onclick="eqTab('ausencias')">🏖️ Ausencias</button>
+              <button class="eq-tab" data-tab="areas" onclick="eqTab('areas')">🧩 Áreas</button>
+            </div>
+
+            <div id="eq-pane-asesores" class="eq-pane">
+            <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:10px 14px;margin-bottom:14px">
+              <div style="font-size:12px;color:var(--amber);line-height:1.6">💡 <strong>Asesores:</strong> las horas trabajadas, las consultas atendidas y la carga de cada uno de los 6 asesores en el mes. Sirve para ver cómo se reparte el trabajo del equipo.</div>
+            </div>
             <!-- Selector de mes: full-width, igual que en Panel general -->
-            <div class="panel-mes-nav">
+            <div class="eq-mes-row">
+              <div class="panel-mes-nav">
               <button id="eq-mes-prev" class="panel-mes-nav__btn" onclick="navEqMes(-1)" title="Mes anterior">◀</button>
               <span id="eq-mes-label" class="panel-mes-nav__label">Cargando...</span>
               <button id="eq-mes-next" class="panel-mes-nav__btn" onclick="navEqMes(1)" disabled title="Mes siguiente">▶</button>
+            </div>
+              <button class="btn-primary" onclick="abrirModalHoras()">+ Carga de horas</button>
             </div>
 
             <div class="metrics-grid">
@@ -1805,6 +1816,21 @@
                   >
                 </div>
               </div>
+            </div>
+            </div><!-- /eq-pane-asesores -->
+
+            <div id="eq-pane-ausencias" class="eq-pane" style="display:none">
+              <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:10px 14px;margin-bottom:14px">
+                <div style="font-size:12px;color:var(--amber);line-height:1.6">💡 <strong>Ausencias:</strong> el calendario del año con las vacaciones, licencias, días sueltos y puentes de cada asesor, más los feriados. Cada uno carga las suyas; sirve para planificar el año y ver cómo manejamos las áreas.</div>
+              </div>
+              <div class="card estruct-card" id="equipo-ausencias" style="margin-top:0"></div>
+            </div>
+
+            <div id="eq-pane-areas" class="eq-pane" style="display:none">
+              <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:10px 14px;margin-bottom:14px">
+                <div style="font-size:12px;color:var(--amber);line-height:1.6">💡 <strong>Áreas:</strong> cómo quedan Soporte e Implementación según las ausencias cargadas. Se actualiza sola y sirve para anticipar semanas con poco personal y ver si hace falta un refuerzo.</div>
+              </div>
+              <div class="card estruct-card" id="equipo-areas" style="margin-top:0"></div>
             </div>
           </div>
 
@@ -2381,12 +2407,13 @@
     <script src="js/pendientes.js?v=20261015d"></script>
     <script src="js/consultas.js?v=20261008a"></script>
     <script src="js/kb.js"></script>
-    <script src="js/implementacion.js?v=20261015l"></script>
+    <script src="js/implementacion.js?v=20261016c"></script>
     <script src="js/reporte-implementacion.js?v=20261008a"></script>
     <script src="js/cliente-detalle.js?v=20261013j"></script>
     <script src="js/conexiones.js?v=20261013c"></script>
     <script src="js/cliente-documentos.js?v=20261014g"></script>
-    <script src="js/implementacion-disponibilidad.js?v=20261016e"></script>
+    <script src="js/implementacion-disponibilidad.js?v=20261016g"></script>
+    <script src="js/equipo-ausencias.js?v=20261016w"></script>
     <script src="js/asesor-detalle.js"></script>
     <script src="js/charts.js?v=20261008a"></script>
     <script src="js/alertas.js"></script>
@@ -2394,7 +2421,7 @@
     <script src="js/repositorio.js?v=20261015c"></script>
     <script src="js/reportes.js"></script>
     <script src="js/avisos.js?v=20261015h"></script>
-    <script src="js/saludo.js?v=20261015d"></script>
+    <script src="js/saludo.js?v=20261016d"></script>
     <script src="js/hitos.js"></script>
 
     <!-- ════════════════════════════════════
