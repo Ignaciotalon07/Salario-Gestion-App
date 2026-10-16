@@ -5640,6 +5640,41 @@ input[type=date]:focus {
 .disp-bar--sim .disp-bar__txt { color: #f97316; }
 .disp-row--sim { background: rgba(249,115,22,.05); }
 
+/* Estructuración interna: fila del Gantt (un tramo por tarea) */
+.disp-bar--interna { --c: #8582a0; background: var(--c); opacity: .85; }
+.disp-bar--interna .disp-bar__txt { color: #fff; font-weight: 600; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px rgba(0,0,0,.22); }
+.disp-bar--interna-hecha { background: color-mix(in srgb, var(--c) 20%, transparent); border: 1px dashed var(--c); }
+.disp-bar--interna-hecha .disp-bar__txt { color: var(--c); text-shadow: none; }
+.disp-row--interna { background: rgba(148,163,184,.06); border-top: 2px solid var(--border); }
+.disp-row--interna .disp-label:hover .disp-label__name { color: #8582a0; }
+.disp-dot--interna { background: #8582a0; }
+
+/* Sección "Estructuración interna" (debajo del Gantt) */
+.estruct-card { margin-top: 18px; }
+.estruct-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 12px; }
+.estruct-sub { font-size: 12.5px; color: var(--text3); line-height: 1.5; margin-top: 4px; max-width: 640px; }
+.estruct-lista { display: flex; flex-direction: column; }
+.estruct-fila {
+  display: grid; grid-template-columns: 120px 1fr 150px 120px auto; align-items: center; gap: 12px;
+  padding: 9px 4px; border-top: 1px solid var(--border); font-size: 13px;
+}
+.estruct-fila--hecha { opacity: .55; }
+.estruct-tipo { font-size: 12px; font-weight: 600; color: var(--text2); white-space: nowrap; }
+.estruct-color { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 7px; vertical-align: -1px; }
+.estruct-nombre { font-weight: 600; color: var(--text); min-width: 0; }
+.estruct-detalle { display: block; margin-top: 3px; font-weight: 400; font-size: 12px; color: var(--text3); line-height: 1.45; white-space: pre-wrap; }
+.estruct-fechas { font-size: 12px; color: var(--text3); white-space: nowrap; }
+.estruct-estado { font-size: 12px; padding: 4px 6px; border-radius: 8px; }
+.estruct-estado--en_curso { color: #6f6c8e; font-weight: 700; }
+.estruct-estado--hecha { color: var(--green); font-weight: 700; }
+.estruct-acc { display: inline-flex; gap: 6px; justify-content: flex-end; }
+.estruct-vacio { padding: 22px 8px; text-align: center; color: var(--text3); font-size: 13px; }
+@media (max-width: 760px) {
+  .estruct-fila { grid-template-columns: 1fr auto; gap: 6px 10px; }
+  .estruct-tipo, .estruct-fechas { grid-column: 1; }
+  .estruct-estado, .estruct-acc { grid-column: 2; }
+}
+
 .disp-dot--atrasado   { background: var(--red); }
 .disp-dot--tiempo     { background: var(--green); }
 .disp-dot--adelantado { background: #3b82f6; }

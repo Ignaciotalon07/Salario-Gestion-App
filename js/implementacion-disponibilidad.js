@@ -186,13 +186,195 @@ function _dispDatos() {
   });
 }
 
-// Cuántos clientes están activos un día dado
+// Cuántos "lugares" de la capacidad están ocupados un día dado: cada cliente
+// activo ocupa 1, y la Estructuración interna ocupa 1 más mientras haya al
+// menos una tarea (pendiente o en curso) ese día.
 function _dispCargaDia(items, dia) {
   let n = 0;
   for (const it of items) {
     if (it.inicio && it.fin && it.inicio <= dia && dia <= it.fin) n++;
   }
+  if (_dispEstructActiva(dia)) n++;
   return n;
+}
+
+// ────────── Estructuración interna ──────────
+// Trabajo del equipo que no es implementar un cliente (soporte, proyectos
+// internos, mejoras de gestión, capacitaciones). Se ve como una fila más en el
+// Gantt y resta 1 lugar de la capacidad mientras tenga tareas activas.
+// Tabla: impl_estructuracion (migración 048).
+let estructTareas = [];
+let _estructError = false;   // true si la tabla todavía no existe (falta correr la migración)
+
+const ESTRUCT_TIPOS = {
+  soporte:      { ico: '🎧', label: 'Soporte' },
+  proyecto:     { ico: '🧩', label: 'Proyecto' },
+  mejora:       { ico: '🛠️', label: 'Mejora' },
+  capacitacion: { ico: '🎓', label: 'Capacitación' },
+};
+const ESTRUCT_ESTADOS = { pendiente: 'Pendiente', en_curso: 'En curso', hecha: 'Hecha' };
+
+function _estructMap(r) {
+  return { id: r.id, nombre: r.nombre, tipo: r.tipo, estado: r.estado, detalle: r.detalle || '',
+           inicio: _parseDate(r.fecha_inicio), fin: _parseDate(r.fecha_fin),
+           fi: r.fecha_inicio, ff: r.fecha_fin };
+}
+
+// Colores para distinguir una tarea de la siguiente en el Gantt y en la lista.
+// Se asignan por orden de fecha, así dos tareas consecutivas nunca comparten color.
+// Tonos apagados (grisáceos) para que la barra pase más desapercibida que las de los clientes
+const ESTRUCT_COLORES = ['#8582a0', '#7993a6', '#789c93', '#a08596', '#a59a76', '#808bab'];
+function _estructOrdenadas() {
+  return [...estructTareas].sort((a, b) => (a.inicio - b.inicio) || String(a.id).localeCompare(String(b.id)));
+}
+function _estructColor(t) {
+  const i = _estructOrdenadas().findIndex(x => x.id === t.id);
+  return ESTRUCT_COLORES[(i < 0 ? 0 : i) % ESTRUCT_COLORES.length];
+}
+
+// ¿Hay estructuración interna activa ese día? (las "hechas" no ocupan lugar)
+function _dispEstructActiva(dia) {
+  return estructTareas.some(t => t.estado !== 'hecha' && t.inicio && t.fin && t.inicio <= dia && dia <= t.fin);
+}
+
+async function cargarEstructuracion() {
+  try {
+    const rows = await dbList('impl_estructuracion', { orderBy: 'fecha_inicio' });
+    estructTareas = rows.map(_estructMap);
+    _estructError = false;
+  } catch (e) {
+    console.warn('Estructuración interna: no se pudo cargar (¿falta correr la migración 048?)', e);
+    _estructError = true;
+  }
+  if (window._implDispAbierta && typeof renderImplementacion === 'function') renderImplementacion();
+}
+
+window.addEventListener('app-ready', () => {
+  cargarEstructuracion();
+  try {
+    sb().channel('impl-estructuracion-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'impl_estructuracion' }, () => cargarEstructuracion())
+      .subscribe();
+  } catch (e) { /* sin tiempo real, igual se carga al abrir */ }
+});
+
+// Modal para agregar / editar una tarea
+function estructAbrirForm(id) {
+  cerrarEstructForm();
+  const t = id ? estructTareas.find(x => x.id === id) : null;
+  const hoyISO = _toISODate(_dispHoy());
+  const overlay = document.createElement('div');
+  overlay.id = 'estruct-overlay';
+  overlay.className = 'kb-modal-overlay kb-modal--open';
+  overlay.innerHTML = `
+    <div class="kb-modal-sheet" onclick="event.stopPropagation()" style="max-width:460px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div class="card-title" style="margin:0">${t ? 'Editar tarea' : 'Nueva tarea de estructuración interna'}</div>
+        <button onclick="cerrarEstructForm()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">✕</button>
+      </div>
+      <label style="font-size:12px;font-weight:600;color:var(--text2)">Nombre</label>
+      <input type="text" id="estruct-nombre" maxlength="120" placeholder="Ej: Armar manual de onboarding" value="${t ? _dispEsc(t.nombre) : ''}" style="width:100%;margin:4px 0 12px">
+      <label style="font-size:12px;font-weight:600;color:var(--text2)">Tipo</label>
+      <select id="estruct-tipo" style="width:100%;margin:4px 0 12px">
+        ${Object.entries(ESTRUCT_TIPOS).map(([k, v]) => `<option value="${k}" ${(t ? t.tipo : 'proyecto') === k ? 'selected' : ''}>${v.ico} ${v.label}</option>`).join('')}
+      </select>
+      <label style="font-size:12px;font-weight:600;color:var(--text2)">Detalle <span style="font-weight:400;color:var(--text3)">(opcional)</span></label>
+      <textarea id="estruct-detalle" rows="3" placeholder="Explicá de qué se trata, qué incluye, quién participa..." style="width:100%;margin:4px 0 12px;resize:vertical">${t ? _dispEsc(t.detalle) : ''}</textarea>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div><label style="font-size:12px;font-weight:600;color:var(--text2)">Fecha de inicio</label>
+          <input type="date" id="estruct-ini" value="${t ? t.fi : hoyISO}" style="width:100%;margin-top:4px"></div>
+        <div><label style="font-size:12px;font-weight:600;color:var(--text2)">Fecha de fin</label>
+          <input type="date" id="estruct-fin" value="${t ? t.ff : hoyISO}" style="width:100%;margin-top:4px"></div>
+      </div>
+      <label style="font-size:12px;font-weight:600;color:var(--text2)">Estado</label>
+      <select id="estruct-estado" style="width:100%;margin:4px 0 18px">
+        ${Object.entries(ESTRUCT_ESTADOS).map(([k, v]) => `<option value="${k}" ${(t ? t.estado : 'pendiente') === k ? 'selected' : ''}>${v}</option>`).join('')}
+      </select>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="btn-secondary" onclick="cerrarEstructForm()">Cancelar</button>
+        <button class="btn-primary" onclick="estructGuardar(${t ? `'${t.id}'` : 'null'})">Guardar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('estruct-nombre')?.focus();
+}
+function cerrarEstructForm() { document.getElementById('estruct-overlay')?.remove(); }
+
+async function estructGuardar(id) {
+  const nombre = document.getElementById('estruct-nombre').value.trim();
+  const tipo   = document.getElementById('estruct-tipo').value;
+  const ini    = document.getElementById('estruct-ini').value;
+  const fin    = document.getElementById('estruct-fin').value;
+  const estado = document.getElementById('estruct-estado').value;
+  const detalle = document.getElementById('estruct-detalle').value.trim();
+  if (!nombre) { toast('Poné un nombre para la tarea.'); return; }
+  if (!ini || !fin) { toast('Completá las fechas de inicio y fin.'); return; }
+  if (fin < ini) { toast('La fecha de fin no puede ser anterior a la de inicio.'); return; }
+  try {
+    const fila = { nombre, tipo, fecha_inicio: ini, fecha_fin: fin, estado, detalle: detalle || null };
+    if (id) await dbUpdate('impl_estructuracion', id, { ...fila, updated_at: new Date().toISOString() });
+    else    await dbInsert('impl_estructuracion', { ...fila, creado_por: (typeof getCurrentUserName === 'function' ? getCurrentUserName() : null) });
+    cerrarEstructForm();
+    toast(id ? 'Tarea actualizada.' : 'Tarea agregada.');
+    await cargarEstructuracion();
+  } catch (e) {
+    console.error(e);
+    toast('No se pudo guardar. ¿Corriste las migraciones 048 y 049 en Supabase?');
+  }
+}
+
+async function estructCambiarEstado(id, estado) {
+  try {
+    await dbUpdate('impl_estructuracion', id, { estado, updated_at: new Date().toISOString() });
+    await cargarEstructuracion();
+  } catch (e) { toast('No se pudo cambiar el estado.'); }
+}
+
+async function estructEliminar(id) {
+  const t = estructTareas.find(x => x.id === id);
+  if (!confirm(`¿Eliminar "${t ? t.nombre : 'esta tarea'}"?`)) return;
+  try {
+    await dbDelete('impl_estructuracion', id);
+    await cargarEstructuracion();
+  } catch (e) { toast('No se pudo eliminar.'); }
+}
+
+// Sección de abajo del Gantt: lista de tareas + botón para agregar
+function _estructSeccionHtml() {
+  const orden = _estructOrdenadas().sort((a, b) =>
+    (a.estado === 'hecha') - (b.estado === 'hecha') || a.inicio - b.inicio);
+  const activas = estructTareas.filter(t => t.estado !== 'hecha').length;
+  const fila = (t) => {
+    const tp = ESTRUCT_TIPOS[t.tipo] || { ico: '•', label: t.tipo };
+    return `
+      <div class="estruct-fila ${t.estado === 'hecha' ? 'estruct-fila--hecha' : ''}">
+        <span class="estruct-tipo" title="${tp.label}"><i class="estruct-color" style="background:${_estructColor(t)}"></i>${tp.ico} ${tp.label}</span>
+        <span class="estruct-nombre">${_dispEsc(t.nombre)}${t.detalle ? `<small class="estruct-detalle">${_dispEsc(t.detalle)}</small>` : ''}</span>
+        <span class="estruct-fechas">${_dispFmt(t.inicio)} → ${_dispFmt(t.fin)}</span>
+        <select class="estruct-estado estruct-estado--${t.estado}" onchange="estructCambiarEstado('${t.id}', this.value)">
+          ${Object.entries(ESTRUCT_ESTADOS).map(([k, v]) => `<option value="${k}" ${t.estado === k ? 'selected' : ''}>${v}</option>`).join('')}
+        </select>
+        <span class="estruct-acc">
+          <button class="btn-sm" onclick="estructAbrirForm('${t.id}')" title="Editar">✎</button>
+          <button class="btn-sm" onclick="estructEliminar('${t.id}')" title="Eliminar">🗑</button>
+        </span>
+      </div>`;
+  };
+  return `
+    <div class="card estruct-card" id="estruct-seccion">
+      <div class="estruct-head">
+        <div>
+          <div class="card-title" style="margin:0">🛠️ Estructuración interna</div>
+          <div class="estruct-sub">Trabajo del equipo que no es implementar un cliente (soporte, proyectos, mejoras, capacitaciones). Mientras haya tareas pendientes o en curso, ocupa <b>1 lugar</b> de la capacidad y se ve en el Gantt.${activas ? ` Hoy hay <b>${activas}</b> activa${activas !== 1 ? 's' : ''}.` : ''}</div>
+        </div>
+        <button class="btn-primary" onclick="estructAbrirForm()">+ Agregar tarea</button>
+      </div>
+      ${_estructError
+        ? '<div class="estruct-vacio">No se pudo cargar. Falta correr la migración <b>048_impl_estructuracion.sql</b> en Supabase.</div>'
+        : orden.length === 0
+          ? '<div class="estruct-vacio">Todavía no hay tareas. Agregá la primera para ver cuánto tiempo nos lleva la estructuración interna.</div>'
+          : `<div class="estruct-lista">${orden.map(fila).join('')}</div>`}
+    </div>`;
 }
 
 // Pico de clientes simultáneos en un mes (con un cliente extra opcional: simulación)
@@ -503,6 +685,45 @@ function renderDisponibilidadImpl() {
       </div>`;
   };
 
+  // Fila "Estructuración Interna": un tramo por tarea, como si fuera un cliente más
+  const estructActivas = estructTareas.filter(t => t.estado !== 'hecha').length;
+  // UNA sola barra: se parte en tramos cada vez que empieza o termina una tarea.
+  // Cada tramo toma el color de su tarea (así se nota dónde termina una y empieza
+  // la otra). Si dos tareas coinciden en fechas, ese tramo muestra a las dos
+  // juntas ("A + B") con rayas de sus colores. Donde no hay tareas, queda vacío.
+  const estructAlto = 48;
+  const cortes = [...new Set(estructTareas.flatMap(t => [+t.inicio, +_addDays(t.fin, 1)]))].sort((a, b) => a - b);
+  const estructTramos = cortes.slice(0, -1).map((c0, i) => {
+    const a = new Date(c0), bExcl = new Date(cortes[i + 1]), b = _addDays(bExcl, -1);
+    const activas = _estructOrdenadas().filter(t => t.inicio <= a && t.fin >= b);
+    if (!activas.length) return '';
+    const p = pos(a, b);
+    if (!p) return '';
+    const colores = activas.map(_estructColor);
+    const fondo = colores.length === 1
+      ? colores[0]
+      : `repeating-linear-gradient(45deg, ${colores.map((c, k) => `${c} ${k * 9}px ${(k + 1) * 9}px`).join(', ')})`;
+    const todasHechas = activas.every(t => t.estado === 'hecha');
+    const tip = activas.map(t => {
+      const tp = ESTRUCT_TIPOS[t.tipo] || { ico: '•', label: t.tipo };
+      return `${t.nombre}\n${tp.label} · ${ESTRUCT_ESTADOS[t.estado]} · ${_dispFmt(t.inicio)} → ${_dispFmt(t.fin)}`
+        + (t.detalle ? `\n${t.detalle}` : '');
+    }).join('\n\n');
+    return `<div class="disp-bar disp-bar--interna ${p.cortaIzq ? 'disp-bar--cortaIzq' : ''} ${p.cortaDer ? 'disp-bar--cortaDer' : ''}"
+                 style="left:calc(${p.left}% + 1px);width:calc(${p.width}% - 2px);background:${fondo};${todasHechas ? 'opacity:.4;' : ''}" title="${_dispEsc(tip)}">
+              <span class="disp-bar__txt">${activas.map(t => _dispEsc(t.nombre)).join(' + ')}</span></div>`;
+  }).join('');
+  const estructFila = `
+      <div class="disp-row disp-row--interna">
+        <div class="disp-label" onclick="document.getElementById('estruct-seccion')?.scrollIntoView({behavior:'smooth',block:'start'})"
+             title="Ver y editar las tareas de Estructuración interna (abajo)">
+          <span class="disp-label__dot disp-dot--interna"></span>
+          <span class="disp-label__name">Estructuración Interna</span>
+          <span class="disp-label__sub">${estructActivas} tarea${estructActivas !== 1 ? 's' : ''} activa${estructActivas !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="disp-track" style="height:${estructAlto}px">${estructTramos}</div>
+      </div>`;
+
   // Fila fantasma del simulador
   let simFila = '';
   if (sim) {
@@ -551,6 +772,7 @@ function renderDisponibilidadImpl() {
           <ol>
             <li><b>Mirá la fila "Carga del mes":</b> cada mes muestra cuántos clientes hay en paralelo sobre el máximo (ej: 3/${cap}). Verde = hay lugar, amarillo = queda uno, rojo = lleno.</li>
             <li><b>Capacidad máxima:</b> es el tope de implementaciones que el equipo puede llevar al mismo tiempo (hoy ${cap}). Se cambia en el campo <b>"Capacidad Máx. de clientes"</b> de los controles; con ese número se calculan los colores de "Carga del mes", el "Próximo mes con lugar" y el simulador. Se guarda en este navegador.</li>
+            <li><b>Estructuración Interna:</b> la primera fila del Gantt muestra el tiempo que el equipo dedica a cosas que no son implementar un cliente (soporte, proyectos, mejoras, capacitaciones). Mientras haya tareas pendientes o en curso, <b>ocupa 1 lugar</b> de la capacidad, así ves la disponibilidad real. Las tareas se cargan y editan en la sección de abajo del Gantt.</li>
             <li><b>Leé las barras:</b> cada fila es un cliente, de su inicio a su fin estimado. La parte oscura es el avance real; el color indica si va atrasado (rojo), en tiempo (verde) o adelantado (azul).</li>
             <li><b>Probá un cliente nuevo:</b> con <b>🧪 Simular cliente nuevo</b> elegís una fecha y una duración y te dice si entra o desde cuándo conviene arrancar.</li>
             <li><b>Navegá:</b> cambiá entre Trimestre, Semestre y Año. Para moverte en el tiempo <b>arrastrá el Gantt hacia los costados</b> (o usá las flechas ‹ › de arriba). Tocá el nombre de un cliente para abrirlo.</li>
@@ -633,6 +855,7 @@ function renderDisponibilidadImpl() {
           ${visibles.length === 0 && !sim
             ? '<div class="disp-vacio">No hay implementaciones con fechas para mostrar.</div>'
             : visibles.map(fila).join('')}
+          ${estructFila}
         </div>
       </div>
     </div>
@@ -643,10 +866,14 @@ function renderDisponibilidadImpl() {
       <span><i class="disp-dot--tiempo"></i> En tiempo</span>
       <span><i class="disp-dot--adelantado"></i> Adelantado (10+ puntos por encima)</span>
       <span><i class="disp-dot--porarrancar"></i> Por arrancar (reserva: ocupa lugar pero todavía no empezó)</span>
+      <span><i class="disp-dot--interna"></i> Estructuración interna (ocupa 1 lugar mientras haya tareas activas)</span>
       <span><i class="disp-dot--sim"></i> Simulado</span>
     </div>
     ${sinFechas.length ? `<div class="disp-sinfechas">Sin fechas para dibujar: ${sinFechas.map(i =>
       `<a onclick="dispAbrirCliente('${i.c.id}')">${_dispEsc(i.c.nombre)}</a>`).join(', ')}. Cargales la fecha de inicio para que aparezcan.</div>` : ''}
+
+    <!-- Estructuración interna: tareas que el equipo carga a mano -->
+    ${_estructSeccionHtml()}
   `;
   dispInitPan();
 }

@@ -140,6 +140,8 @@ Salario Gestion/
     ├── 045_cliente_documentos.sql  ← Tabla + bucket `cliente-documentos` (crear a mano, privado)
     ├── 046_cliente_documentos_links.sql ← Links de Google Drive en documentos
     ├── 047_cliente_documentos_categorias.sql ← Tipo de documento (logo, firma, pdf, etc.)
+    ├── 048_impl_estructuracion.sql ← Tabla impl_estructuracion (tareas internas del equipo, sección 8d)
+    ├── 049_impl_estructuracion_detalle.sql ← Campo opcional "detalle" en esas tareas
     └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 
@@ -269,6 +271,17 @@ Salario Gestion/
     barras grises. La barra no es clickeable, el nombre del cliente sí. Hay
     zoom (trimestre/semestre/año), simulador de cliente nuevo y arrastre para
     desplazar. "Cómo se usa" es un `<details>` colapsado.
+
+14b. **Estructuración interna** (en Disponibilidad): trabajo del equipo que no
+    es implementar un cliente (tipos: soporte, proyecto, mejora, capacitación).
+    Tabla `impl_estructuracion` (nombre, tipo, fecha_inicio, fecha_fin, estado
+    pendiente/en_curso/hecha). Se dibuja como la ÚLTIMA fila del Gantt (separada por una línea más marcada), en
+    UNA sola barra de tonos apagados partida en tramos: cada tarea con su color, y
+    donde coinciden fechas un tramo a rayas con "A + B" ("hecha" se ve atenuada). **Mientras haya al menos una tarea
+    no hecha en un día, ocupa 1 lugar de la capacidad** (`_dispCargaDia`), así
+    la carga del mes, "próximo mes con lugar" y el simulador reflejan la
+    disponibilidad real. Se cargan/editan en la sección debajo del Gantt
+    (`_estructSeccionHtml`, `estructAbrirForm`). Realtime en la tabla.
 
 15. **Mi día**: botón arriba a la derecha del header de Implementación (donde
     estaba "Plantillas") que abre un **panel lateral derecho** con animación.
