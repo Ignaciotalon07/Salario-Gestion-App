@@ -850,3 +850,19 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_borrador_por_cierre
 
 -- 8k. Material enviado sugerido en borradores — ver 058_borradores_material.sql
 ALTER TABLE consultas_borradores ADD COLUMN IF NOT EXISTS material_sugerido text;
+
+-- 8l. Datos de Salario (legajos, convenios, empresas) por cliente — ver 059_salario_sync.sql
+CREATE TABLE IF NOT EXISTS salario_sync (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  cliente_id uuid REFERENCES clientes(id) ON DELETE CASCADE,
+  legajos integer DEFAULT 0,
+  updated_at timestamptz DEFAULT now(),
+  UNIQUE(cliente_id)
+);
+ALTER TABLE salario_sync ADD COLUMN IF NOT EXISTS convenios jsonb;
+ALTER TABLE salario_sync ADD COLUMN IF NOT EXISTS empresas  jsonb;
+ALTER TABLE salario_sync ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "equipo lee salario_sync" ON salario_sync;
+CREATE POLICY "equipo lee salario_sync" ON salario_sync
+  FOR SELECT TO authenticated USING (is_team_member());
+DROP POLICY IF EXISTS "service inserta salario_sync" ON salario_sync;

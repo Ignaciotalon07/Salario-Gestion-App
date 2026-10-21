@@ -233,11 +233,15 @@ function _renderDetalleHeader(cliente, consultasDelCliente) {
 //   legajos:   número
 //   convenios: [{ nombre, ... }]
 //   empresas:  [{ nombre, cuit, ... }]  (solo estudios contables)
+// Los datos vienen de la tabla `salario_sync` (js/salario-sync.js). Si Salario todavía
+// no mandó nada para este cliente, quedan en null y la UI muestra "—".
 function _datosSalarioCliente(cliente) {
+  const r = (window.salarioSync || {})[cliente.id] || null;
   return {
-    legajos:   cliente.legajos   ?? null,
-    convenios: cliente.convenios ?? null,
-    empresas:  cliente.empresas  ?? null,
+    legajos:     r && r.legajos   != null ? r.legajos   : null,
+    convenios:   r && Array.isArray(r.convenios) ? r.convenios : null,
+    empresas:    r && Array.isArray(r.empresas)  ? r.empresas  : null,
+    actualizado: r ? r.updated_at : null,
   };
 }
 
@@ -253,8 +257,8 @@ function abrirSalarioModal(tipo, clienteId) {
   const itemTxt = it => typeof it === 'string' ? it : (it.nombre || it.razon_social || '—');
   const itemSub = it => (typeof it === 'object' && it.cuit) ? `<span style="color:var(--text3);font-size:12px">CUIT ${_escHtml(it.cuit)}</span>` : '';
   document.getElementById('salario-modal-body').innerHTML = lista === null || lista === undefined
-    ? `<div style="text-align:center;padding:28px 10px;color:var(--text3);font-size:14px">Sin datos todavía.<br>Se completará cuando se conecte la API de Salario.</div>`
-    : `<div class="detalle-vivo__tag" style="margin-bottom:12px"><span class="detalle-vivo__dot"></span>${lista.length} ${esConv ? 'convenio(s)' : 'empresa(s)'}</div>
+    ? `<div style="text-align:center;padding:28px 10px;color:var(--text3);font-size:14px">Sin datos todavía.<br>Salario aún no envió ${esConv ? 'los convenios' : 'las empresas'} de este cliente.</div>`
+    : `<div class="detalle-vivo__tag" style="margin-bottom:12px"><span class="detalle-vivo__dot"></span>${lista.length} ${esConv ? 'convenio(s)' : 'empresa(s)'}${vivo.actualizado && typeof salarioHaceTiempo === 'function' ? ` · actualizado ${salarioHaceTiempo(vivo.actualizado)}` : ''}</div>
        ${lista.length ? lista.map(it => `
          <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--border);font-size:14px">
            <span>${_escHtml(itemTxt(it))}</span>${itemSub(it)}

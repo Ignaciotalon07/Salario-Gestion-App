@@ -153,6 +153,7 @@ Salario Gestion/
     ├── 056_borradores_categoria.sql ← categoria_sugerida + subtema_sugerido en borradores (los elige la IA)
     ├── 057_borrador_por_cierre.sql ← Un borrador por cada cierre de chat (reemplaza el índice de 055)
     ├── 058_borradores_material.sql ← material_sugerido en borradores (video/pdf/varios/ninguno, según adjuntos del asesor)
+    ├── 059_salario_sync.sql        ← Tabla salario_sync: legajos/convenios/empresas por cliente que manda Salario (VFP) vía Edge Function `salario-api`
     └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 
@@ -446,9 +447,12 @@ Cuando el usuario te pida cambios:
   botón del header). Habilitar Documentos o devolver el botón.
 - **Implementación → Feedback**: tarjeta de acceso deshabilitada ("Pronto").
   Idea: encuesta post-implementación por cliente. Sin definir.
-- **API de Salario** (Legajos, Convenios, Empresas en vivo): NO construida a
-  propósito. La UI está lista con datos vacíos (—); el punto de enganche es
-  `_datosSalarioCliente()` en `js/cliente-detalle.js`.
+- **API de Salario** (Legajos, Convenios, Empresas en vivo): EN CURSO. Edge Function
+  `supabase/functions/salario-api` (POST por cliente, auth con header `x-api-key` = secreto
+  `SALARIO_API_KEY`, Verify JWT desactivado) → tabla `salario_sync` (migración 059). Front: `js/salario-sync.js`
+  carga + realtime; `_datosSalarioCliente()` en `js/cliente-detalle.js` lee de ahí. PENDIENTE: confirmar
+  que se corrió 059, pegar la función, crear el secreto y que el programador de VFP mande el header y
+  los campos `legajos`, `convenios`, `empresas`.
 - Backlog viejo: búsqueda semántica en KB, PWA.
 
 ## Levantar la base de datos desde cero
