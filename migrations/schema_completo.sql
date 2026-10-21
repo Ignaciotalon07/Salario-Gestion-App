@@ -847,3 +847,6 @@ DROP INDEX IF EXISTS uq_borrador_abierto_por_ticket;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_borrador_por_cierre
   ON consultas_borradores (ticket_id, ultimo_mensaje_id)
   WHERE ultimo_mensaje_id IS NOT NULL;
+
+-- 8k. Material enviado sugerido en borradores — ver 058_borradores_material.sql
+ALTER TABLE consultas_borradores ADD COLUMN IF NOT EXISTS material_sugerido text;

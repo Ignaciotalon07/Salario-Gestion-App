@@ -152,6 +152,7 @@ Salario Gestion/
     ├── 055_borradores_por_asesor.sql ← Un borrador abierto por ticket y por asesor (el que cierra el chat es el dueño)
     ├── 056_borradores_categoria.sql ← categoria_sugerida + subtema_sugerido en borradores (los elige la IA)
     ├── 057_borrador_por_cierre.sql ← Un borrador por cada cierre de chat (reemplaza el índice de 055)
+    ├── 058_borradores_material.sql ← material_sugerido en borradores (video/pdf/varios/ninguno, según adjuntos del asesor)
     └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 
@@ -391,6 +392,11 @@ Cuando el usuario te pida cambios:
   `borradorMarcarRegistrado`). Campo "¿Quién consultó?" (`contacto`) en el form e historial del cliente.
   PENDIENTE: piloto con 2 asesores; Dividir/Reasignar; rol `coordinador`; ítem en menú mobile;
   Etapa 2 IA y Etapa 3 audios; repo público (pasar a privado, ver doc §9).
+  PENDIENTE: **revisar el tiempo sugerido de consultas** (`tiempoActivoHoras` en
+  `whaticket-sync/index.ts`). Hoy solo suma pausas < 15 min (+ tramo AnyDesk), así que cuando el
+  asesor trabaja un rato largo sin escribir (ej. "debo revisarlo" → vuelve 68 min después) el tiempo
+  sale corto (caso Fernanda–Sudossilo: 10 min). Idea: si el asesor promete ("debo revisarlo", "apenas
+  tenga", "te lo paso", "ya te aviso") y después responde él, contar ese hueco con tope (30–45 min).
 
 - **Dominio propio** (PENDIENTE, decidido posponer): pasar de
   `https://ignaciotalon07.github.io/Salario-Gestion-App/` a

@@ -230,6 +230,7 @@ function abrirBorrador(id) {
     }
     if (typeof actualizarHintTiempo === 'function') actualizarHintTiempo();
     set('r-remota', b.conexion_sugerida ? 'si' : 'no');
+    set('r-material', b.material_sugerido || 'ninguno');
     set('r-rep', b.repetida_sugerida ? 'si' : 'no');
     set('r-contacto', _bNombrePersona(b.contacto_nombre));
     // Categoría y subtema sugeridos por la IA (solo si existen como opción en el formulario)

@@ -82,6 +82,24 @@ const RE_ID_ANYDESK = /\b\d{9,10}\b|\b\d{3}\s\d{3}\s\d{3}\b/;
 const RE_SALUDO = /^(hola|buenas|buen d[ií]a|buenos d[ií]as|buenas tardes|buenas noches|holaa*|buen dia)[\s!.,]*$/i;
 const RE_CIERRE = /(listo|solucionado|probalo|probá|funcion[oó]|ya est[aá])/i;
 
+// Material enviado por el ASESOR (los adjuntos del cliente no cuentan):
+// video (archivo de video o link de YouTube/Loom) · pdf (PDF, imagen, documento, captura)
+// · varios (si mandó de las dos clases) · ninguno.
+function materialSugerido(ms: Msg[]): string {
+  let video = false, pdf = false;
+  for (const m of ms) {
+    if (m.de !== "asesor") continue;
+    const t = (m.tipo ?? "chat").toLowerCase();
+    if (t === "video") video = true;
+    else if (["image", "document", "application", "pdf", "sticker"].includes(t)) pdf = true;
+    if (/(youtube\.com|youtu\.be|loom\.com)/i.test(m.texto)) video = true;
+  }
+  if (video && pdf) return "varios";
+  if (video) return "video";
+  if (pdf) return "pdf";
+  return "ninguno";
+}
+
 function tiempoActivoHoras(ms: Msg[]): number {
   const conv = ms.filter((m) => m.de === "cliente" || m.de === "asesor");
   let min = 0;
@@ -371,6 +389,7 @@ async function procesarTramo(t: any, tramo: Msg[], fin: Msg): Promise<string> {
     ultimo_mensaje_id: fin.id,
     tiempo_sugerido: tiempoActivoHoras(convTotal as Msg[]),
     conexion_sugerida: convTotal.some((m: any) => RE_CONEXION.test(m.texto) || RE_ID_ANYDESK.test(m.texto)),
+    material_sugerido: materialSugerido(convTotal as Msg[]),
     repetida_sugerida: !!repetida_consulta_id,
     repetida_consulta_id,
     detalle_sugerido: ia?.problema ?? detalleSugerido(convTotal as Msg[]),
@@ -444,6 +463,7 @@ async function recalcularDetalles() {
         ia_generado: !!ia,
         categoria_sugerida: ia?.categoria ?? null,
         subtema_sugerido: ia?.subtema ?? null,
+        material_sugerido: materialSugerido((b.mensajes ?? []) as Msg[]),
       }).eq("id", b.id);
       if (error) { console.error("update borrador", b.id, error.message); fallidos++; } else n++;
     } catch (e) {
