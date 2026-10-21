@@ -518,7 +518,7 @@ function _cpRenderRow(c) {
                overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%">
             ${_cpEsc(c.descripcion)}
           </div>` : ''}
-        <div style="font-size:11px;color:var(--text3)">${_cpEsc(c.asesor || '—')}</div>
+        <div style="font-size:11px;color:var(--text3)">${_cpEsc(c.asesor || '—')}${c.contacto ? ` · <span style="color:#ea580c;font-weight:600">👤 ${_cpEsc(c.contacto)}</span>` : ''}</div>
       </div>
       <!-- Ícono indicador -->
       <div style="flex-shrink:0;display:flex;align-items:center">
@@ -603,6 +603,10 @@ function _cpAbrirDetalle(id) {
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Asesor</div>
             <div style="font-size:13px">${_cpEsc(c.asesor || '—')}</div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Consultó (liquidador)</div>
+            <div style="font-size:13px">${c.contacto ? '👤 ' + _cpEsc(c.contacto) : '—'}</div>
           </div>
           <div>
             <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Tipo</div>

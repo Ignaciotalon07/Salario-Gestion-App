@@ -14,6 +14,7 @@ let _detalleOrigen = 'clientes'; // página desde la que se navegó al detalle
 // Filtros activos en la tabla de historial
 let _detalleMesFiltro    = null;
 let _detalleTipoFiltro   = null;
+let _detalleLiqFiltro    = null; // clave normalizada del liquidador, o '__sin__' para consultas sin nombre
 let _detalleHistorialLimit = 5; // cuántas consultas mostrar inicialmente
 
 // ────────── Entrada principal ──────────
@@ -22,6 +23,7 @@ function goClienteDetail(clienteId) {
   _detalleClienteId      = clienteId;
   _detalleMesFiltro      = null;
   _detalleTipoFiltro     = null;
+  _detalleLiqFiltro      = null;
   _detalleHistorialLimit = 5;
 
   // Guardar la página actual antes de navegar
@@ -58,7 +60,7 @@ function renderDetalleCliente(clienteId) {
   // Armar el HTML de la página
   const page = document.getElementById('cliente-detalle');
   page.innerHTML = `
-    ${_renderDetalleHeader(cliente)}
+    ${_renderDetalleHeader(cliente, consultasDelCliente)}
     ${_renderDetalleStats(cliente, consultasDelCliente)}
     ${_renderDetalleTipoStats(consultasDelCliente)}
     ${_renderDetalleMiniChart(cliente, consultasDelCliente)}
@@ -77,7 +79,34 @@ function renderDetalleCliente(clienteId) {
 
 // ────────── Header ──────────
 
-function _renderDetalleHeader(cliente) {
+// Clave para comparar nombres sin distinguir mayúsculas, tildes ni espacios de más
+function _liqKey(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+// Liquidadores del cliente: personas que consultaron según el campo "¿Quién consultó?"
+// de las consultas registradas. Se agrupan sin distinguir mayúsculas/tildes y se ordenan
+// de más a menos frecuentes, así se actualiza solo a medida que se cargan registros.
+function _liquidadoresDelCliente(consultasDelCliente) {
+  const norm = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const grupos = {};
+  (consultasDelCliente || []).forEach(c => {
+    const n = String(c.contacto || '').replace(/\s+/g, ' ').trim();
+    if (!n) return;
+    const k = norm(n);
+    if (!grupos[k]) grupos[k] = { cant: 0, variantes: {} };
+    grupos[k].cant++;
+    grupos[k].variantes[n] = (grupos[k].variantes[n] || 0) + 1;
+  });
+  return Object.values(grupos)
+    .sort((a, b) => b.cant - a.cant)
+    .map(g => Object.entries(g.variantes).sort((a, b) => b[1] - a[1])[0][0]);
+}
+
+function _renderDetalleHeader(cliente, consultasDelCliente) {
+  const liquidadores = _liquidadoresDelCliente(consultasDelCliente);
+  const liqLabel = liquidadores.length > 1 ? 'Liquidadores' : 'Liquidador';
+  const liqTexto = liquidadores.map(_escHtml).join(', ');
   const iniciales = cliente.nombre.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
   const colores = ['#e8f0fe', '#e6f4ea', '#fef3e2', '#fce8e6', '#f3e8fd'];
   const textColores = ['#1a56db', '#1e7e34', '#b45309', '#c5221f', '#7c3aed'];
@@ -116,11 +145,12 @@ function _renderDetalleHeader(cliente) {
     cliente.cuit         ? ['CUIT',         _escHtml(cliente.cuit)]         : null,
     cliente.idApi        ? ['ID cliente',   _escHtml(String(cliente.idApi))] : null,
     ['Tipo',             _escHtml(cliente.tipo || 'empresa')],
+    liquidadores.length ? [liqLabel, liqTexto] : null,
   ].filter(Boolean);
   const datosPanel = `
     <div class="detalle-datos">
       ${datosFilas.map(([k, v]) => `
-        <div class="detalle-datos__item">
+        <div class="detalle-datos__item${k === liqLabel ? ' detalle-datos__item--liq' : ''}">
           <div class="detalle-datos__k">${k}</div>
           <div class="detalle-datos__v">${v}</div>
         </div>`).join('')}
@@ -176,6 +206,7 @@ function _renderDetalleHeader(cliente) {
           ${razonLine}
           ${cuitLine}
           ${idApiLine}
+          ${liquidadores.length ? `<div class="dh-dato" style="font-size:12px;color:var(--text3);margin-top:1px">👤 ${liqLabel}: <strong style="color:var(--text2)">${liqTexto}</strong></div>` : ''}
           <div class="detalle-header__badges" style="margin-top:8px">
             ${areaBadge}
             ${autBadge}
@@ -448,6 +479,7 @@ function _renderDetalleFiltroYTabla(cliente, consultasDelCliente) {
             <option value="">Todos los meses</option>
             ${opcionesMeses}
           </select>
+          ${_selectLiquidadoresHtml(consultasDelCliente)}
         </div>
       </div>
       <div id="detalle-tabla-body" style="padding:8px 0">
@@ -455,6 +487,30 @@ function _renderDetalleFiltroYTabla(cliente, consultasDelCliente) {
       </div>
     </div>
   `;
+}
+
+// Desplegable "Todos los liquidadores" (solo si hay al menos un nombre cargado)
+function _selectLiquidadoresHtml(consultasDelCliente) {
+  const nombres = _liquidadoresDelCliente(consultasDelCliente);
+  if (!nombres.length) return '';
+  const cant = {};
+  let sinDato = 0;
+  consultasDelCliente.forEach(c => {
+    if (!c.contacto) { sinDato++; return; }
+    const k = _liqKey(c.contacto);
+    cant[k] = (cant[k] || 0) + 1;
+  });
+  const sel = v => (_detalleLiqFiltro === v ? ' selected' : '');
+  const opts = nombres.map(n => {
+    const k = _liqKey(n);
+    return `<option value="${_escHtml(k)}"${sel(k)}>👤 ${_escHtml(n)} (${cant[k] || 0})</option>`;
+  }).join('');
+  return `
+          <select id="detalle-liq-filtro" style="margin-bottom:0;font-size:11px;padding:4px 8px;height:28px;border-radius:6px" onchange="filtrarDetalleLiq(this.value)">
+            <option value="">Todos los liquidadores</option>
+            ${opts}
+            ${sinDato ? `<option value="__sin__"${sel('__sin__')}>Sin dato (${sinDato})</option>` : ''}
+          </select>`;
 }
 
 function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro, tipoFiltro) {
@@ -482,6 +538,10 @@ function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro, tipoFiltro) {
 
   if (tipoFiltro) {
     lista = lista.filter(c => (c.tipoConsulta || 'soporte') === tipoFiltro);
+  }
+
+  if (_detalleLiqFiltro) {
+    lista = lista.filter(c => _detalleLiqFiltro === '__sin__' ? !c.contacto : _liqKey(c.contacto) === _detalleLiqFiltro);
   }
 
   // Ordenar de más reciente a más antigua
@@ -578,6 +638,15 @@ function _getConsultasDelClienteActual() {
 
 function filtrarDetalleMes(valor) {
   _detalleMesFiltro      = valor || null;
+  _detalleHistorialLimit = 5;
+  const res = _getConsultasDelClienteActual();
+  if (!res) return;
+  const tbody = document.getElementById('detalle-tabla-body');
+  if (tbody) tbody.innerHTML = _buildFilasTabla(res.cliente, res.lista, _detalleMesFiltro, _detalleTipoFiltro);
+}
+
+function filtrarDetalleLiq(valor) {
+  _detalleLiqFiltro      = valor || null;
   _detalleHistorialLimit = 5;
   const res = _getConsultasDelClienteActual();
   if (!res) return;
@@ -722,6 +791,7 @@ function volverAClientes() {
   _detalleClienteId  = null;
   _detalleMesFiltro  = null;
   _detalleTipoFiltro = null;
+  _detalleLiqFiltro  = null;
   if (_detalleChartInstance) {
     _detalleChartInstance.destroy();
     _detalleChartInstance = null;

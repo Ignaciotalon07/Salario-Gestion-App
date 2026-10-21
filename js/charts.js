@@ -1313,6 +1313,11 @@ function _abrirDetalleRegistroAsesor(id) {
           <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Asesor</div>
           <div style="font-size:13px;font-weight:500">${escapeHtmlPanel(c.asesor || '—')}</div>
         </div>
+        ${!esInterna ? `
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Consultó (liquidador)</div>
+          <div style="font-size:13px;font-weight:500">${c.contacto ? '👤 ' + escapeHtmlPanel(c.contacto) : '—'}</div>
+        </div>` : ''}
         <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
           <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Tipo</div>
           <div style="font-size:13px;font-weight:500">${tipoLabel}</div>
@@ -1335,6 +1340,10 @@ function _abrirDetalleRegistroAsesor(id) {
         <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
           <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Remota</div>
           <div style="font-size:13px;font-weight:500">${c.remota === true || c.remota === 'si' || c.conexionRemota || c.conexion_remota ? 'Sí' : 'No'}</div>
+        </div>
+        <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Material enviado</div>
+          <div style="font-size:13px;font-weight:500">${c.material && c.material !== 'ninguno' ? 'Sí' : 'No'}</div>
         </div>
         <div style="background:var(--surface2);border-radius:8px;padding:10px 12px">
           <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">⏱ Tiempo</div>

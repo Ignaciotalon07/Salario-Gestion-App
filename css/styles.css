@@ -8408,3 +8408,7 @@ input[type=date]:focus {
 [data-theme="dark"] #app-root .sidebar .nav-item.active {
   background: rgba(234, 88, 12, .12) !important;
 }
+
+/* ── Detalle de cliente: "Liquidador/es" con el valor en naranja ── */
+#cliente-detalle .detalle-datos__item--liq .detalle-datos__v { color: #ea580c; }
+[data-theme="dark"] #cliente-detalle .detalle-datos__item--liq .detalle-datos__v { color: #fb923c; }
