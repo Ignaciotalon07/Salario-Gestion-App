@@ -596,8 +596,14 @@ function renderSaludoPanel() {
       cta: pendViejos.length === 1 ? 'Revisarlo →' : 'Revisarlos →',
       accion: `_saludoIrAPendienteViejo('${pendViejos.length === 1 ? pendViejos[0].id : ''}')`,
     }] : []),
-    // Ausencias (14 días antes): a los demás les avisa "X sale de vacaciones del A al B" todos los días
-    // (al abrirlo desaparece solo por ese día); a quien la cargó le muestra un cartelito
+    // Consultas por registrar (borradores que llegan desde Whaticket)
+    ...((typeof borradores !== 'undefined' && borradores.length > 0) ? [{
+      bucket: 'dia',
+      count: borradores.length, color: '#0e7490', icon: '💬',
+      msg: `Tenés <strong>${borradores.length}</strong> consulta${borradores.length !== 1 ? 's' : ''} por registrar.`,
+      cta: 'Ver por registrar →', accion: '_saludoIrAPorRegistrar()',
+    }] : []),
+    // Ausencias (14 días antes): a los demás les avisa "X sale de vacaciones del A al B" (ver etapas abajo); a quien la cargó le muestra un cartelito
     // motivacional distinto cada día, que NO desaparece al abrirlo.
     ...((typeof ausSalidasProximas === 'function') ? ausSalidasProximas(AUS_VENTANA_SALIDAS).flatMap(a => {
       if (a.mia) {
@@ -608,7 +614,9 @@ function renderSaludoPanel() {
           cta: 'Ver mis ausencias →', accion: "_saludoIrAEquipoTab('ausencias')",
         }];
       }
-      const kDia = a.key + ':' + _ausISO(new Date());
+      // Recordatorio en dos etapas: entre 14 y 8 días antes, UN aviso (desaparece al abrirlo);
+      // desde 7 días antes, uno por día (desaparece al abrirlo, vuelve al día siguiente) hasta que se va.
+      const kDia = a.faltan <= 7 ? a.key + ':' + _ausISO(new Date()) : a.key + ':14dias';
       if (ausAvisoVisto(kDia)) return [];
       const tipo = { vacaciones: 'de vacaciones', licencia: 'de licencia', dia_suelto: 'un día', puente: 'de puente' }[a.tipo] || 'de vacaciones';
       const cuando = a.faltan === 0 ? 'Hoy' : (a.faltan === 1 ? 'Mañana' : `En ${a.faltan} días`);
@@ -939,6 +947,10 @@ function _saludoIrAImplMias() {
     const btn = document.querySelector('[data-impl-filter="asesor"][data-value="mis"]');
     if (btn && typeof setImplFiltroAsesor === 'function') setImplFiltroAsesor(btn, 'mis');
   }, 50);
+}
+
+function _saludoIrAPorRegistrar() {
+  goTo(_saludoNavBtn('por-registrar'), 'por-registrar');
 }
 
 function _saludoIrARepositorio() {

@@ -18,6 +18,10 @@ function goTo(btn, id) {
   if (id === 'consultas-page' && typeof refreshConsultasPage === 'function') {
     refreshConsultasPage();
   }
+  // Refrescar la lista de borradores al entrar a "Por registrar"
+  if (id === 'por-registrar' && typeof renderBorradores === 'function') {
+    renderBorradores();
+  }
   // Marcar repositorio como visto al entrar
   if (id === 'repositorio' && typeof marcarRepositorioVisto === 'function') {
     marcarRepositorioVisto();
@@ -69,6 +73,7 @@ function mobileGoTo(pageId, btn) {
   if (btn) btn.classList.add('active');
 
   if (pageId === 'consultas-page' && typeof refreshConsultasPage === 'function') refreshConsultasPage();
+  if (pageId === 'por-registrar' && typeof renderBorradores === 'function') renderBorradores();
   if (pageId === 'repositorio' && typeof marcarRepositorioVisto === 'function') marcarRepositorioVisto();
   if (pageId === 'dashboard' && typeof renderSaludoPanel === 'function') renderSaludoPanel();
   if (pageId === 'reportes' && typeof initReportesFiltros === 'function') initReportesFiltros();

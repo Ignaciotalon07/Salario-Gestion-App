@@ -41,8 +41,33 @@ function dbRowToConsulta(row) {
     material:      row.material || null,
     remota:        _esConexionRemotaSi(row.conexion_remota),
     tipoConsulta:  row.tipo_consulta || 'soporte',
+    contacto:      row.contacto || null,        // persona del cliente que consultó
     timestamp:     row.created_at
   };
+}
+
+// Aclaración bajo "Tiempo de resolución": en la plataforma el tiempo se carga como HORAS.MINUTOS
+// (0.13 = 13 min, 1 = 1 hs, 2.45 = 2h 45min).
+function actualizarHintTiempo() {
+  const inp  = document.getElementById('r-tiempo');
+  const hint = document.getElementById('r-tiempo-hint');
+  if (!inp || !hint) return;
+  const v = parseFloat(inp.value);
+  if (!v || isNaN(v) || v <= 0 || typeof hhmmAMinutos !== 'function') { hint.textContent = ''; return; }
+  hint.textContent = '= ' + fmtMinutos(hhmmAMinutos(v));
+}
+
+// Sugerencias para "¿Quién consultó?": personas ya cargadas para el cliente elegido
+function actualizarContactosDatalist() {
+  const dl = document.getElementById('r-contacto-list');
+  if (!dl) return;
+  const nombre = (document.getElementById('r-cliente') || {}).value
+              || ((document.getElementById('r-cliente-search') || {}).value || '').trim();
+  const set = new Set();
+  if (nombre && typeof consultas !== 'undefined') {
+    consultas.forEach(c => { if (c.cliente === nombre && c.contacto) set.add(c.contacto); });
+  }
+  dl.innerHTML = [...set].sort().map(n => `<option value="${String(n).replace(/"/g, '&quot;')}"></option>`).join('');
 }
 
 // ────────── Eliminar consulta (descontando el uso de la solución) ──────────
@@ -152,6 +177,8 @@ function cerrarModalConsulta() {
   modal.style.display = 'none';
   document.body.style.overflow = '';
   resetFormConsulta();
+  // Salir del modo "borrador de Whaticket" (oculta el panel de conversación)
+  if (typeof borradorLimpiarModal === 'function') borradorLimpiarModal();
 }
 
 // Guardar y dejar el modal abierto para registrar otra consulta
@@ -560,6 +587,7 @@ async function guardarConsulta(mantenerAbierto = false) {
   const material      = (document.getElementById('r-material')      || {}).value || 'ninguno';
   const remota        = (document.getElementById('r-remota')        || {}).value || 'no';
   const tipoConsulta  = (document.getElementById('r-tipo-consulta') || {}).value || 'soporte';
+  const contacto      = ((document.getElementById('r-contacto') || {}).value || '').trim() || null;
   const esProg        = tipoConsulta === 'programacion';
   const esImpl        = tipoConsulta === 'implementacion';
 
@@ -642,8 +670,12 @@ async function guardarConsulta(mantenerAbierto = false) {
   const asesor = (typeof currentMember !== 'undefined' && currentMember) ? currentMember.nombre : 'Equipo';
   const clienteObj = (typeof clientes !== 'undefined') ? clientes.find(c => c.nombre === cliente) : null;
 
+  // Si se está registrando desde "Por registrar", el modal siempre se cierra al guardar
+  const veniaDeBorrador = !!window._borradorActivoId;
+  if (veniaDeBorrador) mantenerAbierto = false;
+
   try {
-    await dbInsert('consultas', {
+    const consultaGuardada = await dbInsert('consultas', {
       cliente_id:        clienteObj ? clienteObj.id : null,
       cliente_nombre:    cliente,
       asesor,
@@ -658,7 +690,8 @@ async function guardarConsulta(mantenerAbierto = false) {
       tiempo_resolucion: (tiempoFinal && !isNaN(tiempoFinal) && tiempoFinal > 0) ? tiempoFinal : null,
       material:          esProg ? null : (material !== 'ninguno' ? material : null),
       conexion_remota:   esProg ? false : (remota === 'si' ? true : false),
-      tipo_consulta:     tipoConsulta
+      tipo_consulta:     tipoConsulta,
+      contacto
     });
 
     consultas.unshift({
@@ -674,8 +707,14 @@ async function guardarConsulta(mantenerAbierto = false) {
       material:     esProg ? null : (material !== 'ninguno' ? material : null),
       remota:       esProg ? false : remota === 'si',
       tipoConsulta: tipoConsulta,
+      contacto,
       timestamp:    new Date().toISOString()
     });
+
+    // Si venía de un borrador de Whaticket: marcarlo como registrado
+    if (veniaDeBorrador && typeof borradorMarcarRegistrado === 'function') {
+      await borradorMarcarRegistrado(consultaGuardada.id, clienteObj);
+    }
 
     // Subir archivos staged a la solución (nueva o existente de la base)
     const solIdParaArchivos = esProg ? null : (consultaSolucionId || nuevaSolucionId || null);
@@ -1071,9 +1110,15 @@ function resetFormConsulta() {
   const subCustom = document.getElementById('r-sub-custom');
   if (subCustom) { subCustom.value = ''; subCustom.style.display = 'none'; }
 
+  // Persona del cliente que consultó
+  const contactoInp = document.getElementById('r-contacto');
+  if (contactoInp) contactoInp.value = '';
+
   // Tiempo de resolución
   const tiempo = document.getElementById('r-tiempo');
   if (tiempo) tiempo.value = '';
+  const tiempoHint = document.getElementById('r-tiempo-hint');
+  if (tiempoHint) tiempoHint.textContent = '';
   const tiempoProg = document.getElementById('r-tiempo-prog');
   if (tiempoProg) tiempoProg.value = '';
   const subProg = document.getElementById('r-sub-prog');

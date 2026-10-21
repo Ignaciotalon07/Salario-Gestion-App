@@ -4466,7 +4466,7 @@ input[type=date]:focus {
     height: 3px;
     border-radius: 2px;
     margin-top: 2px;
-    background: var(--accent);
+    background: #ea580c;
     animation: saludoSlideIn .5s cubic-bezier(.2,.8,.2,1) .16s both;
   }
   .saludo-greet__fecha { display: none; }
@@ -8184,4 +8184,227 @@ input[type=date]:focus {
   height: 100%;
   border: 0;
   background: #fff;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════
+   Modal "Registrar consulta" — rediseño minimalista
+   Formulario a la izquierda, conversación de Whaticket a la derecha.
+   (selectores con #modal-consulta para ganarle al resto de los estilos)
+   ════════════════════════════════════════════════════════════════════ */
+#modal-consulta { background: rgba(15, 18, 30, 0.45) !important; backdrop-filter: blur(6px) !important; }
+
+#modal-consulta .mc-shell {
+  display: flex; width: 100%; max-width: 680px; max-height: 90vh;
+  background: var(--surface); border-radius: 20px; overflow: hidden;
+  box-shadow: 0 30px 80px rgba(10, 14, 30, 0.35), 0 0 0 1px var(--border);
+  transition: max-width .25s ease;
+}
+#modal-consulta .mc-shell--dual { max-width: 1240px; height: min(88vh, 860px); }
+
+/* Columna del formulario */
+#modal-consulta .mc-form { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+#modal-consulta .mc-head { padding: 26px 32px 14px; flex: none; }
+#modal-consulta .mc-title { font-size: 20px; font-weight: 700; letter-spacing: -.01em; color: var(--text); }
+#modal-consulta .mc-sub { font-size: 12.5px; color: var(--text3); margin-top: 3px; }
+#modal-consulta .mc-close {
+  background: var(--surface2); border: none; width: 30px; height: 30px; border-radius: 50%;
+  color: var(--text3); font-size: 13px; cursor: pointer; flex: none; line-height: 1;
+  transition: background .15s, color .15s;
+}
+#modal-consulta .mc-close:hover { background: var(--border); color: var(--text); }
+#modal-consulta .mc-tip {
+  margin-top: 12px; font-size: 12px; color: var(--text3); line-height: 1.5;
+  padding-left: 10px; border-left: 2px solid var(--border2);
+}
+#modal-consulta .mc-body {
+  flex: 1; overflow-y: auto; padding: 8px 32px 0;
+  scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+}
+#modal-consulta .mc-body .form-row { gap: 14px; margin-bottom: 16px; }
+#modal-consulta .mc-body .form-group { margin-bottom: 16px; }
+#modal-consulta .mc-body .form-row .form-group { margin-bottom: 0; }
+#modal-consulta .mc-body label.fl {
+  font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 6px;
+}
+#modal-consulta .mc-body input[type=text],
+#modal-consulta .mc-body input[type=number],
+#modal-consulta .mc-body select,
+#modal-consulta .mc-body textarea {
+  background: var(--surface2); border: 1px solid transparent; border-radius: 10px; padding: 10px 13px;
+}
+#modal-consulta .mc-body input:focus, #modal-consulta .mc-body select:focus, #modal-consulta .mc-body textarea:focus {
+  background: var(--surface); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light);
+}
+#modal-consulta .mc-actions {
+  position: sticky; bottom: 0; display: flex; gap: 10px; flex-wrap: wrap;
+  margin: 8px -32px 0; padding: 16px 32px 22px;
+  background: linear-gradient(to top, var(--surface) 70%, transparent);
+}
+#modal-consulta .mc-actions .btn-primary { padding: 11px 22px; border-radius: 10px; font-weight: 600; }
+#modal-consulta .mc-actions .btn-secondary { padding: 11px 18px; border-radius: 10px; }
+
+/* Columna del chat (solo visible en modo borrador) */
+#modal-consulta .mc-chat {
+  display: none; flex-direction: column; flex: 0 0 42%; max-width: 520px; min-width: 340px;
+  background: var(--surface2); border-left: 1px solid var(--border);
+}
+#modal-consulta .mc-shell--dual .mc-chat { display: flex; }
+#modal-consulta .mc-chat-head {
+  display: flex; align-items: center; gap: 12px; padding: 22px 22px 16px; flex: none;
+}
+#modal-consulta .mc-chat-avatar {
+  width: 38px; height: 38px; border-radius: 50%; flex: none; display: flex; align-items: center; justify-content: center;
+  background: var(--accent-light); color: var(--accent-text); font-weight: 700; font-size: 14px;
+}
+#modal-consulta .mc-chat-name { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.25; }
+#modal-consulta .mc-chat-meta { font-size: 11.5px; color: var(--text3); margin-top: 1px; }
+#modal-consulta .mc-chat-body {
+  flex: 1; overflow-y: auto; padding: 4px 22px 22px;
+  scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+}
+#modal-consulta .mc-day {
+  text-align: center; margin: 14px 0 10px;
+}
+#modal-consulta .mc-day span {
+  font-size: 10.5px; color: var(--text3); background: var(--surface); padding: 3px 10px; border-radius: 20px;
+}
+#modal-consulta .mc-msg { display: flex; margin-bottom: 6px; }
+#modal-consulta .mc-msg--cli { justify-content: flex-start; }
+#modal-consulta .mc-msg--ase { justify-content: flex-end; }
+#modal-consulta .mc-bubble {
+  max-width: 82%; padding: 8px 12px 6px; font-size: 12.5px; line-height: 1.5; color: var(--text);
+  white-space: pre-wrap; word-break: break-word; box-shadow: 0 1px 2px rgba(0,0,0,.05);
+}
+#modal-consulta .mc-msg--cli .mc-bubble { background: var(--surface); border-radius: 4px 14px 14px 14px; }
+#modal-consulta .mc-msg--ase .mc-bubble { background: var(--accent-light); border-radius: 14px 4px 14px 14px; }
+#modal-consulta .mc-time { display: block; text-align: right; font-size: 9.5px; color: var(--text3); margin-top: 2px; }
+
+/* Pantallas angostas: el chat pasa abajo del formulario */
+@media (max-width: 1000px) {
+  #modal-consulta .mc-shell--dual { flex-direction: column; height: auto; max-height: 92vh; overflow-y: auto; }
+  #modal-consulta .mc-shell--dual .mc-form { flex: none; }
+  #modal-consulta .mc-shell--dual .mc-body { overflow: visible; }
+  #modal-consulta .mc-chat { flex: none; max-width: none; min-width: 0; max-height: 45vh; border-left: none; border-top: 1px solid var(--border); }
+}
+@media (max-width: 600px) {
+  #modal-consulta .mc-head { padding: 20px 20px 10px; }
+  #modal-consulta .mc-body { padding: 6px 20px 0; }
+  #modal-consulta .mc-actions { margin: 8px -20px 0; padding: 14px 20px 18px; }
+}
+
+#modal-consulta .mc-actions .mc-descartar { margin-left: auto; color: var(--red-text, #b3261e); border-color: transparent; background: transparent; }
+#modal-consulta .mc-actions .mc-descartar:hover { background: var(--red-bg, #fdeceb); }
+
+
+/* ════════════════════════════════════════════════════════════════════
+   Soporte (borradores de Whaticket) — grilla de tarjetas compactas
+   ════════════════════════════════════════════════════════════════════ */
+.bd-toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+.bd-search {
+  display: flex; align-items: center; gap: 8px; flex: 1 1 260px; max-width: 380px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0 12px; color: var(--text3);
+}
+.bd-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.bd-search input { border: none !important; background: transparent !important; box-shadow: none !important; padding: 9px 0 !important; font-size: 13px; }
+.bd-filtros { display: flex; gap: 6px; flex-wrap: wrap; }
+.bd-pill {
+  display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--surface);
+  color: var(--text2); font-family: inherit; font-size: 12px; padding: 6px 12px; border-radius: 20px; cursor: pointer; transition: all .15s;
+}
+.bd-pill span { font-size: 11px; color: var(--text3); background: var(--surface2); padding: 0 7px; border-radius: 10px; }
+.bd-pill:hover { border-color: var(--border2); }
+.bd-pill--on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.bd-pill--on span { background: rgba(255,255,255,.22); color: #fff; }
+
+.bd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+
+.bd-card {
+  display: flex; flex-direction: column; gap: 12px; padding: 16px; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.bd-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(20, 24, 50, .09); border-color: var(--border2); }
+.bd-card--viejo { box-shadow: inset 3px 0 0 #e0524a; }
+
+.bd-card__top { display: flex; align-items: center; gap: 11px; }
+.bd-avatar {
+  width: 38px; height: 38px; border-radius: 12px; flex: none; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 15px; background: var(--accent-light); color: var(--accent-text);
+}
+.bd-avatar--sin { background: var(--amber-bg); color: var(--amber-text); }
+.bd-card__who { flex: 1; min-width: 0; }
+.bd-card__cliente { font-size: 14px; font-weight: 650; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-sin { color: var(--amber-text); }
+.bd-card__persona { font-size: 12px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.bd-card__hace { font-size: 11px; color: var(--text3); flex: none; align-self: flex-start; }
+.bd-card__hace--viejo { color: #e0524a; font-weight: 600; }
+
+.bd-card__detalle {
+  font-size: 12.5px; line-height: 1.55; color: var(--text2); min-height: 58px;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.bd-card__detalle em { color: var(--text3); }
+
+.bd-card__meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.bd-tiempo { font-size: 11.5px; font-weight: 600; color: var(--text2); background: var(--surface2); padding: 3px 9px; border-radius: 8px; }
+.bd-ico { display: flex; gap: 9px; font-size: 11.5px; color: var(--text3); }
+
+.bd-card__acc { display: flex; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; margin-top: auto; }
+.bd-btn { font-family: inherit; font-size: 12.5px; padding: 8px 14px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; transition: all .15s; }
+.bd-btn--ghost { background: transparent; color: var(--text3); }
+.bd-btn--ghost:hover { background: var(--surface2); color: var(--text); }
+.bd-btn--main { flex: 1; background: var(--accent); color: #fff; font-weight: 600; }
+.bd-btn--main:hover { filter: brightness(1.12); }
+
+.bd-empty { text-align: center; padding: 70px 20px; }
+.bd-empty__icon { width: 52px; height: 52px; margin: 0 auto 12px; border-radius: 50%; background: var(--green-bg); color: var(--green); font-size: 22px; display: flex; align-items: center; justify-content: center; }
+.bd-empty__t { font-size: 16px; font-weight: 650; color: var(--text); }
+.bd-empty__s { font-size: 12.5px; color: var(--text3); margin-top: 4px; }
+
+.bd-card__cat { font-size: 11.5px; color: var(--text2); background: var(--surface2); border-radius: 8px; padding: 4px 9px; align-self: flex-start; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Menú lateral: sección activa en naranja ── */
+#app-root .sidebar .nav-item.active {
+  background: #fff1e6 !important;
+  color: #c2410c !important;
+  font-weight: 600;
+}
+#app-root .sidebar .nav-item.active .icon { color: #ea580c; opacity: 1; }
+[data-theme="dark"] #app-root .sidebar .nav-item.active {
+  background: rgba(234, 88, 12, .18) !important;
+  color: #fdba74 !important;
+}
+[data-theme="dark"] #app-root .sidebar .nav-item.active .icon { color: #fb923c; }
+
+/* ── Barra inferior mobile: sección activa en naranja ── */
+.mobile-nav-item.active { color: #ea580c !important; }
+.mobile-nav-item.active .mobile-nav-item__icon {
+  background: rgba(234, 88, 12, .14) !important;
+  color: #ea580c !important;
+}
+
+/* ── Botón central "+ Consulta" (mobile) en naranja ── */
+.mobile-nav-fab {
+  background: linear-gradient(145deg, #fb923c, #ea580c) !important;
+  box-shadow: 0 6px 16px rgba(234, 88, 12, .45), 0 2px 4px rgba(0,0,0,0.15) !important;
+}
+.mobile-nav-fab-label { color: #ea580c !important; }
+
+/* ── Menú lateral: indicador de barra naranja a la izquierda ── */
+#app-root .sidebar .nav-item { position: relative; }
+#app-root .sidebar .nav-item.active {
+  background: rgba(234, 88, 12, .07) !important;
+}
+#app-root .sidebar .nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 6px; bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: #ea580c;
+}
+[data-theme="dark"] #app-root .sidebar .nav-item.active {
+  background: rgba(234, 88, 12, .12) !important;
 }

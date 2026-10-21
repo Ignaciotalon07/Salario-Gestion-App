@@ -15,7 +15,7 @@
     />
 
     <!-- Estilos -->
-    <link rel="stylesheet" href="css/styles.css?v=20261017b" />
+    <link rel="stylesheet" href="css/styles.css?v=20261021h" />
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -362,6 +362,16 @@
           <span class="mobile-sheet-item__label">Implementación</span>
         </button>
 
+        <button class="mobile-sheet-item" onclick="mobileGoTo('por-registrar', null); toggleMobileMore();">
+          <span class="mobile-sheet-item__icon" style="--tile-color:#ea580c">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 4h18v12H10l-5 4v-4H3z" />
+              <path d="M7 8.5h10M7 12h6" />
+            </svg>
+          </span>
+          <span class="mobile-sheet-item__label">Soporte</span>
+        </button>
+
         <button class="mobile-sheet-item" onclick="mobileGoTo('equipo', null); toggleMobileMore();">
           <span class="mobile-sheet-item__icon" style="--tile-color:#7c3aed">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -498,6 +508,27 @@
               </svg>
               <span>Clientes</span>
             </button>
+            <button class="nav-item" onclick="goTo(this, 'implementacion')">
+              <svg
+                class="icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              >
+                <path d="M1 4h14M1 8h10M1 12h7"></path>
+                <circle cx="13" cy="12" r="2"></circle>
+              </svg>
+              <span>Implementación</span>
+            </button>
+            <button class="nav-item" onclick="goTo(this, 'por-registrar')">
+              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M2 3h12v8H7l-3 3v-3H2z"></path>
+                <path d="M5 6h6M5 8.5h4"></path>
+              </svg>
+              <span>Soporte</span>
+              <span class="nav-badge warn" id="borradores-nav-badge" style="display:none"></span>
+            </button>
             <button class="nav-item" onclick="goTo(this, 'pendientes')">
               <svg
                 class="icon"
@@ -512,31 +543,10 @@
               <span>Pendientes</span>
               <span class="nav-badge warn" id="pend-nav-badge">3</span>
             </button>
-            <button class="nav-item" onclick="goTo(this, 'consultas-page')">
-              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M2 2h12v9H2z"></path>
-                <path d="M5 14h6M8 11v3"></path>
-                <path d="M5 5h6M5 7.5h4"></path>
-              </svg>
-              <span>Consultas</span>
-            </button>
           </div>
 
           <div class="sidebar-section">
             <div class="sidebar-section-label">Gestión</div>
-            <button class="nav-item" onclick="goTo(this, 'implementacion')">
-              <svg
-                class="icon"
-                viewBox="0 0 16 16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.5"
-              >
-                <path d="M1 4h14M1 8h10M1 12h7"></path>
-                <circle cx="13" cy="12" r="2"></circle>
-              </svg>
-              <span>Implementación</span>
-            </button>
             <button class="nav-item" onclick="goTo(this, 'equipo')">
               <svg
                 class="icon"
@@ -549,6 +559,30 @@
                 <path d="M3 14c0-2.8 2.2-5 5-5s5 2.2 5 5"></path>
               </svg>
               <span>Equipo</span>
+            </button>
+            <button class="nav-item" onclick="goTo(this, 'repositorio')">
+              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M2 3h12v10H2z"></path>
+                <path d="M5 6h6M5 9h4"></path>
+                <path d="M2 6h12"></path>
+              </svg>
+              <span>Repositorio</span>
+              <span class="nav-badge warn" id="repo-nav-badge" style="display:none"></span>
+            </button>
+            <button class="nav-item" onclick="goTo(this, 'consultas-page')">
+              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M2 2h12v9H2z"></path>
+                <path d="M5 14h6M8 11v3"></path>
+                <path d="M5 5h6M5 7.5h4"></path>
+              </svg>
+              <span>Consultas</span>
+            </button>
+            <button class="nav-item" onclick="goTo(this, 'reportes')">
+              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M2 14V2M2 14h12"></path>
+                <path d="M5 11V7M8.5 11V4M12 11V9"></path>
+              </svg>
+              <span>Reportes</span>
             </button>
             <button class="nav-item" onclick="goTo(this, 'biblioteca')">
               <svg
@@ -564,22 +598,6 @@
                 <path d="M5 6h6M5 9h4"></path>
               </svg>
               <span>Base de soluciones</span>
-            </button>
-            <button class="nav-item" onclick="goTo(this, 'repositorio')">
-              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M2 3h12v10H2z"></path>
-                <path d="M5 6h6M5 9h4"></path>
-                <path d="M2 6h12"></path>
-              </svg>
-              <span>Repositorio</span>
-              <span class="nav-badge warn" id="repo-nav-badge" style="display:none"></span>
-            </button>
-            <button class="nav-item" onclick="goTo(this, 'reportes')">
-              <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M2 14V2M2 14h12"></path>
-                <path d="M5 11V7M8.5 11V4M12 11V9"></path>
-              </svg>
-              <span>Reportes</span>
             </button>
           </div>
 
@@ -662,7 +680,7 @@
                 </div>
               </div>
               <div class="metric-card" style="border-top:3px solid var(--green);padding-top:15px">
-                <div class="metric-label" style="color:var(--green)" id="metric-consultas-mes-label">Consultas este mes</div>
+                <div class="metric-label" style="color:var(--green)" id="metric-consultas-mes-label">Registros este mes</div>
                 <div class="metric-value" id="metric-consultas-mes">0</div>
                 <div class="metric-sub" id="metric-consultas-sub">
                   Sin consultas este mes
@@ -2081,6 +2099,29 @@
           <!-- ════════════════════════════════════
          REPOSITORIO
     ════════════════════════════════════ -->
+          <!-- ═══ Por registrar: borradores de consultas que llegan desde Whaticket ═══ -->
+          <div id="por-registrar" class="page">
+            <div class="page-header">
+              <div>
+                <div class="page-title">Soporte</div>
+                <div class="page-sub" id="borradores-sub">Los chats que resuelvas en Whaticket aparecen acá para registrarlos</div>
+              </div>
+            </div>
+            <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:10px 14px;margin-bottom:18px">
+              <div style="font-size:12px;color:var(--amber);line-height:1.6">
+                💡 <strong>Soporte:</strong> cada chat que resolvés en Whaticket genera acá un borrador de la consulta, ya completado con IA: cliente, quién consultó, tiempo, categoría, subtema, descripción y, si la explicaste en el chat, la solución. Revisalo y confirmalo para registrarlo, o descartalo si no fue una consulta real. Cada asesor ve solo los chats que cerró él.
+              </div>
+            </div>
+            <div class="bd-toolbar" id="borradores-toolbar" style="display:none">
+              <label class="bd-search">
+                <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="9" r="6"/><line x1="17" y1="17" x2="13.2" y2="13.2"/></svg>
+                <input type="text" id="borradores-search" placeholder="Buscar por cliente, persona o detalle..." oninput="buscarBorradores(this.value)" />
+              </label>
+              <div class="bd-filtros" id="borradores-filtros"></div>
+            </div>
+            <div id="borradores-lista"></div>
+          </div>
+
           <div id="repositorio" class="page">
             <div class="page-header">
               <div>
@@ -2402,26 +2443,27 @@
     <script src="js/data.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/ui.js"></script>
-    <script src="js/nav.js?v=20261015b"></script>
+    <script src="js/nav.js?v=20261020a"></script>
     <script src="js/clientes.js?v=20261013a"></script>
     <script src="js/pendientes.js?v=20261015d"></script>
-    <script src="js/consultas.js?v=20261008a"></script>
+    <script src="js/consultas.js?v=20261021b"></script>
     <script src="js/kb.js"></script>
     <script src="js/implementacion.js?v=20261016f"></script>
     <script src="js/reporte-implementacion.js?v=20261008a"></script>
-    <script src="js/cliente-detalle.js?v=20261013j"></script>
+    <script src="js/cliente-detalle.js?v=20261020a"></script>
     <script src="js/conexiones.js?v=20261013c"></script>
     <script src="js/cliente-documentos.js?v=20261014g"></script>
-    <script src="js/implementacion-disponibilidad.js?v=20261016h"></script>
-    <script src="js/equipo-ausencias.js?v=20261016w"></script>
+    <script src="js/implementacion-disponibilidad.js?v=20261019a"></script>
+    <script src="js/equipo-ausencias.js?v=20261019a"></script>
     <script src="js/asesor-detalle.js"></script>
-    <script src="js/charts.js?v=20261008a"></script>
+    <script src="js/charts.js?v=20261020a"></script>
     <script src="js/alertas.js"></script>
     <script src="js/consultas-page.js?v=20261015d"></script>
     <script src="js/repositorio.js?v=20261015c"></script>
+    <script src="js/borradores.js?v=20261021c"></script>
     <script src="js/reportes.js"></script>
     <script src="js/avisos.js?v=20261015h"></script>
-    <script src="js/saludo.js?v=20261016d"></script>
+    <script src="js/saludo.js?v=20261020a"></script>
     <script src="js/hitos.js"></script>
 
     <!-- ════════════════════════════════════
@@ -2439,44 +2481,31 @@
         align-items: center;
         justify-content: center;
         padding: 24px 16px;
+        gap: 16px;
       "
     >
-      <div
-        style="
-          background: var(--surface);
-          border-radius: 14px;
-          max-width: 680px;
-          width: 100%;
-          margin: 0 auto;
-          padding: 28px 28px 24px;
-          position: relative;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-          max-height: 90vh;
-          overflow-y: auto;
-          scrollbar-color: var(--border2) transparent;
-          scrollbar-width: thin;
-        "
-      >
-        <!-- Header del modal -->
-        <div style="position:sticky;top:-28px;background:var(--surface);z-index:1;margin:-28px -28px 20px;padding:28px 28px 16px">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
+      <div class="mc-shell" id="mc-shell">
+      <!-- Columna izquierda: formulario -->
+      <div class="mc-form">
+        <div class="mc-head">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
             <div>
-              <div style="font-size: 17px; font-weight: 700; color: var(--text)">Registrar consulta</div>
-              <div style="font-size: 12px; color: var(--text3); margin-top: 2px">Completá después de cada atención por WhatsApp</div>
+              <div class="mc-title">Registrar consulta</div>
+              <div class="mc-sub" id="mc-sub">Completá después de cada atención por WhatsApp</div>
             </div>
-            <button id="modal-consulta-close" onclick="cerrarModalConsulta()"
-              style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text3);padding:0;line-height:1;margin-left:16px">✕</button>
+            <button id="modal-consulta-close" class="mc-close" onclick="cerrarModalConsulta()" aria-label="Cerrar">✕</button>
           </div>
 
           <div id="reg-ok" style="display: none" class="alert alert-green">
             <strong>Consulta guardada.</strong> La solución fue agregada a la base de conocimiento del equipo.
           </div>
 
-          <div class="info-box" id="r-tip-repetida" style="margin:0">
-            Si el cliente repite la misma consulta, marcala como repetida. Eso alimenta el score de riesgo automáticamente.
+          <div class="mc-tip" id="r-tip-repetida">
+            Si el cliente repite la misma consulta, marcala como repetida: alimenta el score de riesgo.
           </div>
         </div>
 
+        <div class="mc-body">
         <div class="form-row" id="r-row-cliente">
           <div class="form-group" style="flex: 1">
             <label class="fl">Cliente</label>
@@ -2567,6 +2596,21 @@
           </div>
         </div>
 
+        <div class="form-row" id="r-row-contacto">
+          <div class="form-group">
+            <label class="fl">¿Quién consultó? (persona del cliente, opcional)</label>
+            <input
+              type="text"
+              id="r-contacto"
+              list="r-contacto-list"
+              placeholder="Ej: Angie, Fabián..."
+              autocomplete="off"
+              onfocus="actualizarContactosDatalist()"
+            />
+            <datalist id="r-contacto-list"></datalist>
+          </div>
+        </div>
+
         <div class="form-row" id="r-row-rep">
           <div class="form-group">
             <label class="fl">¿Es consulta repetida?</label>
@@ -2581,10 +2625,12 @@
               id="r-tiempo"
               type="number"
               placeholder="Ej: 1.5"
-              step="0.5"
-              min="0.5"
+              step="0.01"
+              min="0"
               required
+              oninput="actualizarHintTiempo()"
             />
+            <div id="r-tiempo-hint" style="font-size:11px;color:var(--text3);margin-top:4px;min-height:14px"></div>
           </div>
         </div>
 
@@ -2684,18 +2730,23 @@
           <div id="r-archivos-consulta"></div>
         </div>
 
-        <div
-          id="modal-consulta-btns"
-          style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px"
-        >
+        <div id="modal-consulta-btns" class="mc-actions">
           <button class="btn-primary" onclick="guardarConsulta()">
             Guardar consulta
           </button>
-          <button class="btn-secondary" onclick="guardarConsultaYOtra()">
+          <button class="btn-secondary" id="btn-guardar-otra" onclick="guardarConsultaYOtra()">
             Guardar y registrar otra
           </button>
+          <button class="btn-secondary mc-descartar" id="btn-descartar-borrador" style="display:none" onclick="descartarBorradorActivo()">
+            Descartar consulta
+          </button>
         </div>
-      </div>
+        </div><!-- /mc-body -->
+      </div><!-- /mc-form -->
+
+      <!-- Columna derecha: conversación de Whaticket (solo al registrar desde Soporte) -->
+      <aside id="r-chat-panel" class="mc-chat"></aside>
+      </div><!-- /mc-shell -->
     </div>
   <!-- ════════════════════════════════════
        MODAL — Detalle de tarea (solo mobile)

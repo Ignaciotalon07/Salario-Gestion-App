@@ -88,6 +88,7 @@ Salario Gestion/
 │   ├── saludo.js            ← Saludo + cartelito + "Tu día" + tiles/campanita del Panel general
 │   ├── avisos.js            ← Sonido (Web Audio), parpadeo de título, popup de viernes,
 │   │                           avisos de pendientes asignados por otros
+│   ├── borradores.js        ← "Por registrar": borradores de Whaticket (lista, chat, registrar, descartar)
 │   ├── repositorio.js       ← Repositorio de archivos del programador + badge por usuario
 │   ├── alertas.js           ← Alertas dinámicas (vencimientos, inactividad, etc.)
 │   └── charts.js            ← Chart.js para el panel general
@@ -144,6 +145,13 @@ Salario Gestion/
     ├── 048_impl_estructuracion.sql ← Tabla impl_estructuracion (tareas internas del equipo, sección 8d)
     ├── 049_impl_estructuracion_detalle.sql ← Campo opcional "detalle" en esas tareas
     ├── 050_equipo_ausencias.sql    ← Tabla equipo_ausencias (vacaciones/licencias; todos ven, cada uno edita las suyas)
+    ├── 051_whaticket_borradores.sql ← Integración Whaticket: borradores "Por registrar" (ver docs/integracion-whaticket.md)
+    ├── 052_whaticket_cron.sql      ← Programa whaticket-sync cada 2 min (NO guardar la key en el repo)
+    ├── 053_consultas_contacto.sql  ← Columna contacto en consultas (quién del cliente consultó)
+    ├── 054_borradores_ia.sql       ← solucion_sugerida + ia_generado en borradores (resumen con IA; secreto ANTHROPIC_API_KEY)
+    ├── 055_borradores_por_asesor.sql ← Un borrador abierto por ticket y por asesor (el que cierra el chat es el dueño)
+    ├── 056_borradores_categoria.sql ← categoria_sugerida + subtema_sugerido en borradores (los elige la IA)
+    ├── 057_borrador_por_cierre.sql ← Un borrador por cada cierre de chat (reemplaza el índice de 055)
     └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 
@@ -374,6 +382,16 @@ Cuando el usuario te pida cambios:
 
 ## Cosas que NO están terminadas
 
+- **Integración Whaticket "Por registrar"** (EN CURSO, probar con el equipo): plan en
+  `docs/integracion-whaticket.md`. HECHO: migraciones 051 (borradores), 052 (cron, plantilla sin key),
+  053 (columna `consultas.contacto`); Edge Function `supabase/functions/whaticket-sync` (corre cada 2 min;
+  `{"accion":"vincular_clientes"}` vincula clientes↔contactos por `clientes.whaticket_url`);
+  UI `js/borradores.js` (ítem de menú "Por registrar" con badge, lista, panel de chat al costado del
+  modal "Registrar consulta", Descartar, tile en Panel general; hook en `guardarConsulta()` →
+  `borradorMarcarRegistrado`). Campo "¿Quién consultó?" (`contacto`) en el form e historial del cliente.
+  PENDIENTE: piloto con 2 asesores; Dividir/Reasignar; rol `coordinador`; ítem en menú mobile;
+  Etapa 2 IA y Etapa 3 audios; repo público (pasar a privado, ver doc §9).
+
 - **Dominio propio** (PENDIENTE, decidido posponer): pasar de
   `https://ignaciotalon07.github.io/Salario-Gestion-App/` a
   `https://www.salariogestion.com.ar`. En el código no hay que cambiar nada
@@ -385,20 +403,32 @@ Cuando el usuario te pida cambios:
   JavaScript origins), sin quitar los viejos; 4) GitHub → Settings → Pages →
   Custom domain + Enforce HTTPS; 5) recién ahí cambiar el Site URL de Supabase;
   6) probar login en incógnito. Si falla: borrar el Custom domain en GitHub.
-- **Ausencias del equipo / cobertura** (EN CURSO, pasos 1, 2 y 3 de 5 hechos = migración
-  050 + `js/equipo-ausencias.js`: calendario de 12 meses con color por asesor, feriados AR
-  en `AUS_FERIADOS` (2026 y 2027; sumar los puentes 2027 cuando salga el decreto), formulario
-  inicio + cantidad de días, y cobertura por semana con `ausCoberturaDia(iso)` reutilizable; la sección Equipo tiene 3
-  pestañas: Asesores / Ausencias / Áreas, con `eqTab()`; la cobertura Gantt vive en Áreas). Reglas acordadas: Soporte = 2 personas (Daniel Colomer, Renzo Moretti),
-  Implementación = 2 (Ignacio Talon, Matias Ferro). Todos ven el mismo calendario
-  y cada uno carga solo las suyas. Tipos: vacaciones, licencia, día suelto, puente
-  (sin "medio día": se descartó). Si falta alguien de Soporte, baja UN implementador a
-  cubrir (Implementación pierde una persona); si falta alguien de Implementación
-  el área queda tocada (de Soporte NO suben a Implementación). Capacidad de
-  Implementación = 2 clientes por implementador disponible (4 con los dos). Alfred
-  (a Impl) y Daniel Ferro (a Soporte) son refuerzos excepcionales: NO se cuentan por
-  defecto. Pasos que faltan: 4) conectar con
-  la capacidad de Disponibilidad; 5) aviso en el Panel general.
+- **Ausencias del equipo / cobertura** (HECHO, queda mantenimiento). Migración 050 +
+  `js/equipo-ausencias.js`. Sección Equipo con 3 pestañas (`eqTab()`): Asesores / Ausencias /
+  Áreas. Ausencias = calendario de 12 meses, un color por asesor, feriados AR en `AUS_FERIADOS`
+  (2026 y 2027; **sumar los puentes turísticos 2027 cuando salga el decreto**), formulario con
+  fecha de inicio + cantidad de días (sin medio día). Áreas = tarjeta por mes con estado
+  Normal/Regular/Crítico por área (Soporte 2, Implementación 2, Programación Salario 1 = Alfredo,
+  Comercial 1 = Daniel Ferro; estas dos quedan en rojo si falta su persona y NO generan alerta de
+  "atender"). Reglas: si falta alguien de Soporte baja UN implementador a cubrir; de Soporte NO
+  suben a Implementación; Alfredo (Impl) y Daniel Ferro (Soporte) son refuerzos sugeridos, no se
+  cuentan solos. `ausCoberturaDia(iso)` es la fuente de verdad. Alertas: badge naranja en la
+  pestaña Áreas + puntitos (sin límite de cercanía, solo Soporte/Impl); Panel general: salidas
+  14 días antes (a los demás: desaparece al abrir, vuelve al día siguiente; al que la cargó:
+  cartel motivacional distinto por día, persiste) y "En N días hay que atender X" a 15 días
+  (desaparece al abrir). **Disponibilidad**: la capacidad máxima (4) se escala por implementador
+  disponible (`_dispCapDia`, `_dispMesInfo`); los meses con capacidad reducida muestran 🏖️ y hay un
+  aviso arriba del Gantt; el simulador y "próximo mes con lugar" también la usan.
+- **Portal de clientes** (IDEA, sin empezar; el usuario quiere pensarla): darle acceso a los
+  clientes. Prioridad 1 = que los clientes en implementación entren y suban ellos mismos sus
+  archivos (logos, firmas, documentos) en vez de cargarlos el equipo. Prioridad 2 (después) = que
+  vean sus métricas. Notas: hoy `is_team_member()` da acceso total, así que haría falta un rol
+  "cliente" aparte (tabla que vincule usuario ↔ cliente + RLS por cliente + Storage por cliente);
+  conviene una página separada (`portal.html`) y no abrir la plataforma del equipo; reutilizaría
+  la pestaña Documentos por cliente. A decidir antes: dominio propio (no dar URL de github.io a
+  clientes), si el cliente solo sube o también ve/borra, cuántos usuarios por empresa, y el límite de
+  almacenamiento del plan gratuito (50 MB por archivo). Es lo más delicado en seguridad: probar
+  que un cliente nunca vea datos de otro.
 - **U10**: Email digest diario (requiere Resend + Edge Function de cron).
 - **Repositorio — links externos**: opción para agregar URL en lugar de
   archivo (útil para recursos que superan 50 MB). Discutido pero no
@@ -413,8 +443,6 @@ Cuando el usuario te pida cambios:
 - **API de Salario** (Legajos, Convenios, Empresas en vivo): NO construida a
   propósito. La UI está lista con datos vacíos (—); el punto de enganche es
   `_datosSalarioCliente()` en `js/cliente-detalle.js`.
-- **Aviso del Repositorio repetido**: hoy suena una sola vez (solo el aviso de
-  los viernes insiste mientras estés en otra pestaña).
 - Backlog viejo: búsqueda semántica en KB, PWA.
 
 ## Levantar la base de datos desde cero

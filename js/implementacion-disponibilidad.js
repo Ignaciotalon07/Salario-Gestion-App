@@ -401,6 +401,47 @@ function _dispPicoMes(items, primerDia, extra) {
   return pico;
 }
 
+// ── Capacidad según las ausencias del equipo ──
+// La capacidad base (4 por defecto) corresponde a los 2 implementadores trabajando. Cuando alguien de
+// Implementación falta, o baja a cubrir Soporte, esa capacidad baja en proporción (ver equipo-ausencias.js).
+function _dispCapDia(cap, dia) {
+  if (typeof ausCoberturaDia !== 'function' || typeof ausencias === 'undefined' || !ausencias.length) return cap;
+  const c = ausCoberturaDia(_toISODate(dia));
+  return Math.max(0, Math.round(cap * c.implDisp / AUS_IMPL.length));
+}
+
+// Día más ajustado de un mes: carga, capacidad de ese día y lugares libres (puede ser negativo).
+// `extra` es un cliente simulado opcional.
+function _dispMesInfo(items, primerDia, extra, cap) {
+  const ultimo = new Date(primerDia.getFullYear(), primerDia.getMonth() + 1, 0);
+  let peor = null, capMin = cap;
+  for (let d = new Date(primerDia); d <= ultimo; d = _addDays(d, 1)) {
+    let n = _dispCargaDia(items, d);
+    if (extra && extra.inicio <= d && d <= extra.fin) n++;
+    const c = _dispCapDia(cap, d);
+    if (c < capMin) capMin = c;
+    const hol = c - n;
+    if (!peor || hol < peor.libres || (hol === peor.libres && n > peor.pico)) peor = { pico: n, cap: c, libres: hol };
+  }
+  return { ...peor, capMin, reducida: capMin < cap };
+}
+
+// Por qué baja la capacidad en un mes: "falta Ignacio", "Matias cubre Soporte"
+function _dispMotivoReduccion(primerDia, cap) {
+  const ultimo = new Date(primerDia.getFullYear(), primerDia.getMonth() + 1, 0);
+  const faltan = new Set(), cubren = new Set();
+  for (let d = new Date(primerDia); d <= ultimo; d = _addDays(d, 1)) {
+    if (_dispCapDia(cap, d) >= cap) continue;
+    const c = ausCoberturaDia(_toISODate(d));
+    c.implFalta.forEach(n => faltan.add(n.split(' ')[0]));
+    c.cubren.forEach(n => cubren.add(n.split(' ')[0]));
+  }
+  const partes = [];
+  if (faltan.size) partes.push('falta ' + [...faltan].join(' y '));
+  if (cubren.size) partes.push([...cubren].join(' y ') + ' cubre Soporte');
+  return partes.join(', ');
+}
+
 // Primera fecha (desde hoy) en la que entra un cliente de `dur` días sin pasar la capacidad
 function _dispSugerirFecha(items, dur, cap) {
   const hoy = _dispHoy();
@@ -408,7 +449,8 @@ function _dispSugerirFecha(items, dur, cap) {
     const ini = _addDays(hoy, i);
     let ok = true;
     for (let k = 0; k < dur; k += 2) {
-      if (_dispCargaDia(items, _addDays(ini, k)) + 1 > cap) { ok = false; break; }
+      const dk = _addDays(ini, k);
+      if (_dispCargaDia(items, dk) + 1 > _dispCapDia(cap, dk)) { ok = false; break; }
     }
     if (ok) return ini;
   }
@@ -610,9 +652,10 @@ function renderDisponibilidadImpl() {
     const hasta = sigMes < rFin ? sigMes : rFin;
     const dias = _dispDias(cur, hasta);
     const ini = new Date(cur.getFullYear(), cur.getMonth(), 1);
-    const pico = _dispPicoMes(conFechas, ini, null);
-    const picoSim = sim ? _dispPicoMes(conFechas, ini, sim) : pico;
-    meses.push({ ini, dias, pico, picoSim, w: (dias / totalDias) * 100 });
+    const info = _dispMesInfo(conFechas, ini, null, cap);
+    const infoSim = sim ? _dispMesInfo(conFechas, ini, sim, cap) : info;
+    meses.push({ ini, dias, pico: info.pico, cap: info.cap, libres: info.libres, reducida: info.reducida, capMin: info.capMin,
+                 libresSim: infoSim.libres, w: (dias / totalDias) * 100 });
     cur = hasta;
   }
 
@@ -626,8 +669,8 @@ function renderDisponibilidadImpl() {
   let proxLibre = null;
   for (let m = 0; m < 24 && !proxLibre; m++) {
     const ini = _dispSumarMeses(_dispPrimeroDeMes(hoy), m);
-    const pico = _dispPicoMes(conFechas, ini, null);
-    if (pico < cap) proxLibre = { ini, libres: cap - pico };
+    const info = _dispMesInfo(conFechas, ini, null, cap);
+    if (info.libres > 0) proxLibre = { ini, libres: info.libres };
   }
 
   // Duración promedio de implementaciones terminadas (sugerida en el simulador)
@@ -759,12 +802,12 @@ function renderDisponibilidadImpl() {
     let m = _dispPrimeroDeMes(sim.inicio);
     const ultimoMes = _dispPrimeroDeMes(sim.fin);
     while (m <= ultimoMes) {
-      const pico = _dispPicoMes(conFechas, m, sim);
-      if (pico > cap) llenos.push(`${DISP_MESES[m.getMonth()]} ${String(m.getFullYear()).slice(2)}`);
+      const info = _dispMesInfo(conFechas, m, sim, cap);
+      if (info.libres < 0) llenos.push(`${DISP_MESES[m.getMonth()]} ${String(m.getFullYear()).slice(2)}`);
       m = _dispSumarMeses(m, 1);
     }
     if (llenos.length === 0) {
-      simMsg = `<div class="disp-simmsg disp-simmsg--ok">✅ <b>Entra sin problemas.</b> Un cliente nuevo del ${_dispFmt(sim.inicio)} al ${_dispFmt(sim.fin)} no supera la capacidad de ${cap} clientes simultáneos.</div>`;
+      simMsg = `<div class="disp-simmsg disp-simmsg--ok">✅ <b>Entra sin problemas.</b> Un cliente nuevo del ${_dispFmt(sim.inicio)} al ${_dispFmt(sim.fin)} no supera la capacidad (${cap} clientes simultáneos, o menos los días que falte alguien del equipo).</div>`;
     } else {
       const sug = _dispSugerirFecha(conFechas, sim.dur, cap);
       simMsg = `<div class="disp-simmsg disp-simmsg--no">⚠️ <b>Se pasa de la capacidad</b> (${cap}) en: ${llenos.join(', ')}.
@@ -784,6 +827,7 @@ function renderDisponibilidadImpl() {
           <ol>
             <li><b>Mirá la fila "Carga del mes":</b> cada mes muestra cuántos clientes hay en paralelo sobre el máximo (ej: 3/${cap}). Verde = hay lugar, amarillo = queda uno, rojo = lleno.</li>
             <li><b>Capacidad máxima:</b> es el tope de implementaciones que el equipo puede llevar al mismo tiempo (hoy ${cap}). Se cambia en el campo <b>"Capacidad Máx. de clientes"</b> de los controles; con ese número se calculan los colores de "Carga del mes", el "Próximo mes con lugar" y el simulador. Se guarda en este navegador.</li>
+            <li><b>Ausencias:</b> la capacidad baja sola los días en que falta un implementador (o baja a cubrir Soporte), según lo cargado en <b>Equipo → Ausencias</b>. Esos meses muestran 🏖️ y la capacidad reducida.</li>
             <li><b>Estructuración Interna:</b> la primera fila del Gantt muestra el tiempo que el equipo dedica a cosas que no son implementar un cliente (soporte, proyectos, mejoras, capacitaciones). Mientras haya tareas pendientes o en curso, <b>ocupa 1 lugar</b> de la capacidad, así ves la disponibilidad real. Las tareas se cargan y editan en la sección de abajo del Gantt.</li>
             <li><b>Leé las barras:</b> cada fila es un cliente, de su inicio a su fin estimado. La parte oscura es el avance real; el color indica si va atrasado (rojo), en tiempo (verde) o adelantado (azul).</li>
             <li><b>Probá un cliente nuevo:</b> con <b>🧪 Simular cliente nuevo</b> elegís una fecha y una duración y te dice si entra o desde cuándo conviene arrancar.</li>
@@ -824,6 +868,13 @@ function renderDisponibilidadImpl() {
       <button class="btn-sm disp-btn-sim" onclick="dispAbrirSim()" title="Probar si entra un cliente nuevo">🧪 Simular cliente nuevo</button>
     </div>
 
+    ${(() => {
+      const red = meses.filter(m => m.reducida);
+      if (!red.length) return '';
+      const lineas = red.map(m => `<b>${DISP_MESES[m.ini.getMonth()]}</b>: baja a ${m.capMin} (${_dispEsc(_dispMotivoReduccion(m.ini, cap))})`).join(' · ');
+      return `<div class="disp-capinfo disp-capinfo--aus">🏖️ <b>Capacidad reducida por ausencias.</b> ${lineas}. Se carga en Equipo → Ausencias.</div>`;
+    })()}
+
     <!-- Resultado del simulador (solo cuando hay una simulación activa) -->
     ${sim ? `<div class="disp-simbar">
       <span class="disp-simbar__tit">🧪 Cliente nuevo simulado: ${_dispFmt(sim.inicio)} → ${_dispFmt(sim.fin)} (${sim.dur} días)</span>
@@ -848,12 +899,13 @@ function renderDisponibilidadImpl() {
           <div class="disp-label disp-label--head" title="Pico de clientes simultáneos en el mes / capacidad máxima">Carga del mes</div>
           <div class="disp-months">
             ${meses.map(m => {
-              const libres = cap - m.pico;
+              const libres = m.libres;
               const cls = libres <= 0 ? 'lleno' : libres === 1 ? 'justo' : 'libre';
-              const pisa = sim && m.picoSim > cap && m.picoSim > m.pico ? ' disp-cell--pisa' : '';
+              const pisa = sim && m.libresSim < 0 && m.libresSim < m.libres ? ' disp-cell--pisa' : '';
               const txt = libres <= 0 ? 'Lleno' : `${libres} libre${libres !== 1 ? 's' : ''}`;
-              return `<div class="disp-cell disp-cell--${cls}${pisa}" style="width:${m.w}%" title="${m.pico} de ${cap} clientes simultáneos (pico del mes)">
-                ${m.w < 6 ? '' : `<b>${m.pico}/${cap}</b><span>${txt}</span>`}</div>`;
+              const aus = m.reducida ? ' 🏖️' : '';
+              return `<div class="disp-cell disp-cell--${cls}${pisa}" style="width:${m.w}%" title="${m.pico} de ${m.cap} clientes simultáneos (día más ajustado del mes)${m.reducida ? ' · la capacidad baja por ausencias del equipo' : ''}">
+                ${m.w < 6 ? '' : `<b>${m.pico}/${m.cap}${aus}</b><span>${txt}</span>`}</div>`;
             }).join('')}
           </div>
         </div>

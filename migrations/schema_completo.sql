@@ -822,3 +822,28 @@ SELECT
   (SELECT COUNT(*) FROM consultas)                   AS consultas,
   (SELECT COUNT(*) FROM soluciones)                  AS soluciones,
   (SELECT COUNT(*) FROM repositorio_items)           AS repo_items;
+
+
+-- 8f. Contacto (persona del cliente) en consultas — ver 053_consultas_contacto.sql
+ALTER TABLE consultas ADD COLUMN IF NOT EXISTS contacto TEXT;
+
+-- 8g. Resumen con IA en borradores de Whaticket — ver 054_borradores_ia.sql
+ALTER TABLE consultas_borradores ADD COLUMN IF NOT EXISTS solucion_sugerida text;
+ALTER TABLE consultas_borradores ADD COLUMN IF NOT EXISTS ia_generado boolean NOT NULL DEFAULT false;
+
+-- 8h. Un borrador abierto por ticket y por asesor — ver 055_borradores_por_asesor.sql
+DROP INDEX IF EXISTS uq_borrador_abierto_por_ticket;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_borrador_abierto_por_ticket_asesor
+  ON consultas_borradores (ticket_id, COALESCE(whaticket_user_id, '00000000-0000-0000-0000-000000000000'::uuid))
+  WHERE estado = 'borrador';
+
+-- 8i. Categoría y subtema sugeridos en borradores — ver 056_borradores_categoria.sql
+ALTER TABLE consultas_borradores ADD COLUMN IF NOT EXISTS categoria_sugerida text;
+ALTER TABLE consultas_borradores ADD COLUMN IF NOT EXISTS subtema_sugerido text;
+
+-- 8j. Un borrador por cierre de chat — ver 057_borrador_por_cierre.sql
+DROP INDEX IF EXISTS uq_borrador_abierto_por_ticket_asesor;
+DROP INDEX IF EXISTS uq_borrador_abierto_por_ticket;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_borrador_por_cierre
+  ON consultas_borradores (ticket_id, ultimo_mensaje_id)
+  WHERE ultimo_mensaje_id IS NOT NULL;

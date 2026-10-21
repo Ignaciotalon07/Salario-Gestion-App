@@ -519,6 +519,7 @@ function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro, tipoFiltro) {
     const modalData = _escHtml(JSON.stringify({
       id: c.id,
       fecha, cat, subtema, asesor, repetida: c.repetida,
+      contacto: c.contacto || '',
       descripcion: c.descripcion || '',
       solucionTitulo,
       solucionPasos,
@@ -536,7 +537,7 @@ function _buildFilasTabla(cliente, consultasDelCliente, mesFiltro, tipoFiltro) {
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(cat)} · ${_escHtml(subtema)}</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_escHtml(desc)}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.contacto ? '👤 ' + _escHtml(c.contacto) + ' · ' : ''}${_escHtml(desc)}</div>
         </div>
         <div style="flex-shrink:0;text-align:right">
           <div style="font-size:11px;color:var(--text3)">${fecha}</div>
@@ -624,6 +625,7 @@ function abrirDetalleConsulta(btn) {
           <div style="font-size:13px;line-height:1.5;color:var(--text2)">${data.descripcion}</div>
         </div>` : ''}
         <div style="display:flex;gap:16px;padding-top:8px;border-top:1px solid var(--border)">
+          <div><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Consultó</div><div style="font-size:13px;font-weight:500">${data.contacto ? _escHtml(data.contacto) : '—'}</div></div>
           <div><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Asesor</div><div style="font-size:13px;font-weight:500">${data.asesor}</div></div>
           <div><div style="font-size:11px;color:var(--text3);margin-bottom:2px">Tiempo</div><div style="font-size:13px;font-weight:500">${data.tiempo != null ? data.tiempo + ' hs' : '—'}</div></div>
         </div>

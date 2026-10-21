@@ -440,6 +440,11 @@ function refreshPanelMetrics() {
   const repetidas   = mesActual.filter(c => c.repetida === 'si').length;
   const pctRep      = total > 0 ? Math.round((repetidas / total) * 100) : 0;
 
+  // Los gráficos del panel muestran solo consultas de soporte: se excluyen los registros de
+  // implementación y las horas internas (las tarjetas de arriba sí cuentan todos los registros).
+  const soloConsultas = lista => lista.filter(c => !['programacion_interna', 'implementacion'].includes(c.tipoConsulta || c.tipo_consulta));
+  const mesGraficos = soloConsultas(mesActual);
+
   // ── Actualizar nav de mes ──
   const panelLabelEl = document.getElementById('panel-mes-label');
   const panelNextBtn = document.getElementById('panel-mes-next');
@@ -456,11 +461,22 @@ function refreshPanelMetrics() {
 
   // ── Cards de métricas ──
   const elConsultas = document.getElementById('metric-consultas-mes');
-  if (elConsultas) elConsultas.textContent = total;
+  if (elConsultas) {
+    elConsultas.textContent = total;
+    // Desglose al pasar el mouse: consultas de soporte, implementación y horas internas
+    const tipoDe = c => c.tipoConsulta || c.tipo_consulta;
+    const nImpl    = mesActual.filter(c => tipoDe(c) === 'implementacion').length;
+    const nInternas = mesActual.filter(c => tipoDe(c) === 'programacion_interna').length;
+    const nConsultas = total - nImpl - nInternas;
+    const desglose = `${total} registros: ${nConsultas} consultas, ${nImpl} de implementación y ${nInternas} horas internas`;
+    elConsultas.title = desglose;
+    const card = elConsultas.closest('.metric-card');
+    if (card) card.title = desglose;
+  }
 
   // Label dinámica de la card
   const elConsultasLabel = document.getElementById('metric-consultas-mes-label');
-  if (elConsultasLabel) elConsultasLabel.textContent = 'Consultas ' + panelLabel.split(' ')[0].toLowerCase();
+  if (elConsultasLabel) elConsultasLabel.textContent = 'Registros ' + panelLabel.split(' ')[0].toLowerCase();
 
   const elRep = document.getElementById('metric-rep-pct');
   if (elRep) {
@@ -520,7 +536,7 @@ function refreshPanelMetrics() {
       const m = ((totalM % 12) + 12) % 12;
       const d = new Date(y, m, 1);
       const lbl = d.toLocaleString('es-AR', { month: 'short' }).replace('.','').replace(/^./, s => s.toUpperCase());
-      meses.push({ label: lbl, consultas: getConsultasPorMes(m, y) });
+      meses.push({ label: lbl, consultas: soloConsultas(getConsultasPorMes(m, y)) });
     }
     chartTendInstance.data.labels           = meses.map(m => m.label);
     chartTendInstance.data.datasets[0].data = meses.map(m => m.consultas.length);
@@ -531,7 +547,7 @@ function refreshPanelMetrics() {
   // ── Gráfico consultas por cliente (este mes, top 10) ──
   if (chartClientesInstance) {
     const porCliente = {};
-    mesActual.forEach(c => {
+    mesGraficos.forEach(c => {
       if (c.cliente) porCliente[c.cliente] = (porCliente[c.cliente] || 0) + 1;
     });
     const sorted = Object.entries(porCliente).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -562,15 +578,24 @@ function refreshPanelMetrics() {
     });
   }
 
-  // Contar agrupando por label normalizado
-  const catCounts = {};
-  mesActual.forEach(c => {
+  // Contar agrupando por categoría normalizada. Se agrupa por una clave sin tildes ni mayúsculas
+  // ("programacion" y "Programación" son la misma categoría) y se muestra la versión con tilde.
+  const claveCat = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  const catCounts = {};   // clave → cantidad
+  const catNombre = {};   // clave → nombre a mostrar
+  mesGraficos.forEach(c => {
     if (!c.categoria) return;
     const rawLabel = catLabelMap[c.categoria] || c.categoria;
     // Primera letra siempre en mayúscula
     const label = rawLabel ? rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1) : rawLabel;
-    catCounts[label] = (catCounts[label] || 0) + 1;
+    const k = claveCat(label);
+    catCounts[k] = (catCounts[k] || 0) + 1;
+    // Si hay variantes, se queda con la que tiene tilde (la "bien escrita")
+    if (!catNombre[k] || (label !== claveCat(label) && /[\u00c0-\u017f]/.test(label) && !/[\u00c0-\u017f]/.test(catNombre[k]))) catNombre[k] = label;
   });
+  if (catNombre['programacion']) catNombre['programacion'] = 'Programación'; // la clave corta no tiene tilde
+  // Pasa a { 'Nombre': cantidad } como esperaba el resto del código
+  Object.keys(catCounts).forEach(k => { catCounts[catNombre[k]] = catCounts[k]; delete catCounts[k]; });
 
   // Top 5 por cantidad, orden descendente
   const top5Cats = Object.entries(catCounts)

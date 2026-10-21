@@ -283,6 +283,7 @@ function renderAreas() {
 function renderAusencias() {
   renderAreas();
   areasActualizarBadge();
+  if (window._implDispAbierta && typeof renderImplementacion === 'function') renderImplementacion(); // capacidad de Disponibilidad
   if (typeof renderSaludoPanel === 'function') { try { renderSaludoPanel(); } catch (e) { /* el panel se rearma solo */ } }
   const host = document.getElementById('equipo-ausencias');
   if (!host || !_ausMes) return;
