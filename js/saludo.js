@@ -602,6 +602,7 @@ function renderSaludoPanel() {
       count: borradores.length, color: '#0e7490', icon: '💬',
       msg: `Tenés <strong>${borradores.length}</strong> consulta${borradores.length !== 1 ? 's' : ''} por registrar.`,
       cta: 'Ver por registrar →', accion: '_saludoIrAPorRegistrar()',
+      flash: true, // destella al aparecer / cuando llega uno nuevo (no sube al primer lugar)
     }] : []),
     // Ausencias (14 días antes): a los demás les avisa "X sale de vacaciones del A al B" (ver etapas abajo); a quien la cargó le muestra un cartelito
     // motivacional distinto cada día, que NO desaparece al abrirlo.
@@ -806,8 +807,10 @@ function renderSaludoPanel() {
 // el panel se vuelva a dibujar.
 const _saludoNovedadesVistas = {};
 function _saludoClaseNuevo(t) {
-  if (!t.prio) return '';
-  const k = t.accion + '|' + (t.hace || '');
+  if (!t.prio && !t.flash) return '';
+  // flash: destella sin subir arriba; la clave incluye el contador para que
+  // cada borrador nuevo vuelva a destellar
+  const k = t.accion + '|' + (t.hace || '') + (t.flash ? '|' + t.count : '');
   if (!_saludoNovedadesVistas[k]) _saludoNovedadesVistas[k] = Date.now();
   return (Date.now() - _saludoNovedadesVistas[k] < 6000) ? ' saludo-tile--nuevo' : '';
 }
