@@ -87,6 +87,7 @@ async function cargarAusencias() {
     _ausError = true;
   }
   renderAusencias();
+  if (typeof refreshAlertas === 'function') { try { refreshAlertas(); } catch (e) { /* se recalcula luego */ } }
 }
 
 window.addEventListener('app-ready', () => {

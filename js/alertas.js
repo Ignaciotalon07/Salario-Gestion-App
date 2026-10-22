@@ -425,6 +425,32 @@ function refreshAlertas() {
     }
   }
 
+  // ── 10. PROYECTOS: meses sin lugar en Implementación (una sola alerta). Queda acá aunque ya
+  // se haya visto en el Panel general; desaparece cuando el problema se resuelve. ──
+  if (typeof proyCapacidadAlerta === 'function') {
+    const capa = proyCapacidadAlerta();
+    if (capa) {
+      alertas.push({
+        tipo: 'amber', titulo: '📊 Capacidad de Implementación:', texto: capa.texto,
+        accion: 'Ver Disponibilidad →',
+        onClick: "goTo(_saludoNavBtn('implementacion'), 'implementacion'); setTimeout(() => abrirDisponibilidadImpl(), 50)"
+      });
+    }
+  }
+
+  // ── 11. AUSENCIAS: quién sale en los próximos días (queda acá aunque ya se haya visto en el Panel general) ──
+  if (typeof ausSalidasProximas === 'function' && typeof AUS_VENTANA_SALIDAS !== 'undefined') {
+    const tipoTxt = { vacaciones: 'de vacaciones', licencia: 'de licencia', dia_suelto: 'un día', puente: 'de puente' };
+    ausSalidasProximas(AUS_VENTANA_SALIDAS).forEach(a => {
+      const cuando = a.faltan === 0 ? 'Hoy' : (a.faltan === 1 ? 'Mañana' : `En ${a.faltan} días`);
+      const fechas = a.dias === 1 ? `el ${_ausFmt(a.fecha_desde)}` : `del ${_ausFmt(a.fecha_desde)} al ${_ausFmt(a.fecha_hasta)}`;
+      alertas.push({
+        tipo: 'blue', titulo: `🏖️ ${cuando}, ${a.miembro_nombre} sale ${tipoTxt[a.tipo] || 'de vacaciones'}:`, texto: fechas + '.',
+        accion: 'Ver ausencias →', onClick: "goTo(_saludoNavBtn('equipo'), 'equipo'); setTimeout(() => eqTab('ausencias'), 50)"
+      });
+    });
+  }
+
   // ── Render ──
   _renderAlertas(alertas);
 }

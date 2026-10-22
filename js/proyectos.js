@@ -64,6 +64,7 @@ function suscribirProyectos() {
 
 // Redibuja lo que dependa de proyectos (la pestaña si está abierta y Disponibilidad si está abierta)
 function _proyRefrescar() {
+  if (typeof refreshAlertas === 'function') { try { refreshAlertas(); } catch (e) { /* se recalcula luego */ } }
   if (typeof renderSaludoPanel === 'function') { try { renderSaludoPanel(); } catch (e) { /* el panel se rearma solo */ } }
   if ((window._implProyAbierta || window._implDispAbierta) && typeof renderImplementacion === 'function') {
     renderImplementacion();
@@ -788,6 +789,38 @@ async function proyMoverTarea(id, dir) {
 const PROY_DIAS_ESTANCADO = 10;
 const PROY_MESES_CAPACIDAD = 3;
 
+// Meses próximos sin lugar en Implementación (cuentan los proyectos). Devuelve null si no hay ninguno.
+// { key, meses:[{nombre, pico, cap}], texto, msgHtml }. La key cambia si cambia la situación.
+function proyCapacidadAlerta() {
+  if (typeof proyectos === 'undefined' || !proyectos.some(p => p.estado === 'en_curso')) return null;
+  if (typeof _dispDatos !== 'function' || typeof _dispMesInfo !== 'function') return null;
+  try {
+    const hoy = _pHoy();
+    const items = _dispDatos().filter(i => !i.finalizado && i.inicio && i.fin);
+    const cap = (typeof _dispCapacidadManual === 'function' && _dispCapacidadManual()) || DISP_CAPACIDAD_DEFAULT;
+    const MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    const meses = [];
+    for (let i = 0; i < PROY_MESES_CAPACIDAD; i++) {
+      const m1 = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
+      const m2 = new Date(m1.getFullYear(), m1.getMonth() + 1, 0);
+      if (!items.some(it => it.esProyecto && it.inicio <= m2 && it.fin >= m1)) continue;
+      const info = _dispMesInfo(items, m1, null, cap);
+      if (info.libres > 0) continue;
+      meses.push({ nombre: MES[m1.getMonth()], clave: `${m1.getFullYear()}-${m1.getMonth() + 1}`, pico: info.pico, cap: info.cap });
+    }
+    if (!meses.length) return null;
+    const lista = meses.length === 1 ? meses[0].nombre : meses.slice(0, -1).map(m => m.nombre).join(', ') + ' y ' + meses[meses.length - 1].nombre;
+    const pico = Math.max(...meses.map(m => m.pico)), capMin = Math.min(...meses.map(m => m.cap));
+    const resto = `no queda lugar en Implementación: hasta ${pico} ocupados sobre ${capMin} de capacidad (cuentan los proyectos).`;
+    return {
+      key: 'proy:cap:' + meses.map(m => `${m.clave}:${m.pico}/${m.cap}`).join('|'),
+      meses,
+      texto: `En ${lista} ${resto}`,
+      msgHtml: `En <strong>${lista}</strong> ${resto}`,
+    };
+  } catch (e) { console.warn('proyCapacidadAlerta', e); return null; }
+}
+
 function proyAvisosPanel() {
   if (typeof proyectos === 'undefined' || !proyectos.length || typeof ausAvisoVisto !== 'function') return [];
   const hoy = _pHoy();
@@ -830,26 +863,10 @@ function proyAvisosPanel() {
     }
   }
 
-  // 10) Capacidad: meses próximos sin lugar en Disponibilidad en los que hay algún proyecto en curso
-  if (typeof _dispDatos === 'function' && typeof _dispMesInfo === 'function' && proyectos.some(p => p.estado === 'en_curso')) {
-    try {
-      const items = _dispDatos().filter(i => !i.finalizado && i.inicio && i.fin);
-      const cap = (typeof _dispCapacidadManual === 'function' && _dispCapacidadManual()) || DISP_CAPACIDAD_DEFAULT;
-      const MES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-      for (let i = 0; i < PROY_MESES_CAPACIDAD; i++) {
-        const m1 = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
-        const m2 = new Date(m1.getFullYear(), m1.getMonth() + 1, 0);
-        const hayProy = items.some(it => it.esProyecto && it.inicio <= m2 && it.fin >= m1);
-        if (!hayProy) continue;
-        const info = _dispMesInfo(items, m1, null, cap);
-        if (info.libres > 0) continue;
-        const key = `proy:cap:${m1.getFullYear()}-${m1.getMonth() + 1}:${info.pico}/${info.cap}`;
-        if (ausAvisoVisto(key)) continue;
-        out.push({ key, pid: null, color: '#f97316', icon: '📊',
-          msg: `En <strong>${MES[m1.getMonth()]}</strong> no queda lugar en Implementación: ${info.pico} de ${info.cap} ocupados (cuentan los proyectos).`,
-          cta: 'Ver Disponibilidad →' });
-      }
-    } catch (e) { console.warn('proyAvisosPanel capacidad', e); }
+  // 10) Capacidad: UNA sola tarjeta con todos los meses próximos sin lugar (si hay algún proyecto en curso)
+  const capa = proyCapacidadAlerta();
+  if (capa && !ausAvisoVisto(capa.key)) {
+    out.push({ key: capa.key, pid: null, color: '#f97316', icon: '📊', msg: capa.msgHtml, cta: 'Ver Disponibilidad →' });
   }
   return out;
 }
