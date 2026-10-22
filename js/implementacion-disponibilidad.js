@@ -846,7 +846,7 @@ function renderDisponibilidadImpl() {
   cont.innerHTML = `
     <!-- Leyenda: para qué sirve y cómo se usa -->
     <div class="disp-ayuda">
-      <div class="disp-ayuda__ico">📅</div>
+      <div class="disp-ayuda__ico">💡</div>
       <div class="disp-ayuda__txt">
         <span>Esta herramienta sirve para ver de un vistazo <b>cuándo arranca y termina cada implementación</b> y <b>en qué meses hay lugar para sumar clientes nuevos</b> (hasta ${cap} simultáneas).</span>
         <details class="disp-ayuda__det" ${window._dispAyudaAbierta ? 'open' : ''} ontoggle="window._dispAyudaAbierta = this.open">

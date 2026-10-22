@@ -80,6 +80,7 @@ Salario Gestion/
 │   ├── cliente-documentos.js ← Pestaña Documentos por cliente (archivos + links de Drive,
 │   │                           tipo de documento, buscador, leyenda)
 │   ├── proyectos.js         ← Implementación → Proyectos: lista, alta, detalle con tareas, % avance (cambios puntuales para clientes de soporte)
+│   ├── proyecto-documentos.js ← Vista "Documentos" del detalle de un proyecto (archivos + links de Drive)
 │   ├── conexiones.js        ← Conexiones del cliente (tarjeta + modal)
 │   ├── reporte-implementacion.js ← Reporte semanal de implementación
 │   ├── asesor-detalle.js    ← Detalle de cada asesor (sección Equipo)
@@ -156,6 +157,7 @@ Salario Gestion/
     ├── 058_borradores_material.sql ← material_sugerido en borradores (video/pdf/varios/ninguno, según adjuntos del asesor)
     ├── 059_salario_sync.sql        ← Tabla salario_sync: legajos/convenios/empresas por cliente que manda Salario (VFP) vía Edge Function `salario-api`
     ├── 060_proyectos.sql           ← Tablas proyectos + proyecto_tareas (Implementación → Proyectos; RLS y realtime)
+    ├── 061_proyecto_documentos.sql ← Tabla proyecto_documentos (archivos + links de Drive por proyecto; usa el bucket cliente-documentos)
     └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 
@@ -366,7 +368,7 @@ Salario Gestion/
     de sus tareas (si no hay tareas, la fecha objetivo). El estado se calcula solo: con todas las tareas completas pasa a `finalizado` (deja de ocupar lugar); si se agrega o se destilda una tarea, vuelve a `en_curso` (`_proySincronizar`). No hay botón manual de finalizar. **Disponibilidad**:
     `_dispProyectoItems()` suma cada proyecto como un item más (ocupa 1 lugar de la capacidad entre
     su inicio y su fin, y es una fila 🧩 del Gantt). Estructuración interna queda aparte.
-    Detalle con vista Lista / Gantt (`_proyGanttHtml`).
+    Detalle con vistas Lista / Gantt (`_proyGanttHtml`, escala día/mes/año) / Documentos (`js/proyecto-documentos.js`, migración 061). Alertas en el Panel general (`proyAvisosPanel`): atrasado, estancado, terminado y mes sin capacidad; se marcan vistos con `ausAvisoMarcarVisto`.
 
 ## Login y usuarios
 

@@ -8845,3 +8845,117 @@ input[type=date]:focus {
 /* Ausencias → más aire alrededor del título del detalle */
 .aus-detalle { margin-top: 34px; padding-top: 0; border-top: 0; }
 .aus-detalle__head { margin-bottom: 14px; }
+
+/* Proyectos → vista Documentos */
+.pdoc-acc { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.pdoc-lista { display: flex; flex-direction: column; }
+.pdoc-fila { display: flex; align-items: center; gap: 14px; padding: 12px 6px; border-bottom: 1px solid var(--border); transition: background .15s; }
+.pdoc-fila:hover { background: var(--surface2); }
+.pdoc-ico { font-size: 24px; width: 40px; height: 40px; border-radius: 11px; background: rgba(249,115,22,.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.pdoc-main { flex: 1; min-width: 0; }
+.pdoc-nom { font-size: 14px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdoc-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.pdoc-btns { display: flex; gap: 6px; flex-shrink: 0; }
+.pdoc-btns button { font: inherit; font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 9px; border: 1px solid var(--border2); background: var(--surface); color: var(--text2); cursor: pointer; }
+.pdoc-btns button:hover { border-color: #f97316; color: #f97316; }
+.pdoc-btns .pdoc-del:hover { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,.08); }
+
+/* Proyectos → botón Documentos en la tarjeta izquierda */
+.proy-btn-docs {
+  margin-top: auto; width: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  font: inherit; font-size: 14px; font-weight: 700; padding: 12px 16px; border-radius: 12px; cursor: pointer;
+  color: var(--text); background: var(--surface2); border: 1px solid var(--border2); transition: all .15s;
+}
+.proy-btn-docs b { font-size: 12px; min-width: 22px; text-align: center; padding: 2px 8px; border-radius: 999px; background: rgba(249,115,22,.15); color: #f97316; }
+.proy-btn-docs:hover { border-color: #f97316; color: #f97316; }
+.proy-btn-docs.on { background: rgba(249,115,22,.12); border-color: #f97316; color: #f97316; }
+.proy-det .proy-btn-docs + .proy-btn-borrar { margin-top: 0; }
+
+/* Proyectos → más aire: línea sobre Documentos y mayor distancia con Eliminar */
+.proy-det .proy-btn-docs { position: relative; margin-top: auto; margin-bottom: 0; }
+.proy-det .proy-btn-docs::before { content: ''; position: absolute; left: -20px; right: -20px; top: -14px; border-top: 1px solid var(--border); }
+.proy-det .proy-btn-docs + .proy-btn-borrar { margin-top: 32px; }
+
+/* Proyectos → Documentos como una fila más del bloque de datos (reemplaza el botón anterior) */
+.proy-btn-docs { display: none; }
+.proy-det__doc { display: flex; flex-direction: column; gap: 4px; }
+.proy-doc-row {
+  width: 100%; box-sizing: border-box; display: flex; align-items: center; gap: 8px; font: inherit; font-size: 13.5px; cursor: pointer;
+  color: var(--text); background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; padding: 8px 10px; text-align: left; transition: all .15s;
+}
+.proy-doc-row em { font-style: normal; flex: 1; font-weight: 600; }
+.proy-doc-row b { font-size: 11.5px; min-width: 20px; text-align: center; padding: 1px 7px; border-radius: 999px; background: rgba(249,115,22,.15); color: #f97316; }
+.proy-doc-row i { font-style: normal; font-size: 17px; line-height: 1; color: var(--text3); }
+.proy-doc-row:hover, .proy-doc-row.on { border-color: #f97316; }
+.proy-doc-row:hover i, .proy-doc-row.on i { color: #f97316; }
+.proy-doc-row.on { background: rgba(249,115,22,.10); }
+.proy-det .proy-btn-docs + .proy-btn-borrar { margin-top: auto; }
+
+/* Proyectos → botón Documentos junto al título del panel de tareas (la fila de la tarjeta izquierda ya no se usa) */
+.proy-det__doc { display: none; }
+.proy-doc-btn {
+  font: inherit; font-size: 12.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  padding: 6px 14px; border-radius: 999px; color: var(--text2); background: var(--surface2); border: 1px solid var(--border2); transition: all .15s;
+}
+.proy-doc-btn b { font-size: 11px; padding: 0 7px; border-radius: 999px; background: rgba(249,115,22,.18); color: #f97316; }
+.proy-doc-btn:hover { border-color: #f97316; color: #f97316; }
+.proy-doc-btn.on { background: rgba(249,115,22,.14); border-color: #f97316; color: #f97316; }
+
+/* Proyectos → 3 pestañas arriba del panel derecho: Tareas | Gantt | Documentos */
+.proy-doc-btn { display: none; }
+.proy-tabs { display: flex; gap: 4px; margin: -4px 0 12px; border-bottom: 1px solid var(--border2); flex-shrink: 0; }
+.proy-tabs button {
+  font: inherit; font-size: 14px; font-weight: 700; padding: 10px 18px; border: 0; background: none; cursor: pointer; color: var(--text3);
+  border-bottom: 3px solid transparent; margin-bottom: -1px; display: inline-flex; align-items: center; gap: 8px; transition: color .15s, border-color .15s;
+}
+.proy-tabs button span { font-size: 11px; font-weight: 800; padding: 1px 8px; border-radius: 999px; background: var(--surface2); color: var(--text3); }
+.proy-tabs button:hover { color: var(--text); }
+.proy-tabs button.on { color: #f97316; border-bottom-color: #f97316; }
+.proy-tabs button.on span { background: rgba(249,115,22,.16); color: #f97316; }
+
+/* Proyectos → elegir si el documento es archivo o link */
+.pdoc-opciones { display: flex; flex-direction: column; gap: 10px; }
+.pdoc-opciones button { display: flex; align-items: center; gap: 14px; text-align: left; font: inherit; cursor: pointer; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text); transition: all .15s; }
+.pdoc-opciones button > span { font-size: 22px; width: 42px; height: 42px; border-radius: 12px; background: rgba(249,115,22,.14); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.pdoc-opciones b { display: block; font-size: 14.5px; }
+.pdoc-opciones small { display: block; font-size: 12px; color: var(--text3); margin-top: 2px; }
+.pdoc-opciones button:hover { border-color: #f97316; background: rgba(249,115,22,.08); }
+
+/* Proyectos → resumen de estados al lado del buscador */
+.proy-buscador-wrap { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 24px; }
+.proy-buscador-wrap .proy-buscador { flex: 0 1 360px; min-width: 220px; }
+.proy-resumen-host .proy-resumen { margin: 0; }
+
+/* Proyectos → el resumen ocupa todo el ancho restante, con los 4 estados repartidos */
+.proy-resumen-host { flex: 1 1 420px; min-width: 0; }
+.proy-resumen-host .proy-resumen { width: 100%; justify-content: space-between; gap: 8px 16px; padding: 0 8px; }
+
+/* Proyectos → estados más juntos (pisa el reparto anterior) */
+.proy-resumen-host .proy-resumen { justify-content: space-evenly; max-width: 640px; margin: 0 auto; }
+
+/* Proyectos → punto medio entre ancho completo y juntos */
+.proy-resumen-host .proy-resumen { max-width: 860px; }
+
+/* Proyectos → estados como mini tarjetas con número (reemplaza los puntitos) */
+.proy-buscador-wrap { align-items: stretch; }
+.proy-buscador-wrap .proy-buscador { align-self: center; }
+.proy-resumen-host { flex: 1 1 auto; display: flex; justify-content: flex-end; }
+.proy-kpis { display: flex; flex-wrap: wrap; gap: 10px; }
+.proy-kpi {
+  min-width: 108px; padding: 8px 16px 9px; border-radius: 12px; background: var(--surface); border: 1px solid var(--border);
+  border-top: 3px solid var(--c); display: flex; flex-direction: column; align-items: center; gap: 1px;
+}
+.proy-kpi b { font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--text); }
+.proy-kpi span { font-size: 11.5px; font-weight: 600; color: var(--text3); white-space: nowrap; }
+@media (max-width: 700px) { .proy-resumen-host { justify-content: flex-start; flex-basis: 100%; } .proy-kpi { flex: 1 1 80px; min-width: 0; } }
+
+/* Proyectos → vuelven los puntitos; ocupan el ancho restante con separación moderada */
+.proy-resumen-host { flex: 1 1 420px; min-width: 0; display: block; }
+.proy-resumen-host .proy-resumen { display: flex; width: 100%; max-width: 900px; margin: 0; padding: 0 8px; justify-content: space-evenly; gap: 8px 16px; }
+
+/* Disponibilidad → cuadro de ayuda en amarillo suave (no naranja) */
+.disp-ayuda { background: rgba(250,204,21,.12); border: 1px solid rgba(234,179,8,.35); border-left: 4px solid #eab308; }
+.disp-ayuda__ico { font-size: 18px; }
+.disp-ayuda__det summary { color: #ca8a04; }
+[data-theme="dark"] .disp-ayuda { background: rgba(250,204,21,.09); border-color: rgba(250,204,21,.3); border-left-color: #facc15; }
+[data-theme="dark"] .disp-ayuda__det summary { color: #facc15; }

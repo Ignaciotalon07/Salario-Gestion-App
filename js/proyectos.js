@@ -204,8 +204,10 @@ function _renderProyLista() {
       <span><i style="background:var(--text3)"></i><b>${fin.length}</b> finalizados</span>
     </div>`;
 
+  // El resumen (puntitos) va al lado del buscador, no dentro de la lista
+  const host = document.getElementById('proy-resumen-host');
+  if (host) host.innerHTML = resumen;
   body.innerHTML = `
-    ${resumen}
     ${activos.length ? `<div class="proy-rows">${activos.map(i => _proyRow(i.p, i.k)).join('')}</div>`
       : `<div class="card" style="text-align:center;color:var(--text3);padding:28px">No hay proyectos activos${q ? ' que coincidan con la búsqueda' : ''}.</div>`}
     ${fin.length ? `
@@ -415,21 +417,25 @@ function _renderProyDetalle(p) {
 
       <!-- Tareas -->
       <section class="proy-det__tareas">
-        <div class="proy-tareas-head">
-          <div class="proy-tareas-tit">Tareas del proyecto <span>${k.total}</span></div>
-          <div class="proy-vistas">
-            <button class="${window._proyVista === 'lista' ? 'on' : ''}" onclick="setProyVista('lista')">☰ Lista</button>
-            <button class="${window._proyVista === 'gantt' ? 'on' : ''}" onclick="setProyVista('gantt')">📊 Gantt</button>
-          </div>
+        <div class="proy-tabs">
+          <button class="${window._proyVista === 'lista' ? 'on' : ''}" onclick="setProyVista('lista')">☰ Tareas <span>${k.total}</span></button>
+          <button class="${window._proyVista === 'gantt' ? 'on' : ''}" onclick="setProyVista('gantt')">📊 Gantt</button>
+          <button class="${window._proyVista === 'docs' ? 'on' : ''}" onclick="setProyVista('docs')">📁 Documentos <span>${typeof pdocCantidad === 'function' ? pdocCantidad(p.id) : 0}</span></button>
+        </div>
+        ${window._proyVista === 'docs' ? `<div class="proy-tareas-head">
+          <div class="proy-tareas-tit">Documentos del proyecto</div>
+          <button class="btn-primary btn-primary--sm" onclick="pdocElegirTipo('${p.id}')">＋ Agregar documento</button>
+        </div>` : `<div class="proy-tareas-head">
+          <div class="proy-tareas-tit">${window._proyVista === 'gantt' ? 'Cronograma' : 'Tareas del proyecto'}</div>
           ${window._proyVista === 'gantt' ? `<div class="proy-vistas">
             <button class="${window._proyEscala === 'dia' ? 'on' : ''}" onclick="setProyEscala('dia')">Día</button>
             <button class="${window._proyEscala === 'mes' ? 'on' : ''}" onclick="setProyEscala('mes')">Mes</button>
             <button class="${window._proyEscala === 'anio' ? 'on' : ''}" onclick="setProyEscala('anio')">Año</button>
           </div>` : ''}
           <button class="btn-primary btn-primary--sm" onclick="proyAgregarTarea('${p.id}')">＋ Agregar tarea</button>
-        </div>
+        </div>`}
         <div class="proy-scroll">
-          ${k.ts.length ? (window._proyVista === 'gantt' ? _proyGanttHtml(p, k.ts) : _proyTareasHtml(p, k.ts, true)) : `
+          ${window._proyVista === 'docs' ? proyDocsHtml(p) : k.ts.length ? (window._proyVista === 'gantt' ? _proyGanttHtml(p, k.ts) : _proyTareasHtml(p, k.ts, true)) : `
           <div class="proy-vacio">Todavía no hay tareas. Agregá la primera con <b>＋ Agregar tarea</b>: nombre, responsable, duración en días y fecha de inicio.</div>`}
         </div>
         <div class="proy-nota">Con todas las tareas completas el proyecto se finaliza solo; si agregás o destildás una, vuelve a estar en curso.</div>
