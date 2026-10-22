@@ -79,6 +79,7 @@ Salario Gestion/
 │   │                           simulador, barras grises "por arrancar", pan con arrastre
 │   ├── cliente-documentos.js ← Pestaña Documentos por cliente (archivos + links de Drive,
 │   │                           tipo de documento, buscador, leyenda)
+│   ├── proyectos.js         ← Implementación → Proyectos: lista, alta, detalle con tareas, % avance (cambios puntuales para clientes de soporte)
 │   ├── conexiones.js        ← Conexiones del cliente (tarjeta + modal)
 │   ├── reporte-implementacion.js ← Reporte semanal de implementación
 │   ├── asesor-detalle.js    ← Detalle de cada asesor (sección Equipo)
@@ -154,6 +155,7 @@ Salario Gestion/
     ├── 057_borrador_por_cierre.sql ← Un borrador por cada cierre de chat (reemplaza el índice de 055)
     ├── 058_borradores_material.sql ← material_sugerido en borradores (video/pdf/varios/ninguno, según adjuntos del asesor)
     ├── 059_salario_sync.sql        ← Tabla salario_sync: legajos/convenios/empresas por cliente que manda Salario (VFP) vía Edge Function `salario-api`
+    ├── 060_proyectos.sql           ← Tablas proyectos + proyecto_tareas (Implementación → Proyectos; RLS y realtime)
     └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 
@@ -354,6 +356,17 @@ Salario Gestion/
     del detalle de cliente y del detalle de asesor se comparten → el banner está
     scopeado con `#cliente-detalle`. Siempre subir el `?v=` de CSS/JS en
     `index.html` al cambiarlos (cache).
+
+22. **Proyectos** (pestaña entre Clientes y Disponibilidad de Implementación; `js/proyectos.js`,
+    migración 060): trabajos puntuales para clientes que YA son de soporte (cambios que pidieron).
+    Tablas `proyectos` + `proyecto_tareas`. Un cliente tiene UN proyecto `en_curso` a la vez (índice
+    único parcial); si pide más cosas, se le suman tareas a ese. Tareas SIN predecesoras: cada una tiene
+    duración (días), fecha de inicio y fin (= inicio + duración − 1), responsable y estado
+    (pendiente/en curso/completa). Avance % = tareas completas / total. Fin del proyecto = última fecha
+    de sus tareas (si no hay tareas, la fecha objetivo). El estado se calcula solo: con todas las tareas completas pasa a `finalizado` (deja de ocupar lugar); si se agrega o se destilda una tarea, vuelve a `en_curso` (`_proySincronizar`). No hay botón manual de finalizar. **Disponibilidad**:
+    `_dispProyectoItems()` suma cada proyecto como un item más (ocupa 1 lugar de la capacidad entre
+    su inicio y su fin, y es una fila 🧩 del Gantt). Estructuración interna queda aparte.
+    Detalle con vista Lista / Gantt (`_proyGanttHtml`).
 
 ## Login y usuarios
 

@@ -29,6 +29,8 @@ const DISP_DIA_MS = 24 * 60 * 60 * 1000;
 // ────────── Navegación ──────────
 
 function abrirDisponibilidadImpl() {
+  window._implProyAbierta = false;
+  window._proyAbierto = null;
   window._implDispAbierta = true;
   window._implClienteAbierto = null;
   window._dispInicio = null;  // se recalcula al dibujar
@@ -142,7 +144,7 @@ function _dispDatos() {
   const lista = (typeof clientes !== 'undefined' ? clientes : [])
     .filter(c => idsConTareas.has(c.id) && (c.area === 'impl' || c.area === 'soporte'));
 
-  return lista.map(c => {
+  const itemsClientes = lista.map(c => {
     const tareas = implTareas.filter(t => t.cliente_id === c.id);
     const total = tareas.length;
     const completas = tareas.filter(t => t.estado === 'completada').length;
@@ -195,6 +197,31 @@ function _dispDatos() {
     }
     return { c, total, completas, progreso, finalizado, vencidas, inicio, fin, estado, pctEsperado,
              sinFechas: !(inicio && fin) };
+  });
+  // Los proyectos (Implementación → Proyectos) cuentan como un cliente más: ocupan 1 lugar
+  // mientras están en curso, en los meses que van de su inicio a su fin.
+  return itemsClientes.concat(_dispProyectoItems());
+}
+
+// Un proyecto = una fila del Gantt y 1 lugar de la capacidad (igual que un cliente en implementación).
+// Fin = última fecha de sus tareas; si todavía no tiene tareas, la fecha objetivo. Si está en curso y
+// tiene tareas vencidas sin cerrar, el fin se proyecta hasta hoy (sigue ocupando lugar).
+function _dispProyectoItems() {
+  if (typeof proyectos === 'undefined' || typeof proyCalc !== 'function') return [];
+  const hoy = _dispHoy();
+  return proyectos.map(p => {
+    const k = proyCalc(p);
+    const cli = (typeof clientes !== 'undefined' ? clientes : []).find(c => c.id === p.cliente_id);
+    const finalizado = p.estado === 'finalizado';
+    let fin = k.fin || k.objetivo || null;
+    if (!finalizado && fin && fin < hoy && k.completas < k.total) fin = hoy;
+    return {
+      c: { id: p.id, nombre: '🧩 ' + p.nombre + (cli ? ' · ' + cli.nombre : '') },
+      esProyecto: true,
+      total: k.total, completas: k.completas, progreso: k.progreso, finalizado, vencidas: k.vencidas,
+      inicio: k.inicio, fin, estado: k.estado, pctEsperado: null,
+      sinFechas: !(k.inicio && fin),
+    };
   });
 }
 
@@ -731,7 +758,7 @@ function renderDisponibilidadImpl() {
       </div>` : '';
     return `
       <div class="disp-row">
-        <div class="disp-label" onclick="dispAbrirCliente('${it.c.id}')" title="Abrir ${_dispEsc(it.c.nombre)}">
+        <div class="disp-label" onclick="${it.esProyecto ? 'dispAbrirProyecto' : 'dispAbrirCliente'}('${it.c.id}')" title="Abrir ${_dispEsc(it.c.nombre)}">
           <span class="disp-label__dot disp-dot--${e.cls}"></span>
           <span class="disp-label__name">${_dispEsc(it.c.nombre)}</span>
           <span class="disp-label__sub">${_dispFmt(it.inicio)} → ${_dispFmt(it.fin)}</span>
@@ -829,6 +856,7 @@ function renderDisponibilidadImpl() {
             <li><b>Capacidad máxima:</b> es el tope de implementaciones que el equipo puede llevar al mismo tiempo (hoy ${cap}). Se cambia en el campo <b>"Capacidad Máx. de clientes"</b> de los controles; con ese número se calculan los colores de "Carga del mes", el "Próximo mes con lugar" y el simulador. Se guarda en este navegador.</li>
             <li><b>Ausencias:</b> la capacidad baja sola los días en que falta un implementador (o baja a cubrir Soporte), según lo cargado en <b>Equipo → Ausencias</b>. Esos meses muestran 🏖️ y la capacidad reducida.</li>
             <li><b>Estructuración Interna:</b> la primera fila del Gantt muestra el tiempo que el equipo dedica a cosas que no son implementar un cliente (soporte, proyectos, mejoras, capacitaciones). Mientras haya tareas pendientes o en curso, <b>ocupa 1 lugar</b> de la capacidad, así ves la disponibilidad real. Las tareas se cargan y editan en la sección de abajo del Gantt.</li>
+            <li><b>Proyectos:</b> los proyectos de la pestaña <b>Proyectos</b> (🧩) aparecen como una fila más y <b>ocupan 1 lugar</b> en los meses donde corren, igual que un cliente en implementación.</li>
             <li><b>Leé las barras:</b> cada fila es un cliente, de su inicio a su fin estimado. La parte oscura es el avance real; el color indica si va atrasado (rojo), en tiempo (verde) o adelantado (azul).</li>
             <li><b>Probá un cliente nuevo:</b> con <b>🧪 Simular cliente nuevo</b> elegís una fecha y una duración y te dice si entra o desde cuándo conviene arrancar.</li>
             <li><b>Navegá:</b> cambiá entre Trimestre, Semestre y Año. Para moverte en el tiempo <b>arrastrá el Gantt hacia los costados</b> (o usá las flechas ‹ › de arriba). Tocá el nombre de un cliente para abrirlo.</li>
@@ -871,8 +899,15 @@ function renderDisponibilidadImpl() {
     ${(() => {
       const red = meses.filter(m => m.reducida);
       if (!red.length) return '';
-      const lineas = red.map(m => `<b>${DISP_MESES[m.ini.getMonth()]}</b>: baja a ${m.capMin} (${_dispEsc(_dispMotivoReduccion(m.ini, cap))})`).join(' · ');
-      return `<div class="disp-capinfo disp-capinfo--aus">🏖️ <b>Capacidad reducida por ausencias.</b> ${lineas}. Se carga en Equipo → Ausencias.</div>`;
+      const chips = red.map(m => `<span class="disp-aus__chip"><b>${DISP_MESES[m.ini.getMonth()]}</b> baja a <b>${m.capMin}</b> <small>${_dispEsc(_dispMotivoReduccion(m.ini, cap))}</small></span>`).join('');
+      return `<div class="disp-aus">
+        <div class="disp-aus__ico">🏖️</div>
+        <div class="disp-aus__txt">
+          <div class="disp-aus__tit">Capacidad reducida por ausencias</div>
+          <div class="disp-aus__chips">${chips}</div>
+          <div class="disp-aus__sub">Se carga en Equipo → Ausencias.</div>
+        </div>
+      </div>`;
     })()}
 
     <!-- Resultado del simulador (solo cuando hay una simulación activa) -->
@@ -934,7 +969,7 @@ function renderDisponibilidadImpl() {
       <span><i class="disp-dot--sim"></i> Simulado</span>
     </div>
     ${sinFechas.length ? `<div class="disp-sinfechas">Sin fechas para dibujar: ${sinFechas.map(i =>
-      `<a onclick="dispAbrirCliente('${i.c.id}')">${_dispEsc(i.c.nombre)}</a>`).join(', ')}. Cargales la fecha de inicio para que aparezcan.</div>` : ''}
+      `<a onclick="${i.esProyecto ? 'dispAbrirProyecto' : 'dispAbrirCliente'}('${i.c.id}')">${_dispEsc(i.c.nombre)}</a>`).join(', ')}. Cargales la fecha de inicio (o tareas / fecha objetivo en un proyecto) para que aparezcan.</div>` : ''}
 
     <!-- Estructuración interna: tareas que el equipo carga a mano -->
     ${_estructSeccionHtml()}

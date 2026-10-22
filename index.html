@@ -15,7 +15,7 @@
     />
 
     <!-- Estilos -->
-    <link rel="stylesheet" href="css/styles.css?v=20261021j" />
+    <link rel="stylesheet" href="css/styles.css?v=20261022w" />
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -1631,6 +1631,32 @@
             <div id="impl-disp-body"></div>
            </div><!-- /impl-disp-view -->
 
+           <!-- Pantalla: Proyectos (cambios puntuales para clientes de soporte; se llena desde proyectos.js) -->
+           <div id="impl-proy-view" style="display:none">
+            <div class="page-header">
+              <div>
+                <div class="page-title">Proyectos</div>
+                <div class="page-sub">Trabajos puntuales para clientes de soporte: tareas, fechas y avance</div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn-primary" onclick="abrirNuevoProyecto()">＋ Nuevo proyecto</button>
+              </div>
+            </div>
+            <div id="impl-nav-proy"></div>
+            <div class="proy-buscador-wrap">
+              <input id="proy-buscador" class="proy-buscador" type="search" placeholder="Buscar por proyecto o cliente…" oninput="setProyFiltro(this.value)">
+            </div>
+            <div id="proy-lista-body"></div>
+           </div><!-- /impl-proy-view -->
+
+           <!-- Detalle de un proyecto -->
+           <div id="impl-proy-detalle-view" style="display:none">
+            <div class="impl-detalle-toolbar">
+              <button class="btn-secondary detalle-back" onclick="cerrarProyecto()">← Volver a proyectos</button>
+            </div>
+            <div id="proy-detalle-body"></div>
+           </div><!-- /impl-proy-detalle-view -->
+
            <!-- Pantalla 2: detalle completo de UN cliente (se llena desde implementacion.js) -->
            <div id="impl-detalle-view" style="display:none">
             <div class="impl-detalle-toolbar">
@@ -2448,14 +2474,15 @@
     <script src="js/pendientes.js?v=20261015d"></script>
     <script src="js/consultas.js?v=20261021b"></script>
     <script src="js/kb.js"></script>
-    <script src="js/implementacion.js?v=20261016f"></script>
+    <script src="js/implementacion.js?v=20261022a"></script>
     <script src="js/reporte-implementacion.js?v=20261008a"></script>
     <script src="js/cliente-detalle.js?v=20261021c"></script>
     <script src="js/salario-sync.js?v=20261021a"></script>
     <script src="js/conexiones.js?v=20261013c"></script>
     <script src="js/cliente-documentos.js?v=20261014g"></script>
-    <script src="js/implementacion-disponibilidad.js?v=20261019a"></script>
-    <script src="js/equipo-ausencias.js?v=20261019a"></script>
+    <script src="js/implementacion-disponibilidad.js?v=20261022b"></script>
+    <script src="js/proyectos.js?v=20261022m"></script>
+    <script src="js/equipo-ausencias.js?v=20261022f"></script>
     <script src="js/asesor-detalle.js"></script>
     <script src="js/charts.js?v=20261021c"></script>
     <script src="js/alertas.js"></script>
@@ -2464,7 +2491,7 @@
     <script src="js/borradores.js?v=20261021d"></script>
     <script src="js/reportes.js"></script>
     <script src="js/avisos.js?v=20261015h"></script>
-    <script src="js/saludo.js?v=20261021a"></script>
+    <script src="js/saludo.js?v=20261022a"></script>
     <script src="js/hitos.js"></script>
 
     <!-- ════════════════════════════════════

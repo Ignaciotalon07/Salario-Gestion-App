@@ -353,24 +353,30 @@ function renderAusencias() {
 
   const leyFer = `<span class="aus-ley"><i class="aus-ley-fer"></i>Feriado</span><span class="aus-ley"><i class="aus-ley-puente"></i>Puente / día no laborable</span>`;
   // Detalle de lo que cargó cada uno (el año visible), editar/borrar solo en las propias
-  const orden = [...delAnio].sort((x, y) => x.fecha_desde.localeCompare(y.fecha_desde));
+  const orden = [...ausencias].sort((x, y) => x.fecha_desde.localeCompare(y.fecha_desde));
   const lista = orden.length
     ? orden.map(a => {
         const t = AUS_TIPOS[a.tipo] || AUS_TIPOS.vacaciones;
         const mia = _ausEsMia(a);
         const dias = ausDiasEntre(a.fecha_desde, a.fecha_hasta);
         const rango = a.fecha_hasta !== a.fecha_desde ? `${_ausFmt(a.fecha_desde)} al ${_ausFmt(a.fecha_hasta)}` : _ausFmt(a.fecha_desde);
-        return `<div class="aus-item">
-          <span class="aus-item__quien"><i class="aus-punto" style="background:${_ausColor(a.miembro_nombre)}"></i>${_ausEsc(a.miembro_nombre)}</span>
-          <span class="aus-item__tipo">${t.ico} ${t.label}</span>
-          <span class="aus-item__fechas">${rango} · ${dias} ${dias === 1 ? 'día' : 'días'}</span>
-          <span class="aus-item__nota">${_ausEsc(a.nota || '')}</span>
+        const col = _ausColor(a.miembro_nombre);
+        const nuevo = a.created_at && (Date.now() - +new Date(a.created_at)) < 3 * 86400000;
+        const ini = a.miembro_nombre.split(' ').map(x => x[0]).slice(0, 2).join('').toUpperCase();
+        return `<div class="aus-card${nuevo ? ' aus-card--nueva' : ''}" style="--c:${col}"${nuevo ? ' title="Cargada recientemente"' : ''}>
+          <div class="aus-card__av" style="background:${col}">${_ausEsc(ini)}</div>
+          <div class="aus-card__main">
+            <div class="aus-card__quien">${_ausEsc(a.miembro_nombre)}</div>
+            <div class="aus-card__tipo">${t.ico} ${t.label}${a.nota ? ' · ' + _ausEsc(a.nota) : ''}</div>
+          </div>
+          <div class="aus-card__fechas">📅 ${rango}</div>
+          <div class="aus-card__dias"><b>${dias}</b> ${dias === 1 ? 'día' : 'días'}</div>
           ${mia ? `<span class="aus-item__acc">
             <button onclick="ausAbrirForm('${a.id}')" title="Editar">✏️</button>
             <button onclick="ausEliminar('${a.id}')" title="Eliminar">🗑️</button></span>` : '<span></span>'}
         </div>`;
       }).join('')
-    : `<div style="font-size:13px;color:var(--text3);padding:6px 0">Nadie tiene ausencias cargadas en ${anio}.</div>`;
+    : `<div style="font-size:13px;color:var(--text3);padding:6px 0">Todavía nadie cargó ausencias.</div>`;
 
   host.innerHTML = `
     <div class="estruct-head">
@@ -386,10 +392,18 @@ function renderAusencias() {
       <button class="panel-mes-nav__btn" onclick="ausNavMes(1)" title="Año siguiente">▶</button>
     </div>
     <div class="aus-cal-anio">${meses}</div>
-    <div class="aus-leyenda">${leyenda}</div>
-    <div class="aus-leyenda aus-leyenda--fer">${leyFer}</div>
-    <div class="aus-subtitulo">Detalle de lo cargado en ${anio}</div>
-    <div class="aus-lista">${lista}</div>`;
+    <div class="aus-leyendas">
+      <div class="aus-leyenda">${leyenda}</div>
+      <div class="aus-leyenda aus-leyenda--fer">${leyFer}</div>
+    </div>
+    <div class="aus-detalle">
+      <div class="aus-detalle__head">
+        <div class="aus-detalle__tit">Detalle de lo cargado</div>
+        <span class="aus-detalle__linea"></span>
+        <span class="aus-detalle__cant">${orden.length} cargada${orden.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div class="aus-lista">${lista}</div>
+    </div>`;
 }
 
 // ── Cobertura (paso 3) ──────────────────────────────────────────

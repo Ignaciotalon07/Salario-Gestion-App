@@ -642,6 +642,11 @@ function renderSaludoPanel() {
         cta: 'Ver áreas →', accion: `_saludoIrAEquipoTab('areas','${a.key}')`,
       };
     }) : []),
+    // Proyectos: atrasados, estancados, terminados y meses sin capacidad. Desaparecen al abrirlos.
+    ...((typeof proyAvisosPanel === 'function') ? proyAvisosPanel().slice(0, 6).map(a => ({
+      bucket: 'dia', count: 1, color: a.color, icon: a.icon, msg: a.msg, prio: true,
+      cta: a.cta, accion: `proyAvisoIr('${a.key}', ${a.pid ? `'${a.pid}'` : 'null'})`,
+    })) : []),
     // Un tile por cada pendiente que otra persona me generó o reasignó
     ...pendAsig.map(a => ({
       bucket: 'notif',

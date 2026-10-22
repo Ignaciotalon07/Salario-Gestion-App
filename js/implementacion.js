@@ -1000,6 +1000,7 @@ function _resetFiltrosImpl() {
 function renderImplNav() {
   const secciones = [
     { k: 'inicio', ico: '👥', titulo: 'Clientes',       desc: 'Tareas, fases, fechas y avance de cada cliente' },
+    { k: 'proy',   ico: '🧩', titulo: 'Proyectos',      desc: 'Trabajos puntuales para clientes de soporte' },
     { k: 'disp',   ico: '📅', titulo: 'Disponibilidad', desc: 'Gantt general y carga por mes' },
     { k: 'docs',   ico: '📁', titulo: 'Documentos',     desc: 'Material estándar de implementación', pronto: true },
     { k: 'feedback', ico: '💬', titulo: 'Feedback',    desc: 'Opiniones de los clientes sobre la implementación', pronto: true },
@@ -1016,14 +1017,20 @@ function renderImplNav() {
     </div>`;
   const a = document.getElementById('impl-nav-lista');
   const b = document.getElementById('impl-nav-disp');
+  const c = document.getElementById('impl-nav-proy');
   if (a) a.innerHTML = html('inicio');
   if (b) b.innerHTML = html('disp');
+  if (c) c.innerHTML = html('proy');
 }
 
 function irImplSeccion(k) {
   if (k === 'disp') { abrirDisponibilidadImpl(); return; }
+  if (k === 'proy') { abrirProyectos(); return; }
   if (k === 'inicio') {
     window._implDispAbierta = false;
+    window._implProyAbierta = false;
+    window._proyAbierto = null;
+    window._proyVolverADisp = false;
     window._implVolverADisp = false;
     renderImplementacion();
     window.scrollTo({ top: 0 });
@@ -1203,12 +1210,23 @@ function renderImplementacion() {
   if (window._implClienteAbierto && !clienteAbierto) window._implClienteAbierto = null;
   if (listaView && detalleView) {
     const modoDetalle = !!clienteAbierto;
-    const modoDisp    = !!window._implDispAbierta && !modoDetalle;
+    const modoProy    = !!window._implProyAbierta && !modoDetalle;
+    const modoDisp    = !!window._implDispAbierta && !modoDetalle && !modoProy;
     const dispView    = document.getElementById('impl-disp-view');
+    const proyView    = document.getElementById('impl-proy-view');
+    const proyDetView = document.getElementById('impl-proy-detalle-view');
     renderImplNav();
-    listaView.style.display   = (modoDetalle || modoDisp) ? 'none' : '';
+    listaView.style.display   = (modoDetalle || modoDisp || modoProy) ? 'none' : '';
     detalleView.style.display = modoDetalle ? '' : 'none';
     if (dispView) dispView.style.display = modoDisp ? '' : 'none';
+    if (!modoProy) {
+      if (proyView)    proyView.style.display    = 'none';
+      if (proyDetView) proyDetView.style.display = 'none';
+    }
+    if (modoProy && typeof renderProyectosView === 'function') {
+      renderProyectosView();
+      return;
+    }
     if (modoDisp && typeof renderDisponibilidadImpl === 'function') {
       renderDisponibilidadImpl();
       return;
