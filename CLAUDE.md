@@ -158,6 +158,8 @@ Salario Gestion/
     ├── 059_salario_sync.sql        ← Tabla salario_sync: legajos/convenios/empresas por cliente que manda Salario (VFP) vía Edge Function `salario-api`
     ├── 060_proyectos.sql           ← Tablas proyectos + proyecto_tareas (Implementación → Proyectos; RLS y realtime)
     ├── 061_proyecto_documentos.sql ← Tabla proyecto_documentos (archivos + links de Drive por proyecto; usa el bucket cliente-documentos)
+    ├── 062_salario_sync_bases.sql  ← Columna `base` en salario_sync: un cliente puede tener varias bases en Salario (ej. DATOS1/DATOS2 o el nombre de la empresa); clave única (cliente_id, base)
+    ├── 063_salario_envios_rechazados.sql ← Tabla salario_envios_rechazados: envíos de Salario sin id_api válido (ej. id_api 0); la función los registra y Alertas los muestra con "Marcar resuelto"
     └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 
@@ -464,7 +466,7 @@ Cuando el usuario te pida cambios:
   Idea: encuesta post-implementación por cliente. Sin definir.
 - **API de Salario** (Legajos, Convenios, Empresas en vivo): EN CURSO. Edge Function
   `supabase/functions/salario-api` (POST por cliente, auth con header `x-api-key` = secreto
-  `SALARIO_API_KEY`, Verify JWT desactivado) → tabla `salario_sync` (migración 059). Front: `js/salario-sync.js`
+  `SALARIO_API_KEY`, Verify JWT desactivado) → tabla `salario_sync` (migración 059; 062 agrega `base`: el programador manda un POST por base y la plataforma suma legajos y junta convenios/empresas, con desglose por base; bases de PRUEBA/TEST/DEMO se ignoran). El cliente se identifica por `id_api` (número de 4 cifras de Salario, único en `clientes`) o, alternativamente, `cliente_id` (uuid). Front: `js/salario-sync.js`
   carga + realtime; `_datosSalarioCliente()` en `js/cliente-detalle.js` lee de ahí. PENDIENTE: confirmar
   que se corrió 059, pegar la función, crear el secreto y que el programador de VFP mande el header y
   los campos `legajos`, `convenios`, `empresas`.

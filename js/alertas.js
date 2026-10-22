@@ -451,6 +451,66 @@ function refreshAlertas() {
     });
   }
 
+  // ── 12. API DE SALARIO: clientes que dejaron de recibir datos (3 días o más desde la última vez) ──
+  // (Las alertas 12, 13 y 14 son de la API de Salario: solo las ve Ignacio.)
+  const _verApi = (typeof esAdminApiSalario === 'function') && esAdminApiSalario();
+  if (_verApi && window.salarioSync && typeof salarioDiasSinDatos === 'function') {
+    const DIAS_ALERTA = 3;
+    const viejos = [];
+    Object.keys(window.salarioSync).forEach(cid => {
+      const filas = window.salarioSync[cid] || [];
+      const ult = filas.map(f => f.updated_at).filter(Boolean).sort().pop();
+      const dias = salarioDiasSinDatos(ult);
+      if (dias !== null && dias >= DIAS_ALERTA) {
+        const cli = allClientes.find(c => String(c.id) === String(cid));
+        viejos.push({ nombre: cli ? cli.nombre : 'Cliente', dias, cuando: salarioFechaHora(ult) });
+      }
+    });
+    if (viejos.length) {
+      viejos.sort((a, b) => b.dias - a.dias);
+      alertas.push({
+        tipo: 'amber',
+        titulo: `🔄 ${viejos.length} cliente${viejos.length !== 1 ? 's' : ''} sin recibir datos de Salario:`,
+        texto: viejos.slice(0, 10).map(v => `${v.nombre} (hace ${v.dias} días, ${v.cuando})`).join(' · ')
+               + (viejos.length > 10 ? ` · y ${viejos.length - 10} más` : '') + '. Avisale al programador.',
+        accion: null, onClick: null
+      });
+    }
+  }
+
+  // ── 13. API DE SALARIO: envíos rechazados por no tener un id_api válido (ej. id_api 0). Hay que cargarle el
+  // id_api a esa instalación de Salario. Se quita con "Marcar resuelto". ──
+  (_verApi ? (window.salarioRechazos || []) : []).slice(0, 8).forEach(r => {
+    const d = r.detalle || {};
+    const conv = Array.isArray(d.convenios) && d.convenios.length
+      ? `${d.convenios.length} convenio${d.convenios.length !== 1 ? 's' : ''} (${d.convenios.slice(0, 4).join(', ')}${d.convenios.length > 4 ? '…' : ''})` : '';
+    const emp = Array.isArray(d.empresas) && d.empresas.length ? `empresas: ${d.empresas.slice(0, 4).join(', ')}` : '';
+    const pistas = [r.base ? `base «${r.base}»` : '', conv, emp, d.legajos != null ? `${d.legajos} legajos` : ''].filter(Boolean).join(' · ');
+    alertas.push({
+      tipo: 'red',
+      titulo: '🚫 Salario envió datos de un cliente sin ID válido:',
+      texto: `Instalación «${r.instalacion || 'sin identificar'}» · id_api enviado: ${r.id_api_enviado || '—'}. ${r.motivo}.`
+        + (pistas ? ` Datos que mandaba: ${pistas}.` : '')
+        + ` Último intento: ${typeof salarioFechaHora === 'function' ? salarioFechaHora(r.ultimo_at) : r.ultimo_at}`
+        + (r.cantidad > 1 ? ` (se repitió ${r.cantidad} veces)` : '')
+        + '. Averiguá de qué cliente es y cargale su id_api en Salario.',
+      accion: 'Marcar resuelto',
+      onClick: `salarioRechazoResolver('${r.id}')`
+    });
+  });
+
+  // ── 14. Clientes de Gestión sin id_api: Salario no puede mandarles datos ──
+  const sinId = _verApi ? allClientes.filter(c => !c.idApi) : [];
+  if (sinId.length) {
+    alertas.push({
+      tipo: 'amber',
+      titulo: `🆔 ${sinId.length} cliente${sinId.length !== 1 ? 's' : ''} sin ID de Salario:`,
+      texto: sinId.slice(0, 10).map(c => c.nombre).join(' · ') + (sinId.length > 10 ? ` · y ${sinId.length - 10} más` : '')
+        + '. Sin id_api no pueden recibir datos de Salario.',
+      accion: null, onClick: null
+    });
+  }
+
   // ── Render ──
   _renderAlertas(alertas);
 }

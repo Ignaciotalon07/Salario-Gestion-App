@@ -8959,3 +8959,12 @@ input[type=date]:focus {
 .disp-ayuda__det summary { color: #ca8a04; }
 [data-theme="dark"] .disp-ayuda { background: rgba(250,204,21,.09); border-color: rgba(250,204,21,.3); border-left-color: #facc15; }
 [data-theme="dark"] .disp-ayuda__det summary { color: #facc15; }
+
+/* Detalle de cliente → "Datos de Salario actualizados hace X" (arriba a la derecha) */
+.salario-chip { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border2); background: var(--surface); color: var(--text2); white-space: nowrap; }
+.salario-chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+.salario-chip--verde i { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.2); }
+.salario-chip--ambar { border-color: rgba(245,158,11,.5); } .salario-chip--ambar i { background: #f59e0b; }
+.salario-chip--rojo { border-color: rgba(239,68,68,.5); color: #ef4444; background: rgba(239,68,68,.07); }
+.salario-chip--rojo i { background: #ef4444; animation: dispAusPunto 1.4s ease-in-out infinite; }
+@media (max-width: 700px) { .salario-chip { font-size: 11.5px; white-space: normal; } }

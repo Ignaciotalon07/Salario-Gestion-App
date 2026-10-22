@@ -950,3 +950,33 @@ BEGIN
     ALTER PUBLICATION supabase_realtime ADD TABLE proyecto_documentos;
   END IF;
 END $$;
+
+-- 8o. Varias bases por cliente en Salario — ver 062_salario_sync_bases.sql
+ALTER TABLE salario_sync ADD COLUMN IF NOT EXISTS base text NOT NULL DEFAULT 'principal';
+ALTER TABLE salario_sync DROP CONSTRAINT IF EXISTS salario_sync_cliente_id_key;
+CREATE UNIQUE INDEX IF NOT EXISTS salario_sync_cliente_base_uq ON salario_sync (cliente_id, base);
+
+-- 8p. Envíos de Salario rechazados (sin id_api válido) — ver 063_salario_envios_rechazados.sql
+CREATE TABLE IF NOT EXISTS salario_envios_rechazados (
+  id             uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  id_api_enviado text NOT NULL DEFAULT '',
+  instalacion    text NOT NULL DEFAULT '',
+  base           text NOT NULL DEFAULT '',
+  motivo         text NOT NULL,
+  detalle        jsonb,
+  cantidad       integer NOT NULL DEFAULT 1,
+  primero_at     timestamptz NOT NULL DEFAULT now(),
+  ultimo_at      timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (id_api_enviado, instalacion, base, motivo)
+);
+ALTER TABLE salario_envios_rechazados ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "equipo lee salario_envios_rechazados" ON salario_envios_rechazados;
+CREATE POLICY "equipo lee salario_envios_rechazados" ON salario_envios_rechazados FOR SELECT TO authenticated USING (is_team_member());
+DROP POLICY IF EXISTS "equipo borra salario_envios_rechazados" ON salario_envios_rechazados;
+CREATE POLICY "equipo borra salario_envios_rechazados" ON salario_envios_rechazados FOR DELETE TO authenticated USING (is_team_member());
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'salario_envios_rechazados') THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE salario_envios_rechazados;
+  END IF;
+END $$;

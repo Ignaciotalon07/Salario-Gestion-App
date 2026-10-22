@@ -161,7 +161,6 @@ function _renderDetalleHeader(cliente, consultasDelCliente) {
   // estudio contable, empresas. Hoy no hay datos (—); cuando se conecte la API
   // solo hay que completar _datosSalarioCliente() y la UI se actualiza sola.
   const vivo = _datosSalarioCliente(cliente);
-  const esEstudio = String(cliente.tipo || '').toLowerCase().startsWith('estudio');
   const cantTxt = n => (n === null || n === undefined) ? '—' : n;
   const vivoTarjeta = (icono, label, valor, onclick) => `
     <${onclick ? 'button' : 'div'} class="detalle-vivo__item${onclick ? ' detalle-vivo__item--btn' : ''}" ${onclick ? `onclick="${onclick}"` : ''}>
@@ -171,10 +170,10 @@ function _renderDetalleHeader(cliente, consultasDelCliente) {
     </${onclick ? 'button' : 'div'}>`;
   const vivoPanel = `
     <div class="detalle-vivo">
-      ${vivoTarjeta('👥', 'Legajos', cantTxt(vivo.legajos))}
+      ${vivoTarjeta('👥', 'Legajos', cantTxt(vivo.legajos) + (vivo.bases.length > 1 ? `<small style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-top:2px">${vivo.bases.map(b => _escHtml(b.nombre) + ': ' + (b.legajos ?? '—')).join(' · ')}</small>` : ''))}
       ${typeof renderTarjetaConexiones === 'function' ? renderTarjetaConexiones(cliente.id) : ''}
       ${vivoTarjeta('📑', 'Convenios', cantTxt(vivo.convenios ? vivo.convenios.length : null), `abrirSalarioModal('convenios','${_escHtml(cliente.id)}')`)}
-      ${esEstudio ? vivoTarjeta('🏢', 'Empresas', cantTxt(vivo.empresas ? vivo.empresas.length : null), `abrirSalarioModal('empresas','${_escHtml(cliente.id)}')`) : ''}
+      ${vivoTarjeta('🏢', 'Empresas', cantTxt(vivo.empresas ? vivo.empresas.length : null), `abrirSalarioModal('empresas','${_escHtml(cliente.id)}')`)}
     </div>`;
 
   const btnWhaticket = cliente.whaticket_url ? `
@@ -195,7 +194,10 @@ function _renderDetalleHeader(cliente, consultasDelCliente) {
     <div class="detalle-header">
       <div style="display:flex;align-items:center;justify-content:space-between;width:100%;margin-bottom:14px">
         <button class="btn-secondary detalle-back" onclick="volverAClientes()">← Volver</button>
-        <button class="btn-primary" onclick="irARegistrarConsulta('${_escHtml(cliente.nombre)}')">+ Consulta</button>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end">
+          ${_chipSalarioActualizado(vivo, cliente)}
+          <button class="btn-primary" onclick="irARegistrarConsulta('${_escHtml(cliente.nombre)}')">+ Consulta</button>
+        </div>
       </div>
       <div class="detalle-header__body" style="width:100%;--cli-color:${textColores[idx]}">
         <div class="av-lg" style="background:${colores[idx]};color:${textColores[idx]};border-radius:14px;width:52px;height:52px;font-size:18px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -226,22 +228,67 @@ function _renderDetalleHeader(cliente, consultasDelCliente) {
   `;
 }
 
+// Indicador arriba a la derecha: cuándo llegaron por última vez datos de Salario para este cliente.
+// Verde: hoy o ayer · Ámbar: 2 días · Rojo: 3 días o más · Gris: nunca llegó nada.
+// El tooltip muestra la fecha y hora exacta de cada base.
+function _chipSalarioActualizado(vivo, cliente) {
+  const hace = typeof salarioHaceTiempo === 'function' ? salarioHaceTiempo : () => '';
+  const dias = typeof salarioDiasSinDatos === 'function' ? salarioDiasSinDatos(vivo.actualizado) : null;
+  let cls = 'sin', txt = 'Datos de Salario: todavía no llegaron';
+  let tip = 'Salario aún no envió datos de este cliente.';
+  if (vivo.actualizado) {
+    cls = dias >= 3 ? 'rojo' : dias === 2 ? 'ambar' : 'verde';
+    const fh = typeof salarioFechaHora === 'function' ? salarioFechaHora(vivo.actualizado) : '';
+    txt = `Datos de Salario actualizados ${hace(vivo.actualizado)}` + (dias >= 1 ? ` (${fh})` : '');
+    tip = 'Última actualización: ' + fh + (vivo.bases.length > 1
+      ? '\n' + vivo.bases.map(b => `${b.nombre}: ${typeof salarioFechaHora === 'function' ? salarioFechaHora(b.actualizado) : ''}`).join('\n') : '');
+  }
+  // Cliente sin id_api: Salario no puede enviarle nada, hay que cargárselo
+  if (!vivo.actualizado && cliente && !cliente.idApi) {
+    cls = 'rojo'; txt = 'Sin ID de Salario';
+    tip = 'Este cliente no tiene id_api cargado, por eso Salario no puede enviarle datos.';
+  }
+  return `<span class="salario-chip salario-chip--${cls}" title="${_escHtml(tip)}"><i></i>${_escHtml(txt)}</span>`;
+}
+
 // ────────── Datos en vivo de Salario (API, pendiente) ──────────
 
 // Punto único de conexión con la API de Salario. Devuelve null en cada campo
 // mientras no haya datos. Cuando la API esté lista, completar acá:
 //   legajos:   número
 //   convenios: [{ nombre, ... }]
-//   empresas:  [{ nombre, cuit, ... }]  (solo estudios contables)
+//   empresas:  [{ nombre, cuit, ... }]  (todos los clientes)
 // Los datos vienen de la tabla `salario_sync` (js/salario-sync.js). Si Salario todavía
 // no mandó nada para este cliente, quedan en null y la UI muestra "—".
 function _datosSalarioCliente(cliente) {
-  const r = (window.salarioSync || {})[cliente.id] || null;
+  const filas = (window.salarioSync || {})[cliente.id] || [];
+  if (!filas.length) return { legajos: null, convenios: null, empresas: null, actualizado: null, bases: [] };
+  const nom = f => (f.base && f.base !== 'principal') ? f.base : 'Principal';
+  const bases = filas.map(f => ({
+    nombre: nom(f),
+    legajos: f.legajos != null ? f.legajos : null,
+    convenios: Array.isArray(f.convenios) ? f.convenios : null,
+    empresas: Array.isArray(f.empresas) ? f.empresas : null,
+    actualizado: f.updated_at,
+  })).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  // Totales: legajos sumados; convenios sin repetir; empresas juntas (sin repetir por CUIT/nombre)
+  const conLeg = bases.filter(b => b.legajos !== null);
+  const conv = [], vistosC = new Set();
+  bases.forEach(b => (b.convenios || []).forEach(x => {
+    const t = (typeof x === 'string' ? x : (x.nombre || '')).trim(); const k = t.toLowerCase();
+    if (t && !vistosC.has(k)) { vistosC.add(k); conv.push(x); }
+  }));
+  const emp = [], vistosE = new Set();
+  bases.forEach(b => (b.empresas || []).forEach(x => {
+    const k = ((x && x.cuit) || '') + '|' + ((x && (x.nombre || x.razon_social)) || x || '').toString().toLowerCase();
+    if (!vistosE.has(k)) { vistosE.add(k); emp.push(x); }
+  }));
   return {
-    legajos:     r && r.legajos   != null ? r.legajos   : null,
-    convenios:   r && Array.isArray(r.convenios) ? r.convenios : null,
-    empresas:    r && Array.isArray(r.empresas)  ? r.empresas  : null,
-    actualizado: r ? r.updated_at : null,
+    legajos:     conLeg.length ? conLeg.reduce((s, b) => s + b.legajos, 0) : null,
+    convenios:   bases.some(b => b.convenios) ? conv : null,
+    empresas:    bases.some(b => b.empresas)  ? emp  : null,
+    actualizado: bases.map(b => b.actualizado).filter(Boolean).sort().pop() || null,
+    bases,
   };
 }
 
@@ -258,11 +305,22 @@ function abrirSalarioModal(tipo, clienteId) {
   const itemSub = it => (typeof it === 'object' && it.cuit) ? `<span style="color:var(--text3);font-size:12px">CUIT ${_escHtml(it.cuit)}</span>` : '';
   document.getElementById('salario-modal-body').innerHTML = lista === null || lista === undefined
     ? `<div style="text-align:center;padding:28px 10px;color:var(--text3);font-size:14px">Sin datos todavía.<br>Salario aún no envió ${esConv ? 'los convenios' : 'las empresas'} de este cliente.</div>`
-    : `<div class="detalle-vivo__tag" style="margin-bottom:12px"><span class="detalle-vivo__dot"></span>${lista.length} ${esConv ? 'convenio(s)' : 'empresa(s)'}${vivo.actualizado && typeof salarioHaceTiempo === 'function' ? ` · actualizado ${salarioHaceTiempo(vivo.actualizado)}` : ''}</div>
-       ${lista.length ? lista.map(it => `
+    : `<div class="detalle-vivo__tag" style="margin-bottom:12px"><span class="detalle-vivo__dot"></span>${lista.length} ${esConv ? 'convenio(s)' : 'empresa(s)'}${vivo.bases.length > 1 ? ` · ${vivo.bases.length} bases` : ''}${vivo.actualizado && typeof salarioHaceTiempo === 'function' ? ` · actualizado ${salarioHaceTiempo(vivo.actualizado)}` : ''}</div>
+       ${(() => {
+         const fila = it => `
          <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--border);font-size:14px">
            <span>${_escHtml(itemTxt(it))}</span>${itemSub(it)}
-         </div>`).join('') : '<div style="color:var(--text3);font-size:14px">No hay registros.</div>'}`;
+         </div>`;
+         if (vivo.bases.length > 1) {
+           // Varias bases: se agrupa por base para ver de dónde viene cada dato
+           return vivo.bases.map(b => {
+             const l = (esConv ? b.convenios : b.empresas) || [];
+             return `<div style="margin-top:14px;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#f97316">${_escHtml(b.nombre)} <span style="color:var(--text3);font-weight:600">(${l.length})</span></div>`
+               + (l.length ? l.map(fila).join('') : '<div style="color:var(--text3);font-size:13px;padding:8px 0">Sin datos en esta base.</div>');
+           }).join('');
+         }
+         return lista.length ? lista.map(fila).join('') : '<div style="color:var(--text3);font-size:14px">No hay registros.</div>';
+       })()}`;
   document.getElementById('salario-overlay').classList.add('kb-modal--open');
 }
 function cerrarSalarioModal() {
