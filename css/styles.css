@@ -8968,3 +8968,50 @@ input[type=date]:focus {
 .salario-chip--rojo { border-color: rgba(239,68,68,.5); color: #ef4444; background: rgba(239,68,68,.07); }
 .salario-chip--rojo i { background: #ef4444; animation: dispAusPunto 1.4s ease-in-out infinite; }
 @media (max-width: 700px) { .salario-chip { font-size: 11.5px; white-space: normal; } }
+
+/* Alertas prioritarias: parpadeo suave del borde y de la sombra */
+.alert--parpadeo { animation: alertParpadeo 1.5s ease-in-out infinite; }
+@keyframes alertParpadeo {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); opacity: 1; }
+  50%      { box-shadow: 0 0 0 4px rgba(239,68,68,.35); opacity: .78; }
+}
+
+/* Alertas de la API de Salario: color propio (violeta) para distinguirlas de las rojas/ámbar */
+.alert-violet { background: rgba(124,58,237,.10); color: #5b21b6; border-left-color: #7c3aed; }
+[data-theme="dark"] .alert-violet { background: rgba(167,139,250,.14); color: #ddd6fe; border-left-color: #a78bfa; }
+.alert-violet.alert--parpadeo { animation-name: alertParpadeoVioleta; }
+@keyframes alertParpadeoVioleta {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124,58,237,0); opacity: 1; }
+  50%      { box-shadow: 0 0 0 4px rgba(124,58,237,.35); opacity: .78; }
+}
+.alert__hace { margin-top: 6px; font-size: 12px; font-weight: 700; opacity: .85; }
+
+/* Alertas de la API de Salario: naranja (pisa el violeta anterior) */
+.alert-violet { background: rgba(249,115,22,.12); color: #9a3412; border-left-color: #f97316; }
+[data-theme="dark"] .alert-violet { background: rgba(249,115,22,.16); color: #fdba74; border-left-color: #fb923c; }
+.alert-violet.alert--parpadeo { animation-name: alertParpadeoNaranja; }
+@keyframes alertParpadeoNaranja {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); opacity: 1; }
+  50%      { box-shadow: 0 0 0 4px rgba(249,115,22,.4); opacity: .78; }
+}
+
+/* Alertas de la API: naranja más fuerte */
+.alert-violet { background: rgba(249,115,22,.24); color: #7c2d12; border-left: 5px solid #ea580c; }
+.alert-violet strong, .alert-violet .alert__hace { color: #7c2d12; }
+[data-theme="dark"] .alert-violet { background: rgba(249,115,22,.30); color: #ffedd5; border-left-color: #f97316; }
+[data-theme="dark"] .alert-violet strong, [data-theme="dark"] .alert-violet .alert__hace { color: #fff7ed; }
+
+/* Alertas de la API (tema oscuro): letras en naranja claro, no blancas */
+[data-theme="dark"] .alert-violet { color: #fdba74; }
+[data-theme="dark"] .alert-violet strong, [data-theme="dark"] .alert-violet .alert__hace { color: #fdba74; }
+
+/* Alertas: "Generada hace X" en la esquina derecha, arriba del botón */
+.alert__der { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; margin-left: auto; }
+.alert__der .alert__hace { margin-top: 0; white-space: nowrap; }
+
+/* "Generada hace X" abajo a la derecha; el botón queda arriba a la derecha */
+.alert__der { align-self: stretch; flex-direction: column-reverse; justify-content: space-between; }
+
+/* "Generada hace X": un poco más chico y separado del borde derecho */
+.alert__der { padding-right: 10px; }
+.alert__der .alert__hace { font-size: 10.5px; font-weight: 600; }

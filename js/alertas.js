@@ -15,6 +15,25 @@ function _alEscHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+// "hace 5 min", "hace 1 hora", "hace 3 horas", "hace 2 días"… a partir de una fecha ISO
+function _alHace(iso) {
+  const min = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+  if (min < 1) return 'hace instantes';
+  if (min < 60) return `hace ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `hace ${h} ${h === 1 ? 'hora' : 'horas'}`;
+  const d = Math.floor(h / 24);
+  return `hace ${d} ${d === 1 ? 'día' : 'días'}`;
+}
+
+// Mientras haya alertas con "hace X", se refresca cada minuto para que el tiempo avance solo
+setInterval(() => {
+  const pag = document.getElementById('alertas');
+  if (pag && pag.classList.contains('active') && document.querySelector('.alert__hace')) {
+    try { refreshAlertas(); } catch (e) { /* se recalcula luego */ }
+  }
+}, 60000);
+
 function _alDiasDesde(dateStr) {
   if (!dateStr) return 0;
   return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
@@ -463,13 +482,15 @@ function refreshAlertas() {
       const dias = salarioDiasSinDatos(ult);
       if (dias !== null && dias >= DIAS_ALERTA) {
         const cli = allClientes.find(c => String(c.id) === String(cid));
-        viejos.push({ nombre: cli ? cli.nombre : 'Cliente', dias, cuando: salarioFechaHora(ult) });
+        viejos.push({ nombre: cli ? cli.nombre : 'Cliente', dias, cuando: salarioFechaHora(ult), generada: new Date(new Date(ult).getTime() + DIAS_ALERTA * 86400000).toISOString() });
       }
     });
     if (viejos.length) {
       viejos.sort((a, b) => b.dias - a.dias);
+      // viejos[0] es el que más días lleva: la alerta se generó cuando él cruzó el umbral
       alertas.push({
-        tipo: 'amber',
+        tipo: 'violet',
+        hace: viejos[0].generada,
         titulo: `🔄 ${viejos.length} cliente${viejos.length !== 1 ? 's' : ''} sin recibir datos de Salario:`,
         texto: viejos.slice(0, 10).map(v => `${v.nombre} (hace ${v.dias} días, ${v.cuando})`).join(' · ')
                + (viejos.length > 10 ? ` · y ${viejos.length - 10} más` : '') + '. Avisale al programador.',
@@ -487,13 +508,14 @@ function refreshAlertas() {
     const emp = Array.isArray(d.empresas) && d.empresas.length ? `empresas: ${d.empresas.slice(0, 4).join(', ')}` : '';
     const pistas = [r.base ? `base «${r.base}»` : '', conv, emp, d.legajos != null ? `${d.legajos} legajos` : ''].filter(Boolean).join(' · ');
     alertas.push({
-      tipo: 'red',
+      tipo: 'violet', prio: true,   // color propio (violeta) de la API; va siempre primera y parpadea
       titulo: '🚫 Salario envió datos de un cliente sin ID válido:',
       texto: `Instalación «${r.instalacion || 'sin identificar'}» · id_api enviado: ${r.id_api_enviado || '—'}. ${r.motivo}.`
         + (pistas ? ` Datos que mandaba: ${pistas}.` : '')
         + ` Último intento: ${typeof salarioFechaHora === 'function' ? salarioFechaHora(r.ultimo_at) : r.ultimo_at}`
         + (r.cantidad > 1 ? ` (se repitió ${r.cantidad} veces)` : '')
         + '. Averiguá de qué cliente es y cargale su id_api en Salario.',
+      hace: r.primero_at,
       accion: 'Marcar resuelto',
       onClick: `salarioRechazoResolver('${r.id}')`
     });
@@ -503,7 +525,7 @@ function refreshAlertas() {
   const sinId = _verApi ? allClientes.filter(c => !c.idApi) : [];
   if (sinId.length) {
     alertas.push({
-      tipo: 'amber',
+      tipo: 'violet',
       titulo: `🆔 ${sinId.length} cliente${sinId.length !== 1 ? 's' : ''} sin ID de Salario:`,
       texto: sinId.slice(0, 10).map(c => c.nombre).join(' · ') + (sinId.length > 10 ? ` · y ${sinId.length - 10} más` : '')
         + '. Sin id_api no pueden recibir datos de Salario.',
@@ -547,19 +569,22 @@ function _renderAlertas(alertas) {
   }
 
   // Ordenar: red → amber → blue → green
-  const ORDEN = { red: 0, amber: 1, blue: 2, green: 3 };
-  alertas.sort((a, b) => (ORDEN[a.tipo] ?? 9) - (ORDEN[b.tipo] ?? 9));
+  const ORDEN = { red: 0, violet: 0.5, amber: 1, blue: 2, green: 3 };
+  alertas.sort((a, b) => ((b.prio ? 1 : 0) - (a.prio ? 1 : 0)) || ((ORDEN[a.tipo] ?? 9) - (ORDEN[b.tipo] ?? 9)));
 
   cont.innerHTML = alertas.map(a => {
     const boton = a.accion && a.onClick
       ? `<button class="btn-sm" onclick="${_alEscHtml(a.onClick)}">${_alEscHtml(a.accion)}</button>`
       : '';
     return `
-      <div class="alert alert-${a.tipo}">
+      <div class="alert alert-${a.tipo}${a.prio ? ' alert--parpadeo' : ''}">
         <div style="flex:1">
           <strong>${_alEscHtml(a.titulo)}</strong>&nbsp;${_alEscHtml(a.texto)}
         </div>
-        ${boton}
+        ${(a.hace || boton) ? `<div class="alert__der">
+          ${a.hace ? `<span class="alert__hace">🕒 Generada ${_alHace(a.hace)}</span>` : ''}
+          ${boton}
+        </div>` : ''}
       </div>`;
   }).join('');
 }
