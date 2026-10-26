@@ -15,7 +15,7 @@
     />
 
     <!-- Estilos -->
-    <link rel="stylesheet" href="css/styles.css?v=20261023t" />
+    <link rel="stylesheet" href="css/styles.css?v=20261026a" />
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -953,7 +953,10 @@
                 <div class="page-title">Consultas</div>
                 <div class="page-sub" id="cp-sub">Métricas avanzadas de las consultas registradas</div>
               </div>
-              <button class="btn-primary" onclick="abrirModalConsulta()">+ Registrar consulta</button>
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <button class="btn-secondary" onclick="abrirModalReporteCp()" title="Informe en PDF de la sección Consultas">📄 Reporte PDF</button>
+                <button class="btn-primary" onclick="abrirModalConsulta()">+ Registrar consulta</button>
+              </div>
             </div>
 
             <!-- Selector de mes: controla Este mes / Top cliente / Promedio (Hoy no cambia) -->
@@ -1939,7 +1942,46 @@
   </div>
 </div>
 
-<!-- ── Modal Reporte de Consultas (Reportes) ── -->
+<!-- ── Modal Reporte PDF de Consultas ── -->
+<div id="modal-reporte-cp" class="kb-modal-overlay" style="display:none" onclick="if(event.target===this)cerrarModalReporteCp()">
+  <div class="kb-modal crp-modal">
+    <button class="kb-modal-close crp-x" onclick="cerrarModalReporteCp()" aria-label="Cerrar">✕</button>
+    <div class="crp-titulo">Reporte PDF</div>
+    <div class="crp-sub">Consultas de soporte, con comparación contra el período anterior.</div>
+
+    <div class="crp-label">Período</div>
+    <input type="hidden" id="crp-periodo" value="mes_actual" />
+    <div class="crp-seg" id="crp-seg">
+      <button type="button" data-p="mes_actual" class="on" onclick="crpElegirPeriodo('mes_actual')">Este mes</button>
+      <button type="button" data-p="mes_cerrado" onclick="crpElegirPeriodo('mes_cerrado')">Mes</button>
+      <button type="button" data-p="trimestre" onclick="crpElegirPeriodo('trimestre')">Trimestre</button>
+      <button type="button" data-p="anio" onclick="crpElegirPeriodo('anio')">Año</button>
+    </div>
+
+    <div class="crp-campos">
+      <div class="crp-campo" id="crp-mes-wrap" style="display:none">
+        <input type="month" id="crp-mes" class="crp-input" />
+      </div>
+      <div class="crp-campo" id="crp-trim-wrap" style="display:none">
+        <select id="crp-trim" class="crp-input">
+          <option value="1">1.er trimestre (ene–mar)</option>
+          <option value="2">2.º trimestre (abr–jun)</option>
+          <option value="3">3.er trimestre (jul–sep)</option>
+          <option value="4">4.º trimestre (oct–dic)</option>
+        </select>
+      </div>
+      <div class="crp-campo" id="crp-anio-wrap" style="display:none">
+        <select id="crp-anio" class="crp-input"></select>
+      </div>
+    </div>
+
+    <div class="crp-acciones">
+      <button class="crp-cancelar" onclick="cerrarModalReporteCp()">Cancelar</button>
+      <button class="btn-primary" id="crp-btn-generar" onclick="generarReporteCpPDF()">Descargar PDF</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal-reporte-consultas" class="kb-modal-overlay" style="display:none" onclick="if(event.target===this)cerrarModalReporteConsultas()">
   <div class="kb-modal" style="max-width:520px;width:94%">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--border)">
@@ -2502,6 +2544,7 @@
     <script src="js/repositorio.js?v=20261015c"></script>
     <script src="js/borradores.js?v=20261021d"></script>
     <script src="js/reportes.js?v=20261026b"></script>
+    <script src="js/consultas-reporte.js?v=20261026e"></script>
     <script src="js/avisos.js?v=20261015h"></script>
     <script src="js/saludo.js?v=20261023b"></script>
     <script src="js/hitos.js"></script>

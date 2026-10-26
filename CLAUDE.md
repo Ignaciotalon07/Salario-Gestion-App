@@ -86,7 +86,8 @@ Salario Gestion/
 │   ├── asesor-detalle.js    ← Detalle de cada asesor (sección Equipo)
 │   ├── equipo-ausencias.js  ← Calendario de ausencias + formulario (sección Equipo)
 │   ├── hitos.js             ← Celebraciones por hitos de registros
-│   ├── reportes.js          ← Sección Reportes
+│   ├── reportes.js          ← Sección Reportes (período: mes / mes específico / trimestre / año; comparación con el período anterior)
+│   ├── consultas-reporte.js ← Botón "📄 Reporte PDF" de la sección Consultas: informe con resumen, evolución, quiénes más consultan, qué consultan, quiénes consumen más tiempo, material y conexión remota (gráficos de barras dibujados en el PDF)
 │   ├── saludo.js            ← Saludo + cartelito + "Tu día" + tiles/campanita del Panel general
 │   ├── avisos.js            ← Sonido (Web Audio), parpadeo de título, popup de viernes,
 │   │                           avisos de pendientes asignados por otros

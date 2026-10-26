@@ -9015,3 +9015,20 @@ input[type=date]:focus {
 /* "Generada hace X": un poco más chico y separado del borde derecho */
 .alert__der { padding-right: 10px; }
 .alert__der .alert__hace { font-size: 10.5px; font-weight: 600; }
+
+/* ── Modal Reporte PDF de Consultas (minimalista) ── */
+.crp-modal { max-width: 400px; width: 92%; padding: 28px 28px 24px; position: relative; }
+.crp-x { position: absolute; top: 14px; right: 14px; font-size: 15px; }
+.crp-titulo { font-size: 18px; font-weight: 600; color: var(--text); }
+.crp-sub { font-size: 12.5px; color: var(--text3); margin: 4px 0 22px; line-height: 1.45; }
+.crp-label { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+.crp-seg { display: flex; background: var(--surface2); border-radius: 10px; padding: 3px; gap: 2px; }
+.crp-seg button { flex: 1; border: 0; background: transparent; color: var(--text3); font-size: 12.5px; padding: 7px 4px; border-radius: 8px; cursor: pointer; font-family: inherit; }
+.crp-seg button.on { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+.crp-campos { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.crp-campos .crp-campo { display: flex; }
+.crp-input { width: 100%; padding: 9px 12px; font-size: 13px; font-family: inherit; color: var(--text); background: transparent; border: 1px solid var(--border); border-radius: 8px; }
+.crp-input:focus { outline: none; border-color: #f59e0b; }
+.crp-acciones { display: flex; justify-content: flex-end; align-items: center; gap: 16px; margin-top: 26px; }
+.crp-cancelar { background: none; border: 0; color: var(--text3); font-size: 13px; cursor: pointer; font-family: inherit; }
+.crp-cancelar:hover { color: var(--text); }
