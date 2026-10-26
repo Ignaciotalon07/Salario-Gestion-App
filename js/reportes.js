@@ -1,7 +1,7 @@
 // ════════════════════════════════════
 // REPORTES
 // Reportes de consultas por período (este mes hasta hoy / un mes específico /
-// un año completo) y opcionalmente filtrados por cliente. Muestra todo en
+// un trimestre / un año completo) y opcionalmente filtrados por cliente. Muestra todo en
 // pantalla (métricas, gráficos, detalle) y permite exportar a Excel/PDF.
 //
 // Lee del array global `consultas` (cargado por consultas.js desde Supabase),
@@ -47,6 +47,13 @@ function initReportesFiltros() {
     selAnio.innerHTML = anios.map(y => `<option value="${y}">${y}</option>`).join('');
   }
 
+  // Trimestre: por defecto el que está en curso
+  const selTrim = document.getElementById('rep-trim');
+  if (selTrim && !selTrim.dataset.init) {
+    selTrim.value = String(Math.floor(new Date().getMonth() / 3) + 1);
+    selTrim.dataset.init = '1';
+  }
+
   const inputMes = document.getElementById('rep-mes');
   if (inputMes && !inputMes.value) {
     const ahora = new Date();
@@ -59,8 +66,11 @@ function onCambioPeriodoReporte() {
   const periodo  = document.getElementById('rep-periodo').value;
   const mesWrap  = document.getElementById('rep-mes-wrap');
   const anioWrap = document.getElementById('rep-anio-wrap');
+  const trimWrap = document.getElementById('rep-trim-wrap');
   if (mesWrap)  mesWrap.style.display  = periodo === 'mes_cerrado' ? 'flex' : 'none';
-  if (anioWrap) anioWrap.style.display = periodo === 'anio'        ? 'flex' : 'none';
+  // El año se elige tanto para "un trimestre" como para "un año completo"
+  if (anioWrap) anioWrap.style.display = (periodo === 'anio' || periodo === 'trimestre') ? 'flex' : 'none';
+  if (trimWrap) trimWrap.style.display = periodo === 'trimestre'   ? 'flex' : 'none';
 }
 
 // Devuelve { desde: Date, hasta: Date, label: string } según el período elegido,
@@ -75,7 +85,28 @@ function _repRango() {
     const desde  = new Date(y, m - 1, 1, 0, 0, 0);
     const hasta  = new Date(y, m, 0, 23, 59, 59);
     const label  = desde.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
-    return { desde, hasta, label: label.charAt(0).toUpperCase() + label.slice(1) };
+    return { desde, hasta, finNatural: hasta, label: label.charAt(0).toUpperCase() + label.slice(1) };
+  }
+
+  if (periodo === 'trimestre') {
+    const y = parseInt(document.getElementById('rep-anio').value, 10);
+    const q = parseInt(document.getElementById('rep-trim').value, 10); // 1..4
+    if (!y || !q) return null;
+    const mesIni = (q - 1) * 3;
+    const desde = new Date(y, mesIni, 1, 0, 0, 0);
+    let hasta   = new Date(y, mesIni + 3, 0, 23, 59, 59);
+    const finNatural = new Date(hasta);
+    const NOMBRES = ['1.er', '2.º', '3.er', '4.º'];
+    const MESES   = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    const rangoTxt = `${MESES[mesIni]} a ${MESES[mesIni + 2]}`;
+    let enCurso = false;
+    const ahora = new Date();
+    if (ahora >= desde && ahora < hasta) { hasta = ahora; enCurso = true; }
+    return {
+      desde, hasta, finNatural,
+      label: `${NOMBRES[q - 1]} trimestre ${y} (${rangoTxt})${enCurso ? ' — hasta hoy' : ''}`,
+      labelNarr: `el ${NOMBRES[q - 1]} trimestre de ${y} (${rangoTxt})`,
+    };
   }
 
   if (periodo === 'anio') {
@@ -83,14 +114,15 @@ function _repRango() {
     if (!y) return null;
     const desde = new Date(y, 0, 1, 0, 0, 0);
     const hasta = new Date(y, 11, 31, 23, 59, 59);
-    return { desde, hasta, label: 'Año ' + y };
+    return { desde, hasta, finNatural: hasta, label: 'Año ' + y };
   }
 
   // mes_actual: desde el 1° del mes en curso hasta hoy
   const ahora = new Date();
   const desde = new Date(ahora.getFullYear(), ahora.getMonth(), 1, 0, 0, 0);
   const label = desde.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
-  return { desde, hasta: ahora, label: (label.charAt(0).toUpperCase() + label.slice(1)) + ' (hasta hoy)' };
+  const finNaturalMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 0, 23, 59, 59);
+  return { desde, hasta: ahora, finNatural: finNaturalMes, label: (label.charAt(0).toUpperCase() + label.slice(1)) + ' (hasta hoy)' };
 }
 
 // ────────── Generar reporte ──────────
@@ -98,7 +130,7 @@ function _repRango() {
 function generarReporte() {
   const rango = _repRango();
   if (!rango) {
-    alert('Elegí el mes o el año del reporte.');
+    alert('Elegí el mes, el trimestre o el año del reporte.');
     return;
   }
 
@@ -477,6 +509,37 @@ function _repRangoMesAnterior(desde) {
   return { desde: anteriorDesde, hasta: anteriorHasta };
 }
 
+// Período inmediatamente anterior, del mismo tipo que el elegido (mes → mes anterior,
+// trimestre → trimestre anterior, año → año anterior). Si el período elegido todavía está en
+// curso (ej. "este mes hasta hoy" o el año actual), se compara contra el mismo tramo del período
+// anterior (mismos días transcurridos) para que la comparación sea justa.
+function _repRangoAnterior(rango, periodo) {
+  const d = rango.desde;
+  let desde, fin, nombre;
+  if (periodo === 'anio') {
+    desde = new Date(d.getFullYear() - 1, 0, 1, 0, 0, 0);
+    fin   = new Date(d.getFullYear() - 1, 11, 31, 23, 59, 59);
+    nombre = 'año anterior';
+  } else if (periodo === 'trimestre') {
+    desde = new Date(d.getFullYear(), d.getMonth() - 3, 1, 0, 0, 0);
+    fin   = new Date(d.getFullYear(), d.getMonth(), 0, 23, 59, 59);
+    nombre = 'trimestre anterior';
+  } else {
+    desde = new Date(d.getFullYear(), d.getMonth() - 1, 1, 0, 0, 0);
+    fin   = new Date(d.getFullYear(), d.getMonth(), 0, 23, 59, 59);
+    nombre = 'mes anterior';
+  }
+  const ahora = new Date();
+  const efectivoHasta = rango.hasta < ahora ? rango.hasta : ahora;
+  const parcial = !!rango.finNatural && efectivoHasta < rango.finNatural;
+  let hasta = fin;
+  if (parcial) {
+    const transcurrido = efectivoHasta.getTime() - d.getTime();
+    hasta = new Date(Math.min(fin.getTime(), desde.getTime() + transcurrido));
+  }
+  return { desde, hasta, nombre, parcial, ref: parcial ? `el mismo tramo del ${nombre}` : `el ${nombre}` };
+}
+
 // Arma un resumen en prosa, profesional, de qué estuvo consultando el
 // cliente en el período y si hay continuidad con el mes anterior. Devuelve
 // un array de párrafos.
@@ -487,7 +550,7 @@ function _repTextoNarrativo(rango, clienteFiltro, filtradas, periodo) {
 
   const topCats = _repCategoriasTop(filtradas, 3);
   const catsTxt = topCats.map(([k, v]) => `${k} (${v})`).join(', ');
-  const rangoLabelMin = rango.label.charAt(0).toLowerCase() + rango.label.slice(1);
+  const rangoLabelMin = rango.labelNarr || (rango.label.charAt(0).toLowerCase() + rango.label.slice(1));
 
   if (clienteFiltro) {
     parrafos.push(
@@ -496,33 +559,35 @@ function _repTextoNarrativo(rango, clienteFiltro, filtradas, periodo) {
         : `Durante ${rangoLabelMin}, ${clienteFiltro} realizó ${total} consulta${total !== 1 ? 's' : ''} a través de nuestro equipo de soporte.`
     );
 
-    // Comparación con el mes anterior — solo tiene sentido cuando el período
-    // elegido es un mes concreto (cerrado o el actual en curso).
-    if (periodo === 'mes_cerrado' || periodo === 'mes_actual') {
-      const rangoAnt = _repRangoMesAnterior(rango.desde);
+    // Comparación con el período anterior del mismo tipo (mes, trimestre o año)
+    {
+      const rangoAnt = _repRangoAnterior(rango, periodo);
       const todas = (typeof consultas !== 'undefined') ? consultas : [];
       const anteriores = todas.filter(c => {
         if (c.cliente !== clienteFiltro) return false;
         const t = new Date(c.timestamp);
         return t >= rangoAnt.desde && t <= rangoAnt.hasta;
       });
-
-      if (anteriores.length > 0) {
+      const n = anteriores.length;
+      if (n > 0) {
         const catsAntNombres = _repCategoriasTop(anteriores).map(e => e[0]);
         const catsActNombres = topCats.map(e => e[0]);
         const comunes = catsActNombres.filter(c => catsAntNombres.includes(c));
+        const dif = total - n;
+        const variacion = dif === 0 ? 'la misma cantidad de consultas'
+          : `${Math.abs(dif)} consulta${Math.abs(dif) !== 1 ? 's' : ''} ${dif > 0 ? 'más' : 'menos'}`;
 
         if (comunes.length > 0) {
           parrafos.push(
-            `Se observa continuidad respecto al mes anterior (${anteriores.length} consulta${anteriores.length !== 1 ? 's' : ''}): el cliente también había consultado sobre ${comunes.join(', ')}. Puede ser una buena oportunidad para reforzar ese punto con una capacitación puntual o material de apoyo.`
+            `Respecto a ${rangoAnt.ref} (${n} consulta${n !== 1 ? 's' : ''}) hubo ${variacion}. Se observa continuidad: el cliente también había consultado sobre ${comunes.join(', ')}. Puede ser una buena oportunidad para reforzar ese punto con una capacitación puntual o material de apoyo.`
           );
         } else {
           parrafos.push(
-            `En el mes anterior el cliente había realizado ${anteriores.length} consulta${anteriores.length !== 1 ? 's' : ''}, pero sobre temáticas distintas a las de este período, sin coincidencias relevantes.`
+            `Respecto a ${rangoAnt.ref} (${n} consulta${n !== 1 ? 's' : ''}) hubo ${variacion}, pero sobre temáticas distintas a las de este período, sin coincidencias relevantes.`
           );
         }
       } else {
-        parrafos.push('No se registran consultas de este cliente en el mes anterior.');
+        parrafos.push(`No se registran consultas de este cliente en ${rangoAnt.ref}.`);
       }
     }
 
@@ -538,6 +603,29 @@ function _repTextoNarrativo(rango, clienteFiltro, filtradas, periodo) {
         ? `Durante ${rangoLabelMin} se registraron ${total} consulta${total !== 1 ? 's' : ''} en total entre todos los clientes, principalmente sobre ${topCats.map(e => e[0]).join(', ')}.`
         : `Durante ${rangoLabelMin} se registraron ${total} consulta${total !== 1 ? 's' : ''} en total entre todos los clientes.`
     );
+
+    // Comparación del total con el período anterior del mismo tipo (mes, trimestre o año)
+    {
+      const rangoAnt = _repRangoAnterior(rango, periodo);
+      const todas = (typeof consultas !== 'undefined') ? consultas : [];
+      const nAnt = todas.filter(c => {
+        if (c.tipoConsulta === 'programacion_interna' || c.tipo_consulta === 'programacion_interna') return false;
+        if (!c.cliente) return false;
+        const t = new Date(c.timestamp);
+        return t >= rangoAnt.desde && t <= rangoAnt.hasta;
+      }).length;
+      if (nAnt > 0) {
+        const dif = total - nAnt;
+        const pct = Math.round(Math.abs(dif) / nAnt * 100);
+        parrafos.push(
+          dif === 0
+            ? `Es la misma cantidad que en ${rangoAnt.ref} (${nAnt} consultas).`
+            : `Respecto a ${rangoAnt.ref} (${nAnt} consulta${nAnt !== 1 ? 's' : ''}) hubo ${Math.abs(dif)} consulta${Math.abs(dif) !== 1 ? 's' : ''} ${dif > 0 ? 'más' : 'menos'}, una ${dif > 0 ? 'suba' : 'baja'} del ${pct}%.`
+        );
+      } else {
+        parrafos.push(`No hay consultas registradas en ${rangoAnt.ref} para comparar.`);
+      }
+    }
 
     const porCliente = _repPorCliente(filtradas);
     if (porCliente.length > 0) {
@@ -826,7 +914,7 @@ async function generarReporteConsultasPDF() {
       // Clientes inactivos — antes de la distribución por tipo
       const inactivos = _repClientesInactivos(filtradas);
       if (inactivos.length > 0) {
-        const textoInactivos = `${inactivos.length} cliente${inactivos.length !== 1 ? 's' : ''} no ${inactivos.length !== 1 ? 'registraron' : 'registró'} ninguna consulta durante ${rango.label.charAt(0).toLowerCase() + rango.label.slice(1)}: ${inactivos.join(', ')}.`;
+        const textoInactivos = `${inactivos.length} cliente${inactivos.length !== 1 ? 's' : ''} no ${inactivos.length !== 1 ? 'registraron' : 'registró'} ninguna consulta durante ${rango.labelNarr || (rango.label.charAt(0).toLowerCase() + rango.label.slice(1))}: ${inactivos.join(', ')}.`;
         const alturaInactivos = doc.splitTextToSize(textoInactivos, pageW - margin * 2).length * 14 + 8;
         seccion('Clientes sin consultas en el período', alturaInactivos);
         parrafo(textoInactivos);

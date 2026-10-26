@@ -2214,6 +2214,7 @@
                   <select id="rep-periodo" class="repo-select" onchange="onCambioPeriodoReporte()">
                     <option value="mes_actual">Este mes (hasta hoy)</option>
                     <option value="mes_cerrado">Un mes específico</option>
+                    <option value="trimestre">Un trimestre</option>
                     <option value="anio">Un año completo</option>
                   </select>
                 </div>
@@ -2224,6 +2225,15 @@
                 <div class="rep-filtro-grupo" id="rep-anio-wrap" style="display:none">
                   <label class="fl">Año</label>
                   <select id="rep-anio" class="repo-select"></select>
+                </div>
+                <div class="rep-filtro-grupo" id="rep-trim-wrap" style="display:none">
+                  <label class="fl">Trimestre</label>
+                  <select id="rep-trim" class="repo-select">
+                    <option value="1">1.er trimestre (ene–mar)</option>
+                    <option value="2">2.º trimestre (abr–jun)</option>
+                    <option value="3">3.er trimestre (jul–sep)</option>
+                    <option value="4">4.º trimestre (oct–dic)</option>
+                  </select>
                 </div>
                 <div class="rep-filtro-grupo">
                   <label class="fl">Cliente</label>
@@ -2491,7 +2501,7 @@
     <script src="js/consultas-page.js?v=20261021a"></script>
     <script src="js/repositorio.js?v=20261015c"></script>
     <script src="js/borradores.js?v=20261021d"></script>
-    <script src="js/reportes.js"></script>
+    <script src="js/reportes.js?v=20261026b"></script>
     <script src="js/avisos.js?v=20261015h"></script>
     <script src="js/saludo.js?v=20261023b"></script>
     <script src="js/hitos.js"></script>
