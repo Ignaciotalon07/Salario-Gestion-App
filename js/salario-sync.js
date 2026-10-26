@@ -35,6 +35,7 @@ async function initSalarioSync() {
           if (i === -1) window.salarioRechazos.unshift(n); else window.salarioRechazos[i] = n;
         }
         if (typeof refreshAlertas === 'function') { try { refreshAlertas(); } catch (e) { /* se recalcula luego */ } }
+        if (typeof renderSaludoPanel === 'function') { try { renderSaludoPanel(); } catch (e) { /* se recalcula luego */ } }
       }).subscribe();
   } catch (e) {
     console.warn('No se pudieron cargar los envíos rechazados de Salario (¿falta la migración 063?)', e);
@@ -104,7 +105,7 @@ function salarioHaceTiempo(iso) {
 
 // Las alertas de la API de Salario (sin datos hace días, envíos rechazados, clientes sin id_api)
 // las ve solamente Ignacio, que es quien coordina con el programador.
-const SALARIO_API_ADMINS = ['Ignacio Talon'];
+const SALARIO_API_ADMINS = ['Ignacio Talon', 'Alfredo Cesar'];
 function esAdminApiSalario() {
   const me = (typeof getCurrentUserName === 'function') ? getCurrentUserName() : null;
   return !!me && SALARIO_API_ADMINS.includes(me);

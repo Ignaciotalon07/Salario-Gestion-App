@@ -647,6 +647,17 @@ function renderSaludoPanel() {
       bucket: 'dia', count: 1, color: a.color, icon: a.icon, msg: a.msg, prio: true,
       cta: a.cta, accion: `proyAvisoIr('${a.key}', ${a.pid ? `'${a.pid}'` : 'null'})`,
     })) : []),
+    // API de Salario: envíos rechazados sin ver (solo Ignacio y Alfredo). Desaparece al abrirla;
+    // el detalle queda en Alertas hasta marcarlo como resuelto.
+    ...((typeof esAdminApiSalario === 'function' && esAdminApiSalario())
+      ? (window.salarioRechazos || []).filter(r => !ausAvisoVisto('apifail:' + r.id)).slice(0, 1).map(() => {
+        const n = (window.salarioRechazos || []).filter(r => !ausAvisoVisto('apifail:' + r.id)).length;
+        return {
+          bucket: 'dia', count: 1, color: '#e67e22', icon: '🚫', prio: true,
+          msg: `<strong>Falló la API de Salario</strong>${n > 1 ? ` (${n} envíos rechazados)` : ''}.`,
+          cta: 'Ver en Alertas →', accion: '_saludoIrAAlertasApi()',
+        };
+      }) : []),
     // Un tile por cada pendiente que otra persona me generó o reasignó
     ...pendAsig.map(a => ({
       bucket: 'notif',
@@ -940,6 +951,13 @@ function _saludoIrACargarPendiente() {
     if (typeof setViewMode === 'function') setViewMode('mis');
     if (typeof showPendForm === 'function') showPendForm();
   }, 50);
+}
+
+// Marca los fallos de la API como vistos (el tile del Panel desaparece) y va a Alertas
+function _saludoIrAAlertasApi() {
+  (window.salarioRechazos || []).forEach(r => { if (typeof ausAvisoMarcarVisto === 'function') ausAvisoMarcarVisto('apifail:' + r.id); });
+  goTo(_saludoNavBtn('alertas'), 'alertas');
+  setTimeout(() => { if (typeof renderSaludoPanel === 'function') renderSaludoPanel(); }, 100);
 }
 
 function _saludoIrAEquipoTab(tab, key) {
