@@ -1236,7 +1236,11 @@ async function eliminarRegistroAsesor(id) {
       });
       refreshEquipoMetrics(mesActual);
     }
-    _renderModalAsesor();
+    try { _renderModalAsesor(); } catch (e) { /* el modal puede no estar abierto */ }
+    // Si está abierta la pantalla de detalle del asesor (sección Equipo), refrescarla para que el registro desaparezca ya
+    if (typeof _detalleAsesorNombre !== 'undefined' && _detalleAsesorNombre && typeof renderDetalleAsesor === 'function') {
+      try { renderDetalleAsesor(); } catch (e) { console.warn('No se pudo refrescar el detalle del asesor', e); }
+    }
     if (typeof toast === 'function') toast('Registro eliminado');
   } catch (e) {
     console.error('Error eliminando registro', e);

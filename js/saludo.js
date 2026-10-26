@@ -566,7 +566,11 @@ function renderSaludoPanel() {
         : misImplVencidas === 1
           ? `Tenés 1 tarea de implementación vencida — <strong>${escapeHtmlSaludo(_saludoNombreCliente(misImplVencidasArr[0].cliente_id))}</strong>.`
           : `Hay <strong>${misImplVencidas}</strong> tareas de implementación vencidas.`,
-      cta: 'Ver implementación →', accion: '_saludoIrAImplMias()',
+      // Con 1 sola tarea vencida, el botón lleva directo a esa tarea (cliente abierto + resaltada)
+      cta: misImplVencidas === 1 ? 'Ver la tarea →' : 'Ver implementación →',
+      accion: misImplVencidas === 1
+        ? `irATareaImpl('${misImplVencidasArr[0].id}', '${misImplVencidasArr[0].cliente_id}')`
+        : '_saludoIrAImplMias()',
     },
     {
       bucket: 'dia',
