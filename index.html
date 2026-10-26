@@ -1366,7 +1366,7 @@
                 id="pend-vencido-btn"
                 class="filter-chip"
                 onclick="toggleVencidoFilter(this)"
-                title="Mostrar solo pendientes vencidos (más de 5 días)"
+                title="Mostrar solo pendientes vencidos (pasaron el plazo de su prioridad)"
               >
                 🔴 Vencidos
                 <span id="pend-vencido-count" class="filter-count">0</span>
@@ -2524,11 +2524,11 @@
     <script src="js/ui.js"></script>
     <script src="js/nav.js?v=20261020a"></script>
     <script src="js/clientes.js?v=20261013a"></script>
-    <script src="js/pendientes.js?v=20261015d"></script>
+    <script src="js/pendientes.js?v=20261026p"></script>
     <script src="js/consultas.js?v=20261021b"></script>
     <script src="js/kb.js"></script>
-    <script src="js/implementacion.js?v=20261022a"></script>
-    <script src="js/reporte-implementacion.js?v=20261008a"></script>
+    <script src="js/implementacion.js?v=20261026p"></script>
+    <script src="js/reporte-implementacion.js?v=20261026p"></script>
     <script src="js/cliente-detalle.js?v=20261023d"></script>
     <script src="js/salario-sync.js?v=20261026b"></script>
     <script src="js/conexiones.js?v=20261013c"></script>
@@ -2539,14 +2539,14 @@
     <script src="js/equipo-ausencias.js?v=20261023a"></script>
     <script src="js/asesor-detalle.js"></script>
     <script src="js/charts.js?v=20261021c"></script>
-    <script src="js/alertas.js?v=20261023g"></script>
+    <script src="js/alertas.js?v=20261026p"></script>
     <script src="js/consultas-page.js?v=20261021a"></script>
     <script src="js/repositorio.js?v=20261015c"></script>
     <script src="js/borradores.js?v=20261021d"></script>
     <script src="js/reportes.js?v=20261026b"></script>
     <script src="js/consultas-reporte.js?v=20261026e"></script>
     <script src="js/avisos.js?v=20261015h"></script>
-    <script src="js/saludo.js?v=20261026a"></script>
+    <script src="js/saludo.js?v=20261026p"></script>
     <script src="js/hitos.js"></script>
 
     <!-- ════════════════════════════════════
@@ -3118,9 +3118,12 @@
         <div class="form-group">
           <label class="fl">Prioridad</label>
           <select id="pf-prio">
-            <option value="alta">Alta — resolver hoy</option>
-            <option value="media" selected>Media — resolver esta semana</option>
-            <option value="baja">Baja — cuando se pueda</option>
+            <option value="muy_urgente">Muy urgente — 24 hs</option>
+            <option value="prioritario">Prioritario — próximas 48/72 hs</option>
+            <option value="semana" selected>En la semana — próximos 7/10 días</option>
+            <option value="mes">En el mes — próximos 30 días</option>
+            <option value="cuando_se_pueda">Cuando se pueda — próximos 60 días</option>
+            <option value="sin_tiempo">Sin tiempo — próximos 90 días</option>
           </select>
         </div>
       </div>

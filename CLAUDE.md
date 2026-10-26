@@ -161,6 +161,7 @@ Salario Gestion/
     ├── 061_proyecto_documentos.sql ← Tabla proyecto_documentos (archivos + links de Drive por proyecto; usa el bucket cliente-documentos)
     ├── 062_salario_sync_bases.sql  ← Columna `base` en salario_sync: un cliente puede tener varias bases en Salario (ej. DATOS1/DATOS2 o el nombre de la empresa); clave única (cliente_id, base)
     ├── 063_salario_envios_rechazados.sql ← Tabla salario_envios_rechazados: envíos de Salario sin id_api válido (ej. id_api 0); la función los registra y Alertas los muestra con "Marcar resuelto"
+    ├── 064_prioridades_pendientes.sql ← Prioridades nuevas: muy_urgente (24h) / prioritario (72h) / semana (10d) / mes (30d) / cuando_se_pueda (60d) / sin_tiempo (90d). Convierte alta→muy_urgente, media→semana, baja→cuando_se_pueda. Vencimiento = plazo de la prioridad (`PRIORIDADES` y `vencimientoInfo(p)` en pendientes.js); "por vencer" al 75%
     └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 

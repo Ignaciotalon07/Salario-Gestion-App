@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS pendientes (
   cliente_id      UUID REFERENCES clientes(id) ON DELETE CASCADE,
   cliente_nombre  TEXT NOT NULL,
   asesor          TEXT NOT NULL,
-  prioridad       TEXT NOT NULL CHECK (prioridad IN ('alta','media','baja')),
+  prioridad       TEXT NOT NULL CHECK (prioridad IN ('muy_urgente','prioritario','semana','mes','cuando_se_pueda','sin_tiempo')),
   categoria       TEXT,
   descripcion     TEXT NOT NULL,
   intento         TEXT,

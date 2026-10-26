@@ -2310,7 +2310,7 @@ async function cambiarAsesorTarea(tareaId, asesor) {
           const pendRow = await dbInsert('pendientes', {
             cliente_nombre: clienteNombre,
             asesor:         nuevo,
-            prioridad:      'media',
+            prioridad:      'semana',
             categoria:      'Implementación',
             descripcion:    `Implementación de ${clienteNombre} — ${t.tarea}`,
             intento:        null,
@@ -2371,7 +2371,7 @@ async function crearPendientesDesbloqueados(clienteId, tareaCompletadaId) {
       const pendRow = await dbInsert('pendientes', {
         cliente_nombre: clienteNombre,
         asesor:         t.asesor,
-        prioridad:      'media',
+        prioridad:      'semana',
         categoria:      'Implementación',
         descripcion:    `Implementación de ${clienteNombre} — ${t.tarea}`,
         tipo_pendiente: 'implementacion',
@@ -3809,7 +3809,7 @@ async function confirmarReasignacionMasiva() {
         const pend = await dbInsert('pendientes', {
           cliente_nombre: clienteNombre,
           asesor:         a,
-          prioridad:      'media',
+          prioridad:      'semana',
           categoria:      'Implementación',
           descripcion:    `Implementación de ${clienteNombre} — ${t.tarea}`,
           tipo_pendiente: 'implementacion',

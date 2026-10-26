@@ -150,35 +150,36 @@ function refreshAlertas() {
     });
   }
 
-  // ── 5. PENDIENTES VENCIDOS (abiertos > 5 días) ──
+  // ── 5. PENDIENTES VENCIDOS (pasaron el plazo de su prioridad) ──
+  const _venc = p => (typeof vencimientoInfo === 'function') ? vencimientoInfo(p) : null;
+  const _prioLbl = p => (typeof prioridadInfo === 'function') ? prioridadInfo(p.prioridad).label : p.prioridad;
   const pendVencidos = allPendientes
-    .filter(p => !p.resuelto && _alDiasDesde(p.createdAt) > 5)
-    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    .filter(p => !p.resuelto && !p.interno && _venc(p) && _venc(p).urgente)
+    .sort((a, b) => _venc(b).exceso - _venc(a).exceso);
   if (pendVencidos.length > 0) {
     const masViejo  = pendVencidos[0];
-    const diasViejo = _alDiasDesde(masViejo.createdAt);
     const sufijo    = pendVencidos.length > 1 ? ` y ${pendVencidos.length - 1} más.` : '.';
+    // Los "Muy urgente" vencidos se destacan aparte
+    const muyUrg = pendVencidos.filter(p => prioridadInfo(p.prioridad) === PRIORIDADES.muy_urgente).length;
     alertas.push({
       tipo:    'red',
       titulo:  pendVencidos.length + ' pendiente' + (pendVencidos.length !== 1 ? 's' : '') + ' vencido' + (pendVencidos.length !== 1 ? 's' : ''),
-      texto:   `El más antiguo es de ${masViejo.cliente || '—'} (${masViejo.asesor || 'sin asesor'}), abierto hace ${diasViejo} días${sufijo}`,
+      texto:   `El más pasado de plazo es de ${masViejo.cliente || '—'} (${masViejo.asesor || 'sin asesor'}, ${_prioLbl(masViejo)}): ${_venc(masViejo).label.toLowerCase()}${sufijo}`
+               + (muyUrg ? ` ${muyUrg} ${muyUrg !== 1 ? 'son' : 'es'} Muy urgente${muyUrg !== 1 ? 's' : ''}.` : ''),
       accion:  'Ver pendientes',
       onClick: `goTo(document.querySelector('.nav-item[onclick*=pendientes]'), 'pendientes')`
     });
   }
 
-  // ── 6. PENDIENTES PRÓXIMOS A VENCER (abiertos 3–5 días) ──
-  const pendPorVencer = allPendientes.filter(p => {
-    const d = _alDiasDesde(p.createdAt);
-    return !p.resuelto && d >= 3 && d <= 5;
-  });
+  // ── 6. PENDIENTES POR VENCER (llegaron al 75% del plazo de su prioridad) ──
+  const pendPorVencer = allPendientes.filter(p => !p.resuelto && !p.interno && _venc(p) && _venc(p).porVencer);
   if (pendPorVencer.length > 0) {
     const clientesAfectados = [...new Set(pendPorVencer.map(p => p.cliente).filter(Boolean))];
     const listaClientes = clientesAfectados.slice(0, 3).join(', ') + (clientesAfectados.length > 3 ? ' y más' : '');
     alertas.push({
       tipo:    'amber',
-      titulo:  pendPorVencer.length + ' pendiente' + (pendPorVencer.length !== 1 ? 's' : '') + ' próximo' + (pendPorVencer.length !== 1 ? 's' : '') + ' a vencer',
-      texto:   `Llevan entre 3 y 5 días sin cerrarse: ${listaClientes}.`,
+      titulo:  pendPorVencer.length + ' pendiente' + (pendPorVencer.length !== 1 ? 's' : '') + ' por vencer',
+      texto:   `Están por cumplir el plazo de su prioridad: ${listaClientes}.`,
       accion:  'Ver pendientes',
       onClick: `goTo(document.querySelector('.nav-item[onclick*=pendientes]'), 'pendientes')`
     });

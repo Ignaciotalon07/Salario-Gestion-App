@@ -406,25 +406,25 @@ function _saludoInfoPendientes(pendArr, me) {
 
   const prioritarios = pendArr.filter(p => {
     if (p.asesor !== me) return false;
-    if (p.prioridad !== 'alta' && p.prioridad !== 'media') return false;
+    if (!['muy_urgente', 'prioritario', 'semana', 'alta', 'media'].includes(p.prioridad)) return false;
     if (_saludoEsHoy(p.createdAt) || _saludoEsAyer(p.createdAt)) return false;
     if (!_saludoEsEstaSemana(p.createdAt)) return false;
-    const v = (typeof vencimientoInfo === 'function') ? vencimientoInfo(p.createdAt) : null;
+    const v = (typeof vencimientoInfo === 'function') ? vencimientoInfo(p) : null;
     return !(v && v.urgente);
   });
   if (prioritarios.length === 1) {
     const p = prioritarios[0];
-    const prioLabel = p.prioridad === 'alta' ? 'alta' : 'media';
+    const prioLabel = (typeof prioridadInfo === 'function') ? prioridadInfo(p.prioridad).label : p.prioridad;
     return {
       tono: 'blue',
-      texto: `📌 Dejaste un pendiente con ${prioLabel} prioridad para esta semana — <strong>${escapeHtmlSaludo(p.cliente || '')}</strong>.`,
+      texto: `📌 Dejaste un pendiente <strong>${prioLabel}</strong> sin resolver — <strong>${escapeHtmlSaludo(p.cliente || '')}</strong>.`,
       cta: { label: 'Ver pendientes →', accion: '_saludoIrAPendientes()' },
     };
   }
   if (prioritarios.length > 1) {
     return {
       tono: 'blue',
-      texto: `📌 Tenés <strong>${prioritarios.length}</strong> pendientes con prioridad media/alta para esta semana.`,
+      texto: `📌 Tenés <strong>${prioritarios.length}</strong> pendientes sin resolver con prioridad de esta semana o más urgente.`,
       cta: { label: 'Ver pendientes →', accion: '_saludoIrAPendientes()' },
     };
   }
@@ -482,7 +482,7 @@ function renderSaludoPanel() {
   const pendArr = (typeof pendientes !== 'undefined') ? pendientes : [];
   const misPendVencidos = pendArr.filter(p => {
     if (p.asesor !== me) return false;
-    const v = (typeof vencimientoInfo === 'function') ? vencimientoInfo(p.createdAt) : null;
+    const v = (typeof vencimientoInfo === 'function') ? vencimientoInfo(p) : null;
     return v && v.urgente;
   }).length;
 

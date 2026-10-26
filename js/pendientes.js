@@ -63,19 +63,46 @@ function dbRowToPendiente(row) {
   };
 }
 
-// Calcular el estado de vencimiento automaticamente.
-// Cada pendiente tiene un plazo standard de 5 dias desde la creacion.
-// Si pasan mas de 5, muestra "Vencido hace X dias".
-function vencimientoInfo(createdAt) {
-  if (!createdAt) return null;
-  const dias = diasDesde(createdAt);
-  if (dias > 5) {
-    const venc = dias - 5;
+// ────────── Prioridades (migración 064) ──────────
+// Cada prioridad tiene un plazo en horas (el tope del rango). Al llegar al 75% del plazo
+// el pendiente figura "por vencer"; al pasarse, "vencido".
+const PRIORIDADES = {
+  muy_urgente:     { label: 'Muy urgente',     rango: '24 hs',             horas: 24,      badge: 'b-red',    orden: 0 },
+  prioritario:     { label: 'Prioritario',     rango: 'próximas 48/72 hs', horas: 72,      badge: 'b-amber',  orden: 1 },
+  semana:          { label: 'En la semana',    rango: 'próximos 7/10 días', horas: 10 * 24, badge: 'b-blue',   orden: 2 },
+  mes:             { label: 'En el mes',       rango: 'próximos 30 días',  horas: 30 * 24, badge: 'b-purple', orden: 3 },
+  cuando_se_pueda: { label: 'Cuando se pueda', rango: 'próximos 60 días',  horas: 60 * 24, badge: 'b-gray',   orden: 4 },
+  sin_tiempo:      { label: 'Sin tiempo',      rango: 'próximos 90 días',  horas: 90 * 24, badge: 'b-gray',   orden: 5 },
+};
+// Por si quedara algún pendiente con los valores viejos (antes de correr la migración 064)
+const PRIORIDAD_ALIAS = { alta: 'muy_urgente', media: 'semana', baja: 'cuando_se_pueda' };
+function prioridadInfo(valor) {
+  return PRIORIDADES[valor] || PRIORIDADES[PRIORIDAD_ALIAS[valor]] || PRIORIDADES.semana;
+}
+
+function _fmtHorasVenc(h) {
+  if (h < 48) return `${Math.max(1, Math.floor(h))} h`;
+  const d = Math.floor(h / 24);
+  return `${d} día${d !== 1 ? 's' : ''}`;
+}
+
+// Estado de vencimiento según la prioridad del pendiente (recibe el pendiente entero).
+// Devuelve null si está en plazo, {urgente:false, porVencer:true} al 75% del plazo,
+// o {urgente:true} si ya se pasó.
+function vencimientoInfo(p) {
+  if (!p || !p.createdAt) return null;
+  const info = prioridadInfo(p.prioridad);
+  const horas = (Date.now() - new Date(p.createdAt).getTime()) / 3600000;
+  if (horas > info.horas) {
     return {
-      label: `Vencido hace ${venc} dia${venc !== 1 ? 's' : ''}`,
+      label: `Vencido hace ${_fmtHorasVenc(horas - info.horas)}`,
       badge: 'b-red',
-      urgente: true
+      urgente: true,
+      exceso: (horas - info.horas) / info.horas   // qué tan pasado está (relativo al plazo)
     };
+  }
+  if (horas >= info.horas * 0.75) {
+    return { label: `Por vencer (plazo ${info.rango})`, badge: 'b-amber', urgente: false, porVencer: true };
   }
   return null;
 }
@@ -225,10 +252,10 @@ function getVisiblePendientes() {
     );
   }
 
-  // Filtro solo vencidos (más de 5 días abiertos)
+  // Filtro solo vencidos (pasaron el plazo de su prioridad)
   if (vencidoFilter) {
     arr = arr.filter(p => {
-      const v = vencimientoInfo(p.createdAt);
+      const v = vencimientoInfo(p);
       return v && v.urgente;
     });
   }
@@ -411,11 +438,12 @@ function renderPendienteCard(p) {
   const borderColor = tipoColor.border;
   const cardBg      = tipoColor.bg;
 
-  const prioBadge   = { alta: 'b-red', media: 'b-amber', baja: 'b-gray' }[p.prioridad] || 'b-gray';
-  const prioLabel   = { alta: 'Alta prioridad', media: 'Media prioridad', baja: 'Baja prioridad' }[p.prioridad] || p.prioridad;
+  const _prioInfo   = prioridadInfo(p.prioridad);
+  const prioBadge   = _prioInfo.badge;
+  const prioLabel   = _prioInfo.label;
   const tipoLabel   = TIPO_LABELS[p.tipo] || '';
   const tipoPend    = TIPO_PENDIENTE[p.tipoPendiente] || null;
-  const venc        = vencimientoInfo(p.createdAt);
+  const venc        = vencimientoInfo(p);
   // Si está vencido o vence hoy, forzar borde rojo
   const finalBorder = (!p.interno && venc && venc.urgente) ? '#ef4444' : borderColor;
 
@@ -541,8 +569,8 @@ function renderPendienteCard(p) {
                   ? `<span class="badge b-amber">${implTareaInfo.fase}</span>`
                   : (tipoPend ? `<span class="badge ${tipoPend.badge}" title="Tipo: ${tipoPend.label}">${tipoPend.emoji} ${tipoPend.label}</span>` : '')
               }
-              <span class="badge ${prioBadge}">${prioLabel}</span>
-              ${venc ? `<span class="badge badge-venc ${venc.badge}" title="Plazo de 5 dias">⏰ ${venc.label}</span>` : ''}
+              <span class="badge ${prioBadge}" title="Plazo: ${_prioInfo.rango}">${prioLabel}</span>
+              ${venc ? `<span class="badge badge-venc ${venc.badge}" title="Plazo según la prioridad: ${_prioInfo.rango}">⏰ ${venc.label}</span>` : ''}
               <span class="text-meta-sm">${p.cuando} &middot; ${p.asesor}</span>
             </div>
             ${implTareaInfo ? (() => {
@@ -1784,7 +1812,7 @@ function updatePendCount() {
   if (misCount)     misCount.textContent    = myCount;
   if (equipoCount)  equipoCount.textContent = total;
   if (vencidoCount) {
-    const nVenc = pendientes.filter(p => { const v = vencimientoInfo(p.createdAt); return v && v.urgente; }).length;
+    const nVenc = pendientes.filter(p => { const v = vencimientoInfo(p); return v && v.urgente; }).length;
     vencidoCount.textContent = nVenc;
   }
 
