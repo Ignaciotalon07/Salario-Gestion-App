@@ -89,6 +89,9 @@ function refrescarSelectsCliente(nombres) {
     nombres.forEach(n => {
       const opt = document.createElement('option');
       opt.text = n;
+      // El value se fija a mano: option.text colapsa espacios dobles ("A.I.V.E.L.  S.A." → "A.I.V.E.L. S.A.")
+      // y el nombre guardado dejaba de coincidir con el del cliente.
+      opt.value = n;
       sel.add(opt);
     });
     if (otroOpt) {

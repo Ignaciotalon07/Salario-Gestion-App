@@ -15,7 +15,7 @@
     />
 
     <!-- Estilos -->
-    <link rel="stylesheet" href="css/styles.css?v=20261028a" />
+    <link rel="stylesheet" href="css/styles.css?v=20261028e" />
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -2524,17 +2524,18 @@
     <script src="js/storage.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/nav.js?v=20261020a"></script>
-    <script src="js/clientes.js?v=20261013a"></script>
-    <script src="js/pendientes.js?v=20261026p"></script>
-    <script src="js/consultas.js?v=20261021b"></script>
+    <script src="js/clientes.js?v=20261028f"></script>
+    <script src="js/pendiente-archivos.js?v=20261028b"></script>
+    <script src="js/pendientes.js?v=20261028f"></script>
+    <script src="js/consultas.js?v=20261028b"></script>
     <script src="js/kb.js"></script>
     <script src="js/implementacion.js?v=20261026p"></script>
     <script src="js/reporte-implementacion.js?v=20261026p"></script>
-    <script src="js/cliente-detalle.js?v=20261023d"></script>
+    <script src="js/cliente-detalle.js?v=20261028c"></script>
     <script src="js/salario-sync.js?v=20261026b"></script>
     <script src="js/conexiones.js?v=20261013c"></script>
     <script src="js/cliente-documentos.js?v=20261014g"></script>
-    <script src="js/implementacion-disponibilidad.js?v=20261028a"></script>
+    <script src="js/implementacion-disponibilidad.js?v=20261028b"></script>
     <script src="js/disponibilidad-reporte.js?v=20261028b"></script>
     <script src="js/proyectos.js?v=20261023a"></script>
     <script src="js/proyecto-documentos.js?v=20261022b"></script>
@@ -3062,6 +3063,7 @@
             <option value="bug">Programación</option>
             <option value="comercial">Comercial (Administración)</option>
           </select>
+          <div id="pf-tipo-hint" style="display:none;font-size:12px;color:var(--amber);margin-top:6px;line-height:1.4"></div>
         </div>
         <div class="form-group" id="pf-cliente-group">
           <label class="fl">Cliente</label>
@@ -3148,6 +3150,11 @@
         <label class="fl" id="pf-desc-label">¿Qué quedó pendiente? Describilo en detalle</label>
         <textarea id="pf-desc" style="min-height:80px"
           placeholder="Ej: El cliente no pudo generar el F931. Se revisó la configuración pero el botón sigue sin aparecer. Hay que volver a conectarse y revisar los permisos de usuario..."></textarea>
+      </div>
+      <div class="form-group" id="pf-archivos-row">
+        <label class="fl">Archivos adjuntos <span style="color:var(--text3);font-weight:400">(opcional)</span></label>
+        <div id="pf-archivos-lista"></div>
+        <button type="button" class="btn-sm" onclick="pfArchivosElegir()">+ Adjuntar archivos</button>
       </div>
       <div class="form-group" id="pf-intento-row">
         <label class="fl">Próximo paso sugerido <span style="color:var(--text3);font-weight:400">(opcional)</span></label>

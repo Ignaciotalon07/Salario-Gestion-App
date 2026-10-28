@@ -767,13 +767,14 @@ function abrirDetalleConsulta(btn) {
           <ol style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;color:var(--text2)">
             ${data.solucionPasos.map(p => `<li>${p}</li>`).join('')}
           </ol>` : ''}
-        </div>` : `
+        </div>` : (data.tipo === 'implementacion' ? '' : `
         <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--text3)">
           Sin solución registrada en la base.
-        </div>`}
+        </div>`)}
         ${data.solucionId && typeof _renderKbArchivosDetalle === 'function'
           ? _renderKbArchivosDetalle(data.solucionId)
           : ''}
+        <div id="dc-archivos-pend"></div>
       </div>`;
 
     // Reusar el modal de consulta o crear uno temporal
@@ -801,6 +802,8 @@ function abrirDetalleConsulta(btn) {
         </div>
       </div>`;
     modal.style.display = 'flex';
+    // Archivos que tenía el pendiente que originó esta consulta
+    if (typeof pendArchivosMostrarDeConsulta === 'function') pendArchivosMostrarDeConsulta(data.id, 'dc-archivos-pend');
   } catch(e) {
     console.error('Error abriendo detalle consulta', e);
   }

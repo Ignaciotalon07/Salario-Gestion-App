@@ -77,6 +77,8 @@ function actualizarContactosDatalist() {
 // registrarse), se le resta ese uso al borrarla. Lanza error si falla el
 // borrado; el descuento del uso es "best effort" y no corta el flujo.
 async function eliminarConsultaDB(id) {
+  // Si la consulta venía de un pendiente con archivos, se borran también (best effort)
+  if (typeof pendArchivosBorrarDeConsulta === 'function') await pendArchivosBorrarDeConsulta(id);
   // Leer la solución asociada ANTES de borrar (después ya no está en la DB,
   // y el realtime puede sacarla del array en memoria).
   let solucionId = null;

@@ -193,6 +193,12 @@ async function initPendientes() {
       });
     }
 
+    // Archivos adjuntos de esos pendientes (migración 065)
+    if (typeof cargarArchivosPendientes === 'function') {
+      await cargarArchivosPendientes(ids);
+      if (typeof suscribirArchivosPendientes === 'function') suscribirArchivosPendientes();
+    }
+
     renderPendientes();
     updatePendCount();
     suscribirPendientes();
@@ -620,6 +626,8 @@ function renderPendienteCard(p) {
       ${p.intento  ? `<div class="info-pill"><div class="info-pill__label">Lo que se intento</div><div class="info-pill__body">${p.intento}</div></div>` : ''}
       ${p.proxPaso ? `<div class="info-pill info-pill--accent"><div class="info-pill__label">Proximo paso</div><div class="info-pill__body">${p.proxPaso}</div></div>` : ''}
 
+      ${typeof renderArchivosPend === 'function' ? renderArchivosPend(p.id) : ''}
+
       <div class="notas-section" data-pend-id="${p.id}">
         ${notas.length > 0 ? `
           <div class="notas-label">Notas (${notas.length})</div>
@@ -734,6 +742,8 @@ function cerrarPendForm() {
 }
 
 function _resetPendForm() {
+  setTimeout(() => { if (typeof aplicarRestriccionTipoPf === 'function') aplicarRestriccionTipoPf(); }, 0);
+  if (typeof pfArchivosReset === 'function') pfArchivosReset();
   // Textareas y texto
   ['pf-desc','pf-intento','pf-prox','pf-cat-custom','pf-tipo-interno-custom'].forEach(id => {
     const el = document.getElementById(id);
@@ -767,6 +777,7 @@ function _resetPendForm() {
 
 // Muestra/oculta campos según si el pendiente es interno
 function toggleInternoForm() {
+  setTimeout(() => { if (typeof aplicarRestriccionTipoPf === 'function') aplicarRestriccionTipoPf(); }, 0);
   const esInterno = document.getElementById('pf-interno')?.checked;
 
   const show = (id, visible) => {
@@ -884,6 +895,12 @@ async function _guardarPendienteImpl() {
     asesoresDestino = [asesor];
   }
 
+  // Cliente en implementación: solo pendientes de Implementación
+  if (!esInterno && _pfClienteEsImpl(cliente) && tipoP !== 'implementacion') {
+    toastError('Ese cliente está en implementación: solo se le pueden crear pendientes de tipo Implementación.');
+    return;
+  }
+
   const baseRow = {
     cliente_nombre: esInterno ? 'Consultora Ferro' : cliente,
     prioridad:      prio,
@@ -898,13 +915,20 @@ async function _guardarPendienteImpl() {
 
   try {
     // Crear un pendiente por cada asesor seleccionado
+    const idsCreados = [];
     for (const a of asesoresDestino) {
       const row = { ...baseRow, asesor: a };
       const inserted = await dbInsert('pendientes', row);
       const ya = pendientes.find(p => p.id === inserted.id);
       if (!ya) pendientes.unshift(dbRowToPendiente(inserted));
       logEvento(inserted.id, 'creado', `Asignado a ${a}, prioridad ${prio}`);
+      idsCreados.push(inserted.id);
     }
+
+    // Subir los archivos adjuntos elegidos en el formulario
+    let archivosFallidos = 0;
+    if (typeof pfArchivosSubir === 'function') archivosFallidos = await pfArchivosSubir(idsCreados);
+    if (archivosFallidos) toastError(`No se pudieron subir ${archivosFallidos} archivo${archivosFallidos !== 1 ? 's' : ''}. ¿Se creó el bucket pendientes-archivos?`);
 
     cerrarPendForm();
     document.getElementById('pf-desc').value = '';
@@ -1244,7 +1268,7 @@ async function confirmarCierreProgramacionInterna() {
 
   // 2. Guardar las horas en consultas → impacta métricas de Equipo
   try {
-    await dbInsert('consultas', {
+    const insertadaHoras = await dbInsert('consultas', {
       cliente_id:        clienteObj ? clienteObj.id : null,
       cliente_nombre:    esImpl ? p.cliente : null,
       asesor,
@@ -1259,10 +1283,15 @@ async function confirmarCierreProgramacionInterna() {
       tipo_consulta:     tipoConsulta
     });
 
+    // Los archivos del pendiente pasan a verse en el detalle de esa consulta (historial del cliente)
+    if (insertadaHoras && insertadaHoras.id && typeof pendArchivosVincularAConsulta === 'function') {
+      await pendArchivosVincularAConsulta(p.id, insertadaHoras.id);
+    }
+
     // Actualizar array en memoria para métricas inmediatas
     if (typeof consultas !== 'undefined') {
       consultas.unshift({
-        id:           '_temp_pi_' + Date.now(),
+        id:           (insertadaHoras && insertadaHoras.id) || ('_temp_pi_' + Date.now()),
         cliente:      esImpl ? p.cliente : null,
         asesor,
         categoria:    catLabel,
@@ -1454,6 +1483,9 @@ async function crearConsultaDesdePendiente(p, tiempo, solucionId, repetida = 'no
       conexion_remota:   esProg ? false : remota === 'si',
       tipo_consulta:     tipoConsulta
     });
+
+    // Los archivos del pendiente pasan a verse en el detalle de esa consulta (historial del cliente)
+    if (typeof pendArchivosVincularAConsulta === 'function') await pendArchivosVincularAConsulta(p.id, inserted.id);
 
     if (typeof consultas !== 'undefined') {
       consultas.unshift({
@@ -2241,7 +2273,7 @@ function filtrarPfClienteSearch() {
   const q = input.value.trim().toLowerCase();
 
   const opciones = Array.from(select.options)
-    .map(o => o.text)
+    .map(o => o.value || o.text)
     .filter(t => t && t !== 'Cargando clientes...');
 
   const filtradas = q
@@ -2271,6 +2303,42 @@ function elegirPfClienteSearch(nombre) {
   if (input)    input.value  = nombre;
   if (select)   select.value = nombre;
   if (dropdown) dropdown.style.display = 'none';
+  aplicarRestriccionTipoPf();
+}
+
+// ¿El cliente está en implementación? Vale si su área es 'impl' o si tiene un cronograma de
+// implementación con tareas sin completar (aunque el área figure como soporte).
+function _pfClienteEsImpl(nombre) {
+  // Se compara sin espacios repetidos (hay nombres con doble espacio, ej. "A.I.V.E.L.  S.A.")
+  const norm = t => String(t || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const c = (typeof clientes !== 'undefined' ? clientes : []).find(x => norm(x.nombre) === norm(nombre));
+  if (!c) return false;
+  if (c.area === 'impl') return true;
+  if (typeof implTareas !== 'undefined') {
+    const tareas = implTareas.filter(t => t.cliente_id === c.id);
+    if (tareas.length > 0 && tareas.some(t => t.estado !== 'completada')) return true;
+  }
+  return false;
+}
+
+// A los clientes en implementación solo se les puede crear pendientes de tipo Implementación:
+// se fuerza el tipo y se deshabilitan los demás mientras ese cliente esté elegido.
+function aplicarRestriccionTipoPf() {
+  const sel  = document.getElementById('pf-tipo');
+  const hint = document.getElementById('pf-tipo-hint');
+  if (!sel) return;
+  const nombre = (document.getElementById('pf-cliente') || {}).value || '';
+  const esInternoChk = document.getElementById('pf-interno');
+  const restringir = !(esInternoChk && esInternoChk.checked) && _pfClienteEsImpl(nombre);
+  Array.from(sel.options).forEach(o => { o.disabled = restringir && o.value !== 'implementacion'; });
+  if (restringir) {
+    sel.value = 'implementacion';
+    if (typeof onTipoPendienteChange === 'function') onTipoPendienteChange();
+  }
+  if (hint) {
+    hint.style.display = restringir ? 'block' : 'none';
+    hint.textContent = restringir ? 'Este cliente está en implementación: solo se le pueden crear pendientes de Implementación.' : '';
+  }
 }
 
 function cerrarPfClienteSearch() {

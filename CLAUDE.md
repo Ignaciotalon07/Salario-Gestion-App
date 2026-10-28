@@ -69,6 +69,7 @@ Salario Gestion/
 │   ├── clientes.js          ← CRUD + realtime de clientes
 │   ├── cliente-detalle.js   ← Vista de historial, stats y mini chart por cliente
 │   ├── pendientes.js        ← CRUD + realtime + notas + audit log + modal solución
+│   ├── pendiente-archivos.js ← Archivos adjuntos en pendientes (form + tarjeta; bucket `pendientes-archivos`, migración 065)
 │   ├── consultas.js         ← Form de registrar consulta (Supabase + realtime)
 │   ├── consultas-page.js    ← Métricas avanzadas de consultas (rankings, historial, gráficos)
 │   ├── kb.js                ← Base de soluciones (Supabase + realtime + archivos adjuntos)
@@ -163,6 +164,9 @@ Salario Gestion/
     ├── 062_salario_sync_bases.sql  ← Columna `base` en salario_sync: un cliente puede tener varias bases en Salario (ej. DATOS1/DATOS2 o el nombre de la empresa); clave única (cliente_id, base)
     ├── 063_salario_envios_rechazados.sql ← Tabla salario_envios_rechazados: envíos de Salario sin id_api válido (ej. id_api 0); la función los registra y Alertas los muestra con "Marcar resuelto"
     ├── 064_prioridades_pendientes.sql ← Prioridades nuevas: muy_urgente (24h) / prioritario (72h) / semana (10d) / mes (30d) / cuando_se_pueda (60d) / sin_tiempo (90d). Convierte alta→muy_urgente, media→semana, baja→cuando_se_pueda. Vencimiento = plazo de la prioridad (`PRIORIDADES` y `vencimientoInfo(p)` en pendientes.js); "por vencer" al 75%
+    ├── 065_pendiente_archivos.sql  ← Tabla pendiente_archivos + policies del bucket `pendientes-archivos` (crear a mano, privado)
+    ├── 066_pendiente_archivos_consulta.sql ← Columna consulta_id en pendiente_archivos: al cerrar el pendiente, sus archivos se vinculan a la consulta y se ven en el detalle de consulta del cliente
+    ├── 067_normalizar_nombres_cliente.sql ← Iguala cliente_nombre de consultas/pendientes al nombre real del cliente (había nombres con espacio doble que option.text colapsaba)
     └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 
@@ -477,12 +481,13 @@ Cuando el usuario te pida cambios:
 
 ## Levantar la base de datos desde cero
 
-1. En el dashboard de Supabase, crear los 4 buckets manualmente:
+1. En el dashboard de Supabase, crear los 5 buckets manualmente:
    Storage → New bucket → Private (no public)
    - `implementacion-archivos`
    - `soluciones-archivos`
    - `repositorio-archivos`
    - `cliente-documentos`
+   - `pendientes-archivos`
 
 2. En el SQL Editor de Supabase, correr en orden:
    - `migrations/schema_completo.sql` — toda la estructura + equipo + plantilla de impl
