@@ -1010,3 +1010,6 @@ CREATE POLICY "pend_archivos_storage_delete" ON storage.objects FOR DELETE TO au
 -- 8r. Archivos del pendiente vinculados a la consulta creada al cerrarlo — ver 066_pendiente_archivos_consulta.sql
 ALTER TABLE pendiente_archivos ADD COLUMN IF NOT EXISTS consulta_id uuid;
 CREATE INDEX IF NOT EXISTS idx_pendiente_archivos_consulta ON pendiente_archivos(consulta_id) WHERE consulta_id IS NOT NULL;
+
+-- 8s. Archivos de registros de Implementación sin pendiente — ver 068_pendiente_archivos_sin_pendiente.sql
+ALTER TABLE pendiente_archivos ALTER COLUMN pendiente_id DROP NOT NULL;

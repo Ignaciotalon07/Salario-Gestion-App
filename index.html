@@ -2525,9 +2525,9 @@
     <script src="js/ui.js"></script>
     <script src="js/nav.js?v=20261020a"></script>
     <script src="js/clientes.js?v=20261028f"></script>
-    <script src="js/pendiente-archivos.js?v=20261028b"></script>
+    <script src="js/pendiente-archivos.js?v=20261028c"></script>
     <script src="js/pendientes.js?v=20261028f"></script>
-    <script src="js/consultas.js?v=20261028b"></script>
+    <script src="js/consultas.js?v=20261028d"></script>
     <script src="js/kb.js"></script>
     <script src="js/implementacion.js?v=20261026p"></script>
     <script src="js/reporte-implementacion.js?v=20261026p"></script>
@@ -2698,7 +2698,7 @@
         </div>
 
         <div class="form-row" id="r-row-rep">
-          <div class="form-group">
+          <div class="form-group" id="r-grp-rep">
             <label class="fl">¿Es consulta repetida?</label>
             <select id="r-rep">
               <option value="no">No, es nueva</option>
@@ -2812,7 +2812,7 @@
 
         <!-- Archivos adjuntos a la solución -->
         <div class="form-group" id="r-archivos-group">
-          <label class="fl">Archivos adjuntos a la solución <span style="font-size:11px;color:var(--text3);font-weight:400">(opcional — se guardan en la base de soluciones)</span></label>
+          <label class="fl" id="r-archivos-label">Archivos adjuntos a la solución <span style="font-size:11px;color:var(--text3);font-weight:400">(opcional — se guardan en la base de soluciones)</span></label>
           <div id="r-archivos-consulta"></div>
         </div>
 

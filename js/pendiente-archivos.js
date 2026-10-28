@@ -163,6 +163,7 @@ function suscribirArchivosPendientes() {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'pendiente_archivos' }, (payload) => {
       const { eventType, new: n, old: o } = payload;
       if (eventType === 'INSERT') {
+        if (!n.pendiente_id) return;   // archivo de un registro de implementación sin pendiente
         const l = (archivosByPendiente[n.pendiente_id] = archivosByPendiente[n.pendiente_id] || []);
         if (l.find(a => a.id === n.id)) return;
         l.push(n);
@@ -239,4 +240,28 @@ async function pendArchivosBorrarDeConsulta(consultaId) {
   } catch (e) {
     console.warn('No se pudieron borrar los archivos de la consulta', e);
   }
+}
+
+// Sube archivos directamente a una consulta (registro de Implementación cargado a mano, sin pendiente).
+// Devuelve cuántos fallaron.
+async function pendArchivosSubirAConsulta(consultaId, files) {
+  const subidoPor = (typeof currentMember !== 'undefined' && currentMember) ? (currentMember.nombre || currentMember.email) : 'Equipo';
+  let fallos = 0;
+  for (const file of files) {
+    try {
+      if (file.size > PEND_ARCH_MAX) throw new Error('supera 50 MB');
+      const safe = file.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `consulta-${consultaId}/${Date.now()}_${safe}`;
+      const { error } = await sb().storage.from(PEND_ARCH_BUCKET).upload(path, file);
+      if (error) throw error;
+      await dbInsert('pendiente_archivos', {
+        pendiente_id: null, consulta_id: consultaId, nombre: file.name, storage_path: path,
+        tipo_mime: file.type || null, tamano_bytes: file.size || null, subido_por: subidoPor,
+      });
+    } catch (e) {
+      console.error('Error subiendo archivo de la consulta', e);
+      fallos++;
+    }
+  }
+  return fallos;
 }

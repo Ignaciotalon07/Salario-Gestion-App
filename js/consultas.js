@@ -211,23 +211,35 @@ function onTipoConsultaChange() {
   };
 
   // Categoría/subtema estándar ↔ subtema libre de programación
-  show('r-row-cat',        !esProg);
+  show('r-row-cat',        !esProg && !esImpl);
   show('r-row-prog-sub',   esProg);
 
-  // Repetida: solo soporte/comercial
+  // Repetida: solo soporte/comercial (la fila queda visible en implementación porque lleva el tiempo)
   show('r-row-rep',         !esProg);
+  show('r-grp-rep',         !esProg && !esImpl);
+
+  // Implementación: solo tiempo, detalle y archivos (sin categoría, contacto, repetida, material ni remota)
+  show('r-row-contacto',    !esImpl);
 
   // Tiempo: solo visible en programación
   show('r-row-tiempo-solo', esProg);
 
   // Material + remota: solo soporte/comercial
-  show('r-row-material',    !esProg);
+  show('r-row-material',    !esProg && !esImpl);
 
   // Programación realizada: solo para programacion
   show('r-group-prog-realizada', esProg);
 
   // Base de soluciones: solo soporte (no impl, no programacion, no comercial)
   show('r-group-soluciones', esSop);
+
+  // Archivos: en soporte van a la base de soluciones; en implementación quedan en el registro
+  const lblArch = document.getElementById('r-archivos-label');
+  if (lblArch) {
+    lblArch.innerHTML = esImpl
+      ? 'Archivos adjuntos <span style="font-size:11px;color:var(--text3);font-weight:400">(opcional — quedan en el registro del cliente)</span>'
+      : 'Archivos adjuntos a la solución <span style="font-size:11px;color:var(--text3);font-weight:400">(opcional — se guardan en la base de soluciones)</span>';
+  }
 
   // Label de descripción y placeholder
   const lbl  = document.getElementById('r-desc-label');
@@ -600,6 +612,13 @@ async function guardarConsulta(mantenerAbierto = false) {
     subtema = ((document.getElementById('r-sub-prog') || {}).value || '').trim();
     if (!cliente) { alert('Elegí un cliente.'); return; }
     if (!subtema) { alert('Escribí el subtema o módulo.'); document.getElementById('r-sub-prog').focus(); return; }
+  } else if (esImpl) {
+    // ── Implementación: solo cliente, tiempo y detalle ──
+    cat = 'Implementación';
+    subtema = null;
+    if (!cliente) { alert('Elegí un cliente.'); return; }
+    if (!tiempo || isNaN(tiempo) || tiempo <= 0) { alert('Ingresá el tiempo de trabajo.'); document.getElementById('r-tiempo').focus(); return; }
+    if (!desc) { alert('Completá el detalle del trabajo realizado.'); document.getElementById('r-desc').focus(); return; }
   } else {
     // ── Validaciones soporte/comercial ──
     if (!cliente) { alert('Elegí un cliente.'); return; }
@@ -683,7 +702,7 @@ async function guardarConsulta(mantenerAbierto = false) {
       asesor,
       categoria:         cat,
       subtema,
-      repetida:          esProg ? false : repetida === 'si',
+      repetida:          (esProg || esImpl) ? false : repetida === 'si',
       descripcion:       esProg && progRealizada
                            ? (desc ? desc + '\n\n✅ Programado: ' + progRealizada : '✅ Programado: ' + progRealizada)
                            : (desc || null),
@@ -693,7 +712,7 @@ async function guardarConsulta(mantenerAbierto = false) {
       material:          esProg ? null : (material !== 'ninguno' ? material : null),
       conexion_remota:   esProg ? false : (remota === 'si' ? true : false),
       tipo_consulta:     tipoConsulta,
-      contacto
+      contacto:          esImpl ? null : contacto
     });
 
     consultas.unshift({
@@ -718,8 +737,15 @@ async function guardarConsulta(mantenerAbierto = false) {
       await borradorMarcarRegistrado(consultaGuardada.id, clienteObj);
     }
 
+    // Implementación: los archivos quedan en el registro (se ven en el detalle de la consulta del cliente)
+    if (esImpl && _consultaArchivosStaged.length > 0 && typeof pendArchivosSubirAConsulta === 'function') {
+      const fallos = await pendArchivosSubirAConsulta(consultaGuardada.id, _consultaArchivosStaged);
+      if (fallos) toastError(`No se pudieron subir ${fallos} archivo${fallos !== 1 ? 's' : ''}. ¿Se corrió la migración 068 y existe el bucket pendientes-archivos?`);
+      _consultaArchivosStaged = [];
+    }
+
     // Subir archivos staged a la solución (nueva o existente de la base)
-    const solIdParaArchivos = esProg ? null : (consultaSolucionId || nuevaSolucionId || null);
+    const solIdParaArchivos = (esProg || esImpl) ? null : (consultaSolucionId || nuevaSolucionId || null);
     if (solIdParaArchivos && _consultaArchivosStaged.length > 0) {
       for (const file of _consultaArchivosStaged) {
         try { await _subirArchivoKB(solIdParaArchivos, file); } catch (e) { /* no bloquear */ }
@@ -1011,8 +1037,9 @@ function filtrarClienteSearch() {
   const q = input.value.trim().toLowerCase();
 
   // Obtener la lista de opciones del select oculto
+  // value (no text): option.text colapsa los espacios dobles del nombre y rompía la coincidencia
   const opciones = Array.from(select.options)
-    .map(o => o.text)
+    .map(o => o.value || o.text)
     .filter(t => t && t !== 'Cargando clientes...');
 
   const filtradas = q
@@ -1053,12 +1080,12 @@ function actualizarTipoSegunCliente(nombreCliente) {
   const sel = document.getElementById('r-tipo-consulta');
   if (!sel) return;
 
-  const clienteObj = (typeof clientes !== 'undefined')
-    ? clientes.find(c => c.nombre === nombreCliente)
-    : null;
-  const area = clienteObj ? (clienteObj.area || 'soporte') : 'soporte';
+  // Cliente en implementación: área 'impl' o cronograma con tareas sin completar (misma regla que Nuevo pendiente)
+  const esImpl = (typeof _pfClienteEsImpl === 'function')
+    ? _pfClienteEsImpl(nombreCliente)
+    : ((clientes.find(c => c.nombre === nombreCliente) || {}).area === 'impl');
 
-  if (area === 'impl') {
+  if (esImpl) {
     // Solo implementacion
     sel.innerHTML = '<option value="implementacion">Implementación</option>';
     sel.value = 'implementacion';

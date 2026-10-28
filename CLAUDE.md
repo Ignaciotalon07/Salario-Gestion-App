@@ -167,6 +167,7 @@ Salario Gestion/
     ├── 065_pendiente_archivos.sql  ← Tabla pendiente_archivos + policies del bucket `pendientes-archivos` (crear a mano, privado)
     ├── 066_pendiente_archivos_consulta.sql ← Columna consulta_id en pendiente_archivos: al cerrar el pendiente, sus archivos se vinculan a la consulta y se ven en el detalle de consulta del cliente
     ├── 067_normalizar_nombres_cliente.sql ← Iguala cliente_nombre de consultas/pendientes al nombre real del cliente (había nombres con espacio doble que option.text colapsaba)
+    ├── 068_pendiente_archivos_sin_pendiente.sql ← pendiente_id NULL permitido: registros de Implementación cargados a mano con archivos (se vinculan por consulta_id)
     └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 
