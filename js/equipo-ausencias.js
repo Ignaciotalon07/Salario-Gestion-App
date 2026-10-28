@@ -35,6 +35,8 @@ const AUS_FERIADOS = {
   '2026-08-17': { n: 'Paso a la Inmortalidad de San Martín', t: 'f' },
   '2026-09-21': { n: 'Día del Perdón - Yom Kipur (no laborable)', t: 'p' },
   '2026-10-12': { n: 'Día del Respeto a la Diversidad Cultural', t: 'f' },
+  '2026-11-09': { n: 'Visita del Papa', t: 'f' },
+  '2026-11-10': { n: 'Visita del Papa', t: 'f' },
   '2026-11-23': { n: 'Día de la Soberanía Nacional (trasladado)', t: 'f' },
   '2026-12-07': { n: 'Puente turístico (no laborable)', t: 'p' },
   '2026-12-08': { n: 'Inmaculada Concepción de María', t: 'f' },
