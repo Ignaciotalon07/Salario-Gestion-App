@@ -894,6 +894,7 @@ function renderDisponibilidadImpl() {
         <input type="number" min="1" max="50" value="${cap}" onchange="dispSetCapacidad(this.value)">
       </label>
       <button class="btn-sm disp-btn-sim" onclick="dispAbrirSim()" title="Probar si entra un cliente nuevo">🧪 Simular cliente nuevo</button>
+      <button class="btn-sm" onclick="dispGenerarReportePDF()" title="Informe en PDF: dónde entra un cliente nuevo, dónde no y por qué">📄 Reporte PDF</button>
     </div>
 
     ${(() => {

@@ -77,6 +77,7 @@ Salario Gestion/
 │   │                           lateral "Mi día"
 │   ├── implementacion-disponibilidad.js ← Gantt general: carga por mes, capacidad máx., zoom,
 │   │                           simulador, barras grises "por arrancar", pan con arrastre
+│   ├── disponibilidad-reporte.js ← Botón "📄 Reporte PDF" de Disponibilidad: dónde entra un cliente nuevo, dónde no y por qué (usa los mismos cálculos del Gantt)
 │   ├── cliente-documentos.js ← Pestaña Documentos por cliente (archivos + links de Drive,
 │   │                           tipo de documento, buscador, leyenda)
 │   ├── proyectos.js         ← Implementación → Proyectos: lista, alta, detalle con tareas, % avance (cambios puntuales para clientes de soporte)

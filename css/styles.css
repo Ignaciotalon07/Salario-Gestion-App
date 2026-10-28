@@ -249,7 +249,7 @@ body {
    toquen en la misma fila — así "Cliente que más consultó" siempre tiene
    lugar de sobra para el nombre, sin importar el resto. */
 #reportes .metrics-grid .metric-card--narrow { flex: 0 0 120px; }
-#reportes .metrics-grid .metric-card--wide   { flex: 0 0 300px; }
+#reportes .metrics-grid .metric-card--wide   { flex: 1 1 300px; }  /* crece para llenar la fila si queda sola al achicar la pantalla */
 .metric-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius-lg); padding: 16px 18px;

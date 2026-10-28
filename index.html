@@ -15,7 +15,7 @@
     />
 
     <!-- Estilos -->
-    <link rel="stylesheet" href="css/styles.css?v=20261026a" />
+    <link rel="stylesheet" href="css/styles.css?v=20261028a" />
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -1905,7 +1905,8 @@
       </div>
       <div class="form-group">
         <label class="fl">Horas trabajadas</label>
-        <input type="text" id="mh-horas" class="form-input" placeholder="Ej: 0.30 = 30min · 1.45 = 1h 45min" style="max-width:220px"/>
+        <input type="text" id="mh-horas" class="form-input" placeholder="Ej: 0.30 = 30min · 1.45 = 1h 45min" style="max-width:220px" oninput="mhActualizarReferencia()"/>
+        <div id="mh-horas-ref" style="font-size:12.5px;color:var(--text3);margin-top:6px;min-height:18px"></div>
       </div>
       <div class="form-group">
         <label class="fl">Detalle de lo realizado</label>
@@ -2533,12 +2534,13 @@
     <script src="js/salario-sync.js?v=20261026b"></script>
     <script src="js/conexiones.js?v=20261013c"></script>
     <script src="js/cliente-documentos.js?v=20261014g"></script>
-    <script src="js/implementacion-disponibilidad.js?v=20261023a"></script>
+    <script src="js/implementacion-disponibilidad.js?v=20261028a"></script>
+    <script src="js/disponibilidad-reporte.js?v=20261028b"></script>
     <script src="js/proyectos.js?v=20261023a"></script>
     <script src="js/proyecto-documentos.js?v=20261022b"></script>
     <script src="js/equipo-ausencias.js?v=20261028b"></script>
     <script src="js/asesor-detalle.js"></script>
-    <script src="js/charts.js?v=20261026a"></script>
+    <script src="js/charts.js?v=20261028a"></script>
     <script src="js/alertas.js?v=20261026p"></script>
     <script src="js/consultas-page.js?v=20261021a"></script>
     <script src="js/repositorio.js?v=20261015c"></script>

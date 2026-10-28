@@ -18,7 +18,7 @@
 
 // "1.45" o 1.45 → 105 minutos totales
 function hhmmAMinutos(val) {
-  const v = parseFloat(val) || 0;
+  const v = parseFloat(String(val).replace(',', '.')) || 0;  // acepta coma o punto
   const h = Math.floor(v);
   const m = Math.round((v - h) * 100);
   return h * 60 + m;
@@ -983,9 +983,22 @@ function abrirModalHoras() {
   if (tipo)   tipo.value   = '';
   if (horas)   horas.value   = '';
   if (detalle) detalle.value = '';
+  mhActualizarReferencia();
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
   if (tipo) tipo.focus();
+}
+
+// Referencia debajo del campo: "0.20" → "= 20 min" (el formato es HH.MM, no decimales de hora)
+function mhActualizarReferencia() {
+  const inp = document.getElementById('mh-horas');
+  const ref = document.getElementById('mh-horas-ref');
+  if (!inp || !ref) return;
+  const txt = (inp.value || '').trim();
+  if (!txt) { ref.textContent = ''; return; }
+  const min = hhmmAMinutos(txt);
+  ref.textContent = min > 0 ? `Estás cargando: ${fmtMinutos(min)}` : 'Valor no válido. Usá el formato 0.30 = 30 min · 1.45 = 1h 45min';
+  ref.style.color = min > 0 ? 'var(--text2)' : 'var(--red)';
 }
 
 function cerrarModalHoras() {
