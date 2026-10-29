@@ -9053,3 +9053,36 @@ input[type=date]:focus {
 .pend-archivos .notas-label { flex: 0 0 100%; margin-bottom: 0; }
 .pend-archivos .mtm-archivo { margin-bottom: 0; flex: 0 1 auto; width: 280px; max-width: 100%; padding: 6px 10px; }
 @media (max-width: 480px) { .pend-archivos .mtm-archivo { width: 100%; } }
+
+/* ── Archivos vistos: a color = sin ver, gris = ya visto/descargado ── */
+.av-visto { filter: grayscale(1); opacity: .55; transition: opacity .15s, filter .15s; }
+.av-visto:hover { opacity: .9; }
+/* Indicador circular de visto (vacío = sin ver, tilde = visto) */
+.av-toggle { width: 22px; height: 22px; min-width: 22px; padding: 0; border-radius: 50%; cursor: pointer; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; line-height: 1; font-family: inherit;
+  border: 2px solid #f59e0b; color: #fff; background: transparent; transition: background .15s, border-color .15s; }
+.av-toggle:hover { background: rgba(245,158,11,.25); }
+.av-toggle--on { background: #8a8a85; border-color: #8a8a85; }
+.av-toggle--on:hover { background: #a3a39e; }
+/* En las tarjetas de documentos del cliente va flotando en la esquina superior derecha */
+.doc-card { position: relative; }
+.doc-card > .av-toggle { position: absolute; top: 14px; right: 14px; z-index: 3; background: rgba(0,0,0,.35); }
+.doc-card > .av-toggle--on { background: #8a8a85; }
+
+/* Tarjetas de documentos: mismo alto y misma distribución (link o archivo) */
+.doc-card__meta { display: flex; flex-direction: column; min-height: 30px; }
+.doc-card__meta-l { display: block; min-height: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-card__actions { margin-top: auto; }
+.doc-act--ico { flex: 0 0 34px; }
+
+/* Empresa del documento */
+.doc-card__emp { display: block; width: 100%; text-align: left; font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
+  background: transparent; border: none; padding: 0 2px; color: #f97316; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-card__emp:hover { text-decoration: underline; }
+.doc-card__emp--vacia { color: var(--text3); font-weight: 500; opacity: .7; }
+.docs-filtros--emp { align-items: center; margin-top: 8px; }
+.docs-filtros__lbl { font-size: 12px; font-weight: 600; color: var(--text3); margin-right: 2px; }
+
+.docs-emp-sel { font: inherit; font-size: 13.5px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text); cursor: pointer; }
+.docs-emp-sel:focus { outline: none; border-color: #f97316; }

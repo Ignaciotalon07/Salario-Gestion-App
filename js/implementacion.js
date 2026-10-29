@@ -4211,7 +4211,7 @@ function renderImplArchivos(tareaId) {
   };
 
   const tarjetas = archivos.map(a => `
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
+    <div class="${(typeof avClase === 'function' ? avClase('tarea_archivo', a.id) : '').trim()}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)">
       <span style="font-size:22px;flex-shrink:0;line-height:1">${iconoArchivo(a.tipo_mime, a.nombre)}</span>
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
@@ -4227,6 +4227,7 @@ function renderImplArchivos(tareaId) {
           onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background='var(--surface)'">
           ⬇ Descargar
         </button>
+        ${typeof avBoton === 'function' ? avBoton('tarea_archivo', a.id) : ''}
         <button onclick="eliminarArchivoTarea('${escapeHtmlImpl(a.id)}', '${escapeHtmlImpl(a.storage_path)}', '${escapeHtmlImpl(tareaId)}')"
           title="Eliminar"
           style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text3);font-size:14px;cursor:pointer;line-height:1"
@@ -4285,7 +4286,7 @@ async function subirArchivoTarea(tareaId, file) {
       ? (currentMember.nombre || currentMember.email)
       : 'Equipo';
 
-    await dbInsert('implementacion_tarea_archivos', {
+    const archivoNuevo = await dbInsert('implementacion_tarea_archivos', {
       tarea_id:     tareaId,
       nombre:       file.name,
       storage_path: storagePath,
@@ -4294,6 +4295,8 @@ async function subirArchivoTarea(tareaId, file) {
       subido_por:   subidoPor,
     });
 
+    // Lo que subís vos ya lo tenés: nace como visto (gris)
+    if (archivoNuevo && archivoNuevo.id && typeof avMarcar === 'function') avMarcar('tarea_archivo', archivoNuevo.id, true, false);
     // El realtime se encarga del re-render; no hacemos nada más
     toast(`Archivo "${file.name}" subido.`);
   } catch (e) {
@@ -4311,6 +4314,7 @@ async function descargarArchivoTarea(archivoId, storagePath) {
       .createSignedUrl(storagePath, 3600); // URL válida por 1 hora
     if (error) throw error;
     window.open(data.signedUrl, '_blank');
+    if (typeof avMarcar === 'function') avMarcar('tarea_archivo', archivoId);
   } catch (e) {
     console.error('Error descargando archivo', e);
     toast('Error al generar el link de descarga.');
@@ -4407,7 +4411,7 @@ function _refreshModalNotasArchivos(tareaId) {
 
   // ── Sección Archivos ───────────────────────────────────────────────────
   const archivosHTML = archivos.map(a => `
-    <div class="mtm-archivo">
+    <div class="mtm-archivo${typeof avClase === 'function' ? avClase('tarea_archivo', a.id) : ''}">
       <span class="mtm-archivo-icono">${iconoArchivo(a.tipo_mime, a.nombre)}</span>
       <div class="mtm-archivo-info">
         <div class="mtm-archivo-nombre" title="${escapeHtmlImpl(a.nombre)}">${escapeHtmlImpl(a.nombre)}</div>
@@ -4418,6 +4422,7 @@ function _refreshModalNotasArchivos(tareaId) {
       <div class="mtm-archivo-btns">
         <button class="mtm-archivo-dl"
           onclick="descargarArchivoTarea('${a.id}', '${escapeHtmlImpl(a.storage_path)}')">⬇ Descargar</button>
+        ${typeof avBoton === 'function' ? avBoton('tarea_archivo', a.id) : ''}
         <button class="mtm-archivo-del"
           onclick="eliminarArchivoTarea('${a.id}', '${escapeHtmlImpl(a.storage_path)}', '${tareaId}')">×</button>
       </div>

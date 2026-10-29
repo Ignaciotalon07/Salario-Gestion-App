@@ -14,6 +14,7 @@ const DOCS_MAX_BYTES = 50 * 1024 * 1024;
 
 let clienteDocs   = {};   // { cliente_id: [doc, ...] }
 let _docsThumbs   = {};   // { doc_id: signedUrl } cache de miniaturas de imágenes
+window._docsEmpresa   = window._docsEmpresa   || {};  // cliente_id -> '' (todas) | nombre de empresa | '__sin'
 window._docsFiltro    = window._docsFiltro    || {};  // cliente_id -> 'todos' | 'logo' | 'firma' | 'pdf' | ...
 window._docsCategoria = window._docsCategoria || 'documento'; // categoría con la que se sube: documento | logo | firma
 window._docsBusqueda  = window._docsBusqueda  || {};  // cliente_id -> texto del buscador
@@ -163,6 +164,45 @@ function getCantDocsCliente(clienteId) {
   return (clienteDocs[clienteId] || []).length;
 }
 
+// ────────── Empresa del documento ──────────
+
+function _docEmp(d) { return (d.empresa || '').trim(); }
+
+// Empresas ya usadas en los documentos del cliente (para autocompletar y filtrar)
+function _docsEmpresasDe(clienteId) {
+  const m = {};
+  (clienteDocs[clienteId] || []).forEach(d => { const e = _docEmp(d); if (e) m[e] = (m[e] || 0) + 1; });
+  return Object.keys(m).sort((a, b) => a.localeCompare(b, 'es')).map(n => ({ nombre: n, cant: m[n] }));
+}
+
+function _docsDatalist(clienteId) {
+  return `<datalist id="docs-emp-lista">${_docsEmpresasDe(clienteId).map(e => `<option value="${_docEsc(e.nombre)}">`).join('')}</datalist>`;
+}
+
+// Campo "Empresa": desplegable con las empresas ya cargadas + "Nueva empresa…".
+// El <input id> (oculto salvo en "Nueva") siempre guarda el valor final, así que se lee con .value.
+function _docsCampoEmpresa(clienteId, valor, id) {
+  const emps = _docsEmpresasDe(clienteId).map(e => e.nombre);
+  valor = (valor || '').trim();
+  const esNueva = valor && !emps.includes(valor);
+  return `<label style="font-size:12px;font-weight:600;color:var(--text2)">Empresa (opcional)</label>
+    <select class="docs-emp-sel" id="${id}-sel" onchange="docsEmpresaSel('${id}')" style="width:100%;margin:4px 0 6px">
+      <option value="">Sin empresa</option>
+      ${emps.map(n => `<option value="${_docEsc(n)}" ${n === valor ? 'selected' : ''}>${_docEsc(n)}</option>`).join('')}
+      <option value="__nueva" ${esNueva ? 'selected' : ''}>＋ Nueva empresa…</option>
+    </select>
+    <input type="text" id="${id}" value="${_docEsc(valor)}" placeholder="Nombre de la empresa nueva" style="width:100%;margin:0 0 4px;${esNueva ? '' : 'display:none'}" autocomplete="off">`;
+}
+
+function docsEmpresaSel(id) {
+  const sel = document.getElementById(id + '-sel');
+  const inp = document.getElementById(id);
+  if (!sel || !inp) return;
+  if (sel.value === '__nueva') { inp.value = ''; inp.style.display = ''; inp.focus(); }
+  else { inp.value = sel.value; inp.style.display = 'none'; }
+}
+window._docsUltEmpresa = window._docsUltEmpresa || {};
+
 // ────────── Render de la pestaña ──────────
 
 // Texto sin tildes y en minúsculas, para buscar sin importar acentos ni mayúsculas
@@ -179,8 +219,10 @@ function _docsFiltrados(clienteId) {
   const palabras = _docNorm(window._docsBusqueda[clienteId] || '').split(/\s+/).filter(Boolean);
   return todos.filter(d => {
     if (filtro !== 'todos' && _docTipo(d) !== filtro) return false;
+    const fe = window._docsEmpresa[clienteId] || '';
+    if (fe === '__sin' ? !!_docEmp(d) : (fe && _docEmp(d) !== fe)) return false;
     if (palabras.length === 0) return true;
-    const pajar = _docNorm(`${d.nombre} ${DOCS_TIPOS[_docTipo(d)].label} ${d.subido_por || ''} ${d.url ? _docHost(d.url) : ''}`);
+    const pajar = _docNorm(`${d.nombre} ${DOCS_TIPOS[_docTipo(d)].label} ${d.subido_por || ''} ${d.empresa || ''} ${d.url ? _docHost(d.url) : ''}`);
     return palabras.every(p => pajar.includes(p));
   });
 }
@@ -214,6 +256,18 @@ function renderDocumentosCliente(c) {
         ${DOCS_TIPOS[k].label}${k === 'todos' ? ` (${todos.length})` : ` (${conteo[k]})`}
       </button>`).join('');
 
+  // Chips de empresa (solo si hay al menos una cargada)
+  const emps = _docsEmpresasDe(c.id);
+  const fe = window._docsEmpresa[c.id] || '';
+  const sinEmp = todos.filter(d => !_docEmp(d)).length;
+  const chipsEmp = emps.length === 0 ? '' : `
+    <div class="docs-filtros docs-filtros--emp">
+      <span class="docs-filtros__lbl">🏢 Empresa</span>
+      <button class="filter-chip ${fe === '' ? 'active' : ''}" onclick="docsSetEmpresa('${c.id}','')">Todas</button>
+      ${emps.map((e, i) => `<button class="filter-chip ${fe === e.nombre ? 'active' : ''}" onclick="docsSetEmpresa('${c.id}', _docsEmpresasDe('${c.id}')[${i}].nombre)">${_docEsc(e.nombre)} (${e.cant})</button>`).join('')}
+      ${sinEmp ? `<button class="filter-chip ${fe === '__sin' ? 'active' : ''}" onclick="docsSetEmpresa('${c.id}','__sin')">Sin empresa (${sinEmp})</button>` : ''}
+    </div>`;
+
   return `
     <div class="docs-panel" id="docs-panel" data-cliente-id="${c.id}">
       <!-- Buscador + subir (también se puede arrastrar archivos sobre toda la sección) -->
@@ -235,10 +289,22 @@ function renderDocumentosCliente(c) {
         </div>
       </div>
       ${todos.length > 0 ? `<div class="docs-filtros">${chips}</div>` : ''}
+      ${chipsEmp}
 
       <!-- Archivos -->
       <div id="docs-lista">${_docsListaHtml(c.id)}</div>
     </div>`;
+}
+
+// Meta en 2 líneas fijas: (tamaño · fecha) y quién lo subió → todas las tarjetas miden igual
+function _docMetaHtml(partes, autor) {
+  return `<span class="doc-card__meta-l">${_docEsc(partes.filter(Boolean).join(' · '))}</span><span class="doc-card__meta-l">${_docEsc(autor || '')}</span>`;
+}
+
+// Línea de empresa de la tarjeta; al tocarla se edita
+function _docEmpHtml(d) {
+  const e = _docEmp(d);
+  return `<button type="button" class="doc-card__emp${e ? '' : ' doc-card__emp--vacia'}" onclick="docsEditarEmpresa('${d.id}')" title="${e ? 'Cambiar empresa' : 'Asignar empresa'}">${e ? '🏢 ' + _docEsc(e) : '+ Asignar empresa'}</button>`;
 }
 
 function _renderDocCard(d) {
@@ -246,19 +312,21 @@ function _renderDocCard(d) {
   if (d.url) {
     const host = _docHost(d.url);
     const esDrive = /(^|\.)(drive|docs)\.google\.com$/.test(host);
-    const meta = [_docFecha(d.created_at), d.subido_por].filter(Boolean).join(' · ');
+    const meta = _docMetaHtml([_docFecha(d.created_at)], d.subido_por);
     return `
-      <div class="doc-card">
+      <div class="doc-card${typeof avClase === 'function' ? avClase('cliente_doc', d.id) : ''}">
+        ${typeof avBoton === 'function' ? avBoton('cliente_doc', d.id) : ''}
         <div class="doc-card__thumb doc-card__thumb--link" onclick="docsAbrirLink('${d.id}')" title="Abrir link">
           <span class="doc-card__ico">${esDrive ? '📂' : '🔗'}</span>
           <span class="doc-card__host">${_docEsc(esDrive ? 'Google Drive' : host)}</span>
           <span class="doc-card__tag doc-card__tag--link">Link</span>
         </div>
         <div class="doc-card__name" title="${_docEsc(d.nombre)}">${_docEsc(d.nombre)}</div>
-        <div class="doc-card__meta">${_docEsc(meta)}</div>
+        ${_docEmpHtml(d)}
+        <div class="doc-card__meta">${meta}</div>
         <div class="doc-card__actions">
           <button class="doc-act" onclick="docsAbrirLink('${d.id}')">↗ Abrir</button>
-          <button class="doc-act" onclick="docsCopiarLink('${d.id}')" title="Copiar link">⧉</button>
+          <button class="doc-act doc-act--ico" onclick="docsCopiarLink('${d.id}')" title="Copiar link">⧉</button>
           <button class="doc-act doc-act--del" onclick="docsEliminar('${d.id}')" title="Eliminar">🗑</button>
         </div>
       </div>`;
@@ -266,9 +334,10 @@ function _renderDocCard(d) {
   const tipo = _docTipo(d);
   const thumb = _docsThumbs[d.id];
   const abrir = _docPuedePreview(d) ? `docsPreview('${d.id}')` : `docsDescargar('${d.id}')`;
-  const meta = [_docFmtBytes(d.tamano_bytes), _docFecha(d.created_at), d.subido_por].filter(Boolean).join(' · ');
+  const meta = _docMetaHtml([_docFmtBytes(d.tamano_bytes), _docFecha(d.created_at)], d.subido_por);
   return `
-    <div class="doc-card">
+    <div class="doc-card${typeof avClase === 'function' ? avClase('cliente_doc', d.id) : ''}">
+      ${typeof avBoton === 'function' ? avBoton('cliente_doc', d.id) : ''}
       <div class="doc-card__thumb" data-doc-thumb="${d.id}" onclick="${abrir}" title="${_docPuedePreview(d) ? 'Ver' : 'Descargar'}">
         ${thumb
           ? `<img src="${thumb}" alt="${_docEsc(d.nombre)}">`
@@ -276,10 +345,14 @@ function _renderDocCard(d) {
         ${(DOCS_CATS[tipo] && DOCS_CATS[tipo].tag) ? `<span class="doc-card__tag">${DOCS_CATS[tipo].tag}</span>` : ''}
       </div>
       <div class="doc-card__name" title="${_docEsc(d.nombre)}">${_docEsc(d.nombre)}</div>
-      <div class="doc-card__meta">${_docEsc(meta)}</div>
+      ${_docEmpHtml(d)}
+      <div class="doc-card__meta">${meta}</div>
       <div class="doc-card__actions">
-        ${_docPuedePreview(d) ? `<button class="doc-act" onclick="docsPreview('${d.id}')">👁 Ver</button>` : ''}
-        <button class="doc-act" onclick="docsDescargar('${d.id}')">↓ Descargar</button>
+        ${_docPuedePreview(d)
+          ? `<button class="doc-act" onclick="docsPreview('${d.id}')">👁 Ver</button>
+        <button class="doc-act doc-act--ico" onclick="docsDescargar('${d.id}')" title="Descargar">↓</button>`
+          : `<button class="doc-act" onclick="docsDescargar('${d.id}')">↓ Descargar</button>
+        <button class="doc-act doc-act--ico" style="visibility:hidden" tabindex="-1" aria-hidden="true">·</button>`}
         <button class="doc-act doc-act--del" onclick="docsEliminar('${d.id}')" title="Eliminar">🗑</button>
       </div>
     </div>`;
@@ -329,6 +402,54 @@ async function _docsCargarThumbs() {
 }
 
 // ────────── Acciones ──────────
+
+function docsSetEmpresa(clienteId, emp) {
+  window._docsEmpresa[clienteId] = emp;
+  renderImplementacion();
+}
+
+// Modal para asignar / cambiar la empresa de un documento ya subido
+function docsEditarEmpresa(id) {
+  const d = _docPorId(id);
+  if (!d) return;
+  const o0 = document.getElementById('docs-emp-overlay'); if (o0) o0.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'docs-emp-overlay';
+  overlay.className = 'kb-modal-overlay kb-modal--open';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `<div class="kb-modal-sheet" onclick="event.stopPropagation()" style="max-width:420px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div class="card-title" style="margin:0">🏢 Empresa del documento</div>
+      <button onclick="document.getElementById('docs-emp-overlay').remove()" style="background:none;border:none;font-size:22px;color:var(--text3);cursor:pointer;line-height:1">✕</button>
+    </div>
+    <div style="font-size:12.5px;color:var(--text3);margin-bottom:14px;overflow-wrap:anywhere">${_docEsc(d.nombre)}</div>
+    ${_docsCampoEmpresa(d.cliente_id, _docEmp(d), 'docs-emp-input')}
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+      <button class="btn-secondary" onclick="document.getElementById('docs-emp-overlay').remove()">Cancelar</button>
+      <button class="btn-primary" onclick="docsGuardarEmpresa('${d.id}')">Guardar</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  const i = document.getElementById('docs-emp-input');
+  if (i) { i.focus(); i.select(); i.onkeydown = (e) => { if (e.key === 'Enter') docsGuardarEmpresa(id); }; }
+}
+
+async function docsGuardarEmpresa(id) {
+  const d = _docPorId(id);
+  if (!d) return;
+  const val = (document.getElementById('docs-emp-input').value || '').trim().replace(/\s+/g, ' ');
+  try {
+    await dbUpdate('cliente_documentos', id, { empresa: val || null });
+    d.empresa = val || null;
+    window._docsUltEmpresa[d.cliente_id] = val;
+    const o = document.getElementById('docs-emp-overlay'); if (o) o.remove();
+    renderImplementacion();
+    toast(val ? 'Empresa asignada ✓' : 'Empresa quitada.');
+  } catch (e) {
+    console.error('Error guardando empresa', e);
+    toast('Error al guardar la empresa (¿corriste la migración 070?).');
+  }
+}
 
 function docsSetFiltro(clienteId, tipo) {
   window._docsFiltro[clienteId] = tipo;
@@ -398,7 +519,7 @@ function _docsSugerirCat(files) {
 
 function docsPedirTipo(clienteId, files) {
   cerrarDocsTipo();
-  window._docsPend = { clienteId, files, cat: _docsSugerirCat(files) };
+  window._docsPend = { clienteId, files, cat: _docsSugerirCat(files), empresa: window._docsUltEmpresa[clienteId] || '' };
   const overlay = document.createElement('div');
   overlay.id = 'docs-tipo-overlay';
   overlay.className = 'kb-modal-overlay kb-modal--open';
@@ -430,6 +551,7 @@ function _docsRenderTipo() {
           <span>${DOCS_CATS[k].label}</span>
         </button>`).join('')}
     </div>
+    <div style="margin-top:16px">${_docsCampoEmpresa(p.clienteId, p.empresa, 'docs-tipo-emp')}</div>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
       <button class="btn-secondary" onclick="cerrarDocsTipo()">Cancelar</button>
       <button class="btn-primary" onclick="docsConfirmarSubida()">Subir</button>
@@ -438,6 +560,8 @@ function _docsRenderTipo() {
 
 function docsElegirTipo(k) {
   if (!window._docsPend) return;
+  const ie = document.getElementById('docs-tipo-emp');
+  if (ie) window._docsPend.empresa = ie.value;
   window._docsPend.cat = k;
   _docsRenderTipo();
 }
@@ -452,11 +576,14 @@ function docsConfirmarSubida() {
   const p = window._docsPend;
   if (!p) return;
   const { clienteId, files, cat } = p;
+  const ie = document.getElementById('docs-tipo-emp');
+  const empresa = ((ie ? ie.value : p.empresa) || '').trim().replace(/\s+/g, ' ');
+  window._docsUltEmpresa[clienteId] = empresa;
   cerrarDocsTipo();
-  docsSubir(clienteId, files, cat);
+  docsSubir(clienteId, files, cat, empresa);
 }
 
-async function docsSubir(clienteId, files, categoria) {
+async function docsSubir(clienteId, files, categoria, empresa) {
   categoria = categoria || 'otro';
   const subidoPor = (typeof currentMember !== 'undefined' && currentMember)
     ? (currentMember.nombre || currentMember.email) : 'Equipo';
@@ -474,11 +601,11 @@ async function docsSubir(clienteId, files, categoria) {
       const { error } = await sb().storage.from(DOCS_BUCKET).upload(storagePath, file);
       if (error) throw error;
       const inserted = await dbInsert('cliente_documentos', {
-        cliente_id: clienteId, nombre: file.name, categoria,
+        cliente_id: clienteId, nombre: file.name, categoria, empresa: empresa || null,
         storage_path: storagePath, tipo_mime: file.type || null,
         tamano_bytes: file.size || null, subido_por: subidoPor,
       });
-      if (inserted) _docsAgregarLocal(inserted);
+      if (inserted) { _docsAgregarLocal(inserted); if (typeof avMarcar === 'function') avMarcar('cliente_doc', inserted.id, true, false); }  // lo que subís vos ya lo tenés: nace visto
       ok++;
     } catch (e) {
       console.error('Error subiendo documento', e);
@@ -507,6 +634,7 @@ async function docsDescargar(id) {
       .createSignedUrl(d.storage_path, 3600, { download: d.nombre });
     if (error) throw error;
     window.open(data.signedUrl, '_blank');
+    if (typeof avMarcar === 'function') avMarcar('cliente_doc', id);
   } catch (e) {
     toast('Error al generar el link de descarga.');
   }
@@ -541,6 +669,7 @@ async function docsPreview(id) {
     document.body.appendChild(overlay);
     document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', _docsPreviewEsc);
+    if (typeof avMarcar === 'function') avMarcar('cliente_doc', id, true, false);   // sin redibujar: el visor está abierto
   } catch (e) {
     toast('Error al abrir la vista previa.');
   }
@@ -558,7 +687,10 @@ function _docsPreviewEsc(e) { if (e.key === 'Escape') cerrarDocsPreview(); }
 
 function docsAbrirLink(id) {
   const d = _docPorId(id);
-  if (d && d.url) window.open(d.url, '_blank', 'noopener');
+  if (d && d.url) {
+    window.open(d.url, '_blank', 'noopener');
+    if (typeof avMarcar === 'function') avMarcar('cliente_doc', id);
+  }
 }
 
 async function docsCopiarLink(id) {
@@ -586,7 +718,9 @@ function docsAbrirFormLink(clienteId) {
       <label style="font-size:12px;font-weight:600;color:var(--text2)">Link *</label>
       <input type="text" id="docs-link-url" placeholder="https://drive.google.com/..." style="width:100%;margin:4px 0 12px" autocomplete="off">
       <label style="font-size:12px;font-weight:600;color:var(--text2)">Nombre (opcional)</label>
-      <input type="text" id="docs-link-nombre" placeholder="Ej: Carpeta de legajos escaneados" style="width:100%;margin:4px 0 16px" autocomplete="off">
+      <input type="text" id="docs-link-nombre" placeholder="Ej: Carpeta de legajos escaneados" style="width:100%;margin:4px 0 12px" autocomplete="off">
+      ${_docsCampoEmpresa(clienteId, window._docsUltEmpresa[clienteId], 'docs-link-emp')}
+      <div style="height:12px"></div>
       <div style="display:flex;justify-content:flex-end;gap:8px">
         <button class="btn-secondary" onclick="cerrarDocsLink()">Cancelar</button>
         <button class="btn-primary" onclick="docsGuardarLink('${clienteId}')">Guardar link</button>
@@ -608,16 +742,18 @@ async function docsGuardarLink(clienteId) {
   if (!url) { alert('Pegá el link.'); return; }
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
   try { new URL(url); } catch (e) { alert('El link no parece válido.'); return; }
+  const empresa = ((document.getElementById('docs-link-emp').value || '').trim().replace(/\s+/g, ' ')) || null;
+  window._docsUltEmpresa[clienteId] = empresa || '';
   const host = _docHost(url);
   if (!nombre) nombre = /(^|\.)(drive|docs)\.google\.com$/.test(host) ? 'Carpeta de Google Drive' : host;
   const subidoPor = (typeof currentMember !== 'undefined' && currentMember)
     ? (currentMember.nombre || currentMember.email) : 'Equipo';
   try {
     const inserted = await dbInsert('cliente_documentos', {
-      cliente_id: clienteId, nombre, categoria: 'documento',
+      cliente_id: clienteId, nombre, categoria: 'documento', empresa,
       url, storage_path: null, subido_por: subidoPor,
     });
-    if (inserted) _docsAgregarLocal(inserted);
+    if (inserted) { _docsAgregarLocal(inserted); if (typeof avMarcar === 'function') avMarcar('cliente_doc', inserted.id, true, false); }
     cerrarDocsLink();
     renderImplementacion();
     toast('Link guardado ✓');

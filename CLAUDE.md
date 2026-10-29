@@ -69,6 +69,7 @@ Salario Gestion/
 │   ├── clientes.js          ← CRUD + realtime de clientes
 │   ├── cliente-detalle.js   ← Vista de historial, stats y mini chart por cliente
 │   ├── pendientes.js        ← CRUD + realtime + notas + audit log + modal solución
+│   ├── archivos-vistos.js    ← Archivos vistos por persona (a color = sin ver, gris = visto/descargado): documentos de clientes y proyectos, adjuntos de tareas (migración 069)
 │   ├── pendiente-archivos.js ← Archivos adjuntos en pendientes (form + tarjeta; bucket `pendientes-archivos`, migración 065)
 │   ├── consultas.js         ← Form de registrar consulta (Supabase + realtime)
 │   ├── consultas-page.js    ← Métricas avanzadas de consultas (rankings, historial, gráficos)
@@ -168,6 +169,7 @@ Salario Gestion/
     ├── 066_pendiente_archivos_consulta.sql ← Columna consulta_id en pendiente_archivos: al cerrar el pendiente, sus archivos se vinculan a la consulta y se ven en el detalle de consulta del cliente
     ├── 067_normalizar_nombres_cliente.sql ← Iguala cliente_nombre de consultas/pendientes al nombre real del cliente (había nombres con espacio doble que option.text colapsaba)
     ├── 068_pendiente_archivos_sin_pendiente.sql ← pendiente_id NULL permitido: registros de Implementación cargados a mano con archivos (se vinculan por consulta_id)
+    ├── 069_archivos_vistos.sql     ← Tabla archivos_vistos (usuario, tipo, archivo_id): qué archivos ya vio/descargó cada persona
     └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 

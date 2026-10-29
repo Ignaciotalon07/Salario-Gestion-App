@@ -72,7 +72,7 @@ function proyDocsHtml(p) {
   const filas = lista.map(d => {
     const esLink = !!d.url;
     const sub = esLink ? _pdEsc(_pdHost(d.url)) : [_pdBytes(d.tamano_bytes), _pdExt(d.nombre).toUpperCase()].filter(Boolean).join(' · ');
-    return `<div class="pdoc-fila">
+    return `<div class="pdoc-fila${typeof avClase === 'function' ? avClase('proyecto_doc', d.id) : ''}">
       <span class="pdoc-ico">${_pdIcono(d)}</span>
       <div class="pdoc-main">
         <div class="pdoc-nom" title="${_pdEsc(d.nombre)}">${_pdEsc(d.nombre)}</div>
@@ -81,6 +81,7 @@ function proyDocsHtml(p) {
       <div class="pdoc-btns">
         <button onclick="${esLink ? `pdocAbrir('${d.id}')` : `pdocDescargar('${d.id}')`}">${esLink ? '↗ Abrir' : '⬇ Descargar'}</button>
         ${esLink ? `<button onclick="pdocCopiar('${d.id}')" title="Copiar link">📋</button>` : ''}
+        ${typeof avBoton === 'function' ? avBoton('proyecto_doc', d.id) : ''}
         <button class="pdoc-del" onclick="pdocEliminar('${d.id}')" title="Eliminar">🗑</button>
       </div>
     </div>`;
@@ -108,7 +109,7 @@ async function _pdocSubirArchivos(pid, files) {
       const { error } = await sb().storage.from(PDOC_BUCKET).upload(path, f);
       if (error) throw error;
       const row = await dbInsert('proyecto_documentos', { proyecto_id: pid, nombre: f.name, storage_path: path, tipo_mime: f.type || null, tamano_bytes: f.size || null, subido_por: quien });
-      if (row) _pdocAgregar(row);
+      if (row) { _pdocAgregar(row); if (typeof avMarcar === 'function') avMarcar('proyecto_doc', row.id, true, false); }
       ok++;
     } catch (e) { console.error(e); toast(`Error al subir "${f.name}": ${e.message || e}`); }
   }
@@ -121,9 +122,13 @@ async function pdocDescargar(id) {
     const { data, error } = await sb().storage.from(PDOC_BUCKET).createSignedUrl(d.storage_path, 3600, { download: d.nombre });
     if (error) throw error;
     window.open(data.signedUrl, '_blank');
+    if (typeof avMarcar === 'function') avMarcar('proyecto_doc', id);
   } catch (e) { toast('Error al generar el link de descarga.'); }
 }
-function pdocAbrir(id) { const d = _pdocDe(id); if (d && d.url) window.open(d.url, '_blank', 'noopener'); }
+function pdocAbrir(id) {
+  const d = _pdocDe(id);
+  if (d && d.url) { window.open(d.url, '_blank', 'noopener'); if (typeof avMarcar === 'function') avMarcar('proyecto_doc', id); }
+}
 async function pdocCopiar(id) {
   const d = _pdocDe(id); if (!d || !d.url) return;
   try { await navigator.clipboard.writeText(d.url); toast('Link copiado ✓'); } catch (e) { toast('No se pudo copiar el link.'); }
@@ -167,6 +172,7 @@ async function pdocGuardarLink(pid) {
   const quien = (typeof currentMember !== 'undefined' && currentMember) ? (currentMember.nombre || currentMember.email) : 'Equipo';
   try {
     const row = await dbInsert('proyecto_documentos', { proyecto_id: pid, nombre, url, storage_path: null, subido_por: quien });
+    if (row && typeof avMarcar === 'function') avMarcar('proyecto_doc', row.id, true, false);
     if (row) _pdocAgregar(row);
     cerrarPdocLink(); _pdocRefrescar(); toast('Link guardado ✓');
   } catch (e) { console.error(e); toast('Error al guardar el link: ' + (e.message || e)); }

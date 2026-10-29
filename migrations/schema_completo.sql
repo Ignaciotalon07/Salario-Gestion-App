@@ -1013,3 +1013,19 @@ CREATE INDEX IF NOT EXISTS idx_pendiente_archivos_consulta ON pendiente_archivos
 
 -- 8s. Archivos de registros de Implementación sin pendiente — ver 068_pendiente_archivos_sin_pendiente.sql
 ALTER TABLE pendiente_archivos ALTER COLUMN pendiente_id DROP NOT NULL;
+
+-- 8t. Archivos vistos por persona — ver 069_archivos_vistos.sql
+CREATE TABLE IF NOT EXISTS archivos_vistos (
+  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  usuario    text NOT NULL,
+  tipo       text NOT NULL,
+  archivo_id text NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE (usuario, tipo, archivo_id)
+);
+ALTER TABLE archivos_vistos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "team_archivos_vistos_all" ON archivos_vistos;
+CREATE POLICY "team_archivos_vistos_all" ON archivos_vistos FOR ALL TO authenticated USING (is_team_member()) WITH CHECK (is_team_member());
+
+-- 8u. Empresa por documento — ver 070_cliente_documentos_empresa.sql
+ALTER TABLE cliente_documentos ADD COLUMN IF NOT EXISTS empresa text;
