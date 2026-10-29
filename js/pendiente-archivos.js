@@ -101,6 +101,43 @@ async function pfArchivosSubir(pendienteIds) {
   return fallos;
 }
 
+// ────────── Adjuntar a un pendiente ya creado (como las notas: cualquiera del equipo) ──────────
+function pendArchivosAgregar(pid) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.multiple = true;
+  input.onchange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    const subidoPor = (typeof currentMember !== 'undefined' && currentMember) ? (currentMember.nombre || currentMember.email) : 'Equipo';
+    let ok = 0;
+    for (const file of files) {
+      if (file.size > PEND_ARCH_MAX) { toastError(`"${file.name}" supera los 50 MB. Comprimilo con WinRAR y volvé a intentar.`); continue; }
+      try {
+        toast(`Subiendo "${file.name}"...`);
+        const safe = file.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `${pid}/${Date.now()}_${safe}`;
+        const { error } = await sb().storage.from(PEND_ARCH_BUCKET).upload(path, file);
+        if (error) throw error;
+        const ins = await dbInsert('pendiente_archivos', {
+          pendiente_id: pid, nombre: file.name, storage_path: path,
+          tipo_mime: file.type || null, tamano_bytes: file.size || null, subido_por: subidoPor,
+        });
+        if (ins && ins.id) {
+          const l = (archivosByPendiente[pid] = archivosByPendiente[pid] || []);
+          if (!l.find(a => a.id === ins.id)) l.push(ins);
+        }
+        if (typeof logEvento === 'function') logEvento(pid, 'nota', '📎 Archivo: ' + file.name);
+        ok++;
+      } catch (err) {
+        console.error('Error subiendo archivo de pendiente', err);
+        toastError(`No se pudo subir "${file.name}".`);
+      }
+    }
+    if (ok) { if (typeof renderPendientes === 'function') renderPendientes(); toast(ok === 1 ? 'Archivo adjuntado ✓' : `${ok} archivos adjuntados ✓`); }
+  };
+  input.click();
+}
+
 // ────────── Tarjeta del pendiente ──────────
 function renderArchivosPend(pid) {
   const lista = archivosByPendiente[pid] || [];

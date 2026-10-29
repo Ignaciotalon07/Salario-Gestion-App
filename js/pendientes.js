@@ -539,6 +539,7 @@ function renderPendienteCard(p) {
       <div class="btn-row">
         ${btnResolver}
         <button class="btn-secondary btn-secondary--sm" onclick="toggleNotaForm('${p.id}', true)">Agregar nota</button>
+        <button class="btn-secondary btn-secondary--sm" onclick="pendArchivosAgregar('${p.id}')" title="Adjuntar archivos a este pendiente">📎 Adjuntar</button>
         <div class="pend-more-wrap">
           <button class="pend-more-btn" onclick="togglePendMoreMenu('${p.id}', event)">⋯</button>
           <div class="pend-more-menu" id="pend-more-${p.id}">${itemsMenu}</div>
@@ -549,6 +550,7 @@ function renderPendienteCard(p) {
       <div class="btn-row">
         ${btnResolver}
         <button class="btn-secondary btn-secondary--sm" onclick="toggleNotaForm('${p.id}', true)">Agregar nota</button>
+        <button class="btn-secondary btn-secondary--sm" onclick="pendArchivosAgregar('${p.id}')" title="Adjuntar archivos a este pendiente">📎 Adjuntar</button>
         ${puedoEditar ? `<button class="btn-sm" onclick="reasignarPendiente('${p.id}',this)">Reasignar</button>` : ''}
         ${whaticketUrl ? `<a class="btn-sm wt-btn" href="${escapeHtml(whaticketUrl)}" target="_blank" rel="noopener" title="Abrir chat en Whaticket">🎫 Whaticket</a>` : ''}
         ${implTareaInfo ? `<button class="btn-sm" style="color:var(--amber,#f59e0b);border-color:rgba(245,158,11,0.35)" onclick="irATareaImpl('${implTareaInfo.id}','${implTareaInfo.clienteId}')">🔗 Ir a la tarea</button>` : ''}

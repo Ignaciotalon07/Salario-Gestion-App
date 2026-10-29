@@ -1058,7 +1058,7 @@ textarea::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3
   color: var(--text3);
   margin-bottom: 8px;
   padding-top: 6px;
-  border-top: 1px dashed var(--border);
+  border-top: 1px solid var(--border);
 }
 
 .notas-list {
@@ -1519,7 +1519,7 @@ input[type=date]:focus {
   margin-top: 4px;
   margin-bottom: 12px;
   padding-top: 8px;
-  border-top: 1px dashed var(--border);
+  border-top: 1px solid var(--border);
 }
 
 .historial-label {
@@ -2036,7 +2036,7 @@ input[type=date]:focus {
 .impl-cliente-expand-hint {
   margin-top: 14px;
   padding-top: 14px;
-  border-top: 1px dashed var(--border);
+  border-top: 1px solid var(--border);
   text-align: center;
   font-size: 11px;
   color: var(--text3);
