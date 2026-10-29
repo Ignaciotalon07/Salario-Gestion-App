@@ -4295,8 +4295,6 @@ async function subirArchivoTarea(tareaId, file) {
       subido_por:   subidoPor,
     });
 
-    // Lo que subís vos ya lo tenés: nace como visto (gris)
-    if (archivoNuevo && archivoNuevo.id && typeof avMarcar === 'function') avMarcar('tarea_archivo', archivoNuevo.id, true, false);
     // El realtime se encarga del re-render; no hacemos nada más
     toast(`Archivo "${file.name}" subido.`);
   } catch (e) {

@@ -109,7 +109,7 @@ async function _pdocSubirArchivos(pid, files) {
       const { error } = await sb().storage.from(PDOC_BUCKET).upload(path, f);
       if (error) throw error;
       const row = await dbInsert('proyecto_documentos', { proyecto_id: pid, nombre: f.name, storage_path: path, tipo_mime: f.type || null, tamano_bytes: f.size || null, subido_por: quien });
-      if (row) { _pdocAgregar(row); if (typeof avMarcar === 'function') avMarcar('proyecto_doc', row.id, true, false); }
+      if (row) { _pdocAgregar(row); }
       ok++;
     } catch (e) { console.error(e); toast(`Error al subir "${f.name}": ${e.message || e}`); }
   }
@@ -172,7 +172,6 @@ async function pdocGuardarLink(pid) {
   const quien = (typeof currentMember !== 'undefined' && currentMember) ? (currentMember.nombre || currentMember.email) : 'Equipo';
   try {
     const row = await dbInsert('proyecto_documentos', { proyecto_id: pid, nombre, url, storage_path: null, subido_por: quien });
-    if (row && typeof avMarcar === 'function') avMarcar('proyecto_doc', row.id, true, false);
     if (row) _pdocAgregar(row);
     cerrarPdocLink(); _pdocRefrescar(); toast('Link guardado ✓');
   } catch (e) { console.error(e); toast('Error al guardar el link: ' + (e.message || e)); }

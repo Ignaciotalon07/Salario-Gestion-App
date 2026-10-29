@@ -605,7 +605,7 @@ async function docsSubir(clienteId, files, categoria, empresa) {
         storage_path: storagePath, tipo_mime: file.type || null,
         tamano_bytes: file.size || null, subido_por: subidoPor,
       });
-      if (inserted) { _docsAgregarLocal(inserted); if (typeof avMarcar === 'function') avMarcar('cliente_doc', inserted.id, true, false); }  // lo que subís vos ya lo tenés: nace visto
+      if (inserted) { _docsAgregarLocal(inserted); }
       ok++;
     } catch (e) {
       console.error('Error subiendo documento', e);
@@ -753,7 +753,7 @@ async function docsGuardarLink(clienteId) {
       cliente_id: clienteId, nombre, categoria: 'documento', empresa,
       url, storage_path: null, subido_por: subidoPor,
     });
-    if (inserted) { _docsAgregarLocal(inserted); if (typeof avMarcar === 'function') avMarcar('cliente_doc', inserted.id, true, false); }
+    if (inserted) { _docsAgregarLocal(inserted); }
     cerrarDocsLink();
     renderImplementacion();
     toast('Link guardado ✓');
