@@ -9155,3 +9155,12 @@ input[type=date]:focus {
 
 /* Al desplegar, el detalle ya se ve completo abajo: no repetirlo en la fila */
 .pf--abierta .pf__texto { visibility: hidden; }
+
+/* Color del tipo en el borde izquierdo de la card (en vez del puntito) */
+.pf__dot { display: none; }
+.pf { border-left: 4px solid var(--pf-col, var(--border)); }
+.pf:hover, .pf--abierta { border-color: #f97316; border-left-color: var(--pf-col, #f97316); }
+
+/* Cards un poco más grandes (más alto y aire interno) */
+.pf__row { padding: 20px 20px; }
+.pend-filas { gap: 10px; }
