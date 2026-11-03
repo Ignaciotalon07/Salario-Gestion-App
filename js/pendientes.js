@@ -297,7 +297,7 @@ function renderPendientes() {
       ? 'No tenes pendientes activos. Buen trabajo.'
       : 'No hay pendientes activos en el equipo.';
     list.innerHTML = `<div class="card" style="text-align:center;color:var(--text3);padding:40px"><div style="font-size:14px">${txt}</div></div>`;
-    return;
+      return;
   }
 
   if (groupByCliente) {
@@ -315,7 +315,7 @@ function renderPendientes() {
     list.innerHTML = orderedClientes.map(cliente => {
       const lookup = CLIENTES_LOOKUP[cliente] || { tipo: 'empresa', iniciales: cliente.substring(0, 2).toUpperCase() };
       const tipoLabel = TIPO_LABELS[lookup.tipo] || '';
-      const cards = groups[cliente].map(renderPendienteCard).join('');
+      const cards = `<div class="pend-filas">${groups[cliente].map(renderPendienteFila).join('')}</div>`;
       return `
         <div class="grupo-cliente">
           <div class="grupo-cliente-header">
@@ -328,7 +328,7 @@ function renderPendientes() {
         </div>`;
     }).join('');
   } else {
-    list.innerHTML = visible.map(renderPendienteCard).join('');
+    list.innerHTML = `<div class="pend-filas">${_pfSecciones(visible)}</div>`;
   }
 
   _initSwipePendientes();
@@ -428,7 +428,77 @@ function toggleGroupByCliente() {
   renderPendientes();
 }
 
-function renderPendienteCard(p) {
+// ── Tarjeta chica (grilla) + panel lateral con el detalle completo ──
+const _PM_COLORES = {
+  soporte: { b: '#3b82f6', bg: 'rgba(59,130,246,0.06)' }, implementacion: { b: '#f59e0b', bg: 'rgba(245,158,11,0.07)' },
+  bug: { b: '#ef4444', bg: 'rgba(239,68,68,0.06)' }, comercial: { b: '#22c55e', bg: 'rgba(34,197,94,0.07)' },
+  interno: { b: '#8b5cf6', bg: 'rgba(139,92,246,0.07)' },
+};
+const _PM_TIPO_LABEL = { soporte: '🎧 Soporte', implementacion: '🚀 Implementación', bug: '🐛 Bug', comercial: '💼 Comercial', interno: '🔒 Interno' };
+
+// Tiempo que queda (o que pasó) respecto del plazo de la prioridad
+function _pfPlazo(p) {
+  const info = prioridadInfo(p.prioridad);
+  if (!p.createdAt) return { h: 0, valor: '—', sub: '', nivel: 'ok', grupo: 2 };
+  const usadas = (Date.now() - new Date(p.createdAt).getTime()) / 3600000;
+  const rest = info.horas - usadas;          // negativo = vencido
+  const abs = Math.abs(rest);
+  const valor = abs < 48 ? `${Math.max(1, Math.round(abs))}h` : `${Math.round(abs / 24)}d`;
+  let nivel = 'ok', grupo = 2;
+  if (rest < 0) { nivel = 'rojo'; grupo = 0; }
+  else if (rest < info.horas * 0.25) { nivel = 'ambar'; grupo = 1; }
+  return { h: rest, valor, sub: rest < 0 ? 'vencido' : 'restan', nivel, grupo };
+}
+const _PF_GRUPOS = ['Vencidos', 'Por vencer', 'En plazo'];
+
+// Lista plana ordenada por urgencia, con títulos de sección
+function _pfSecciones(lista) {
+  const ord = lista.map(p => ({ p })).sort((a, b) => new Date(b.p.createdAt || 0) - new Date(a.p.createdAt || 0));   // los más nuevos primero
+  let html = '';
+  for (const x of ord) html += renderPendienteFila(x.p);
+  return html;
+}
+
+window._pendAbiertos = window._pendAbiertos || new Set();   // ids de filas desplegadas
+
+function togglePendFila(id) {
+  if (window._pendAbiertos.has(id)) window._pendAbiertos.delete(id);
+  else window._pendAbiertos.add(id);
+  renderPendientes();
+}
+
+// Fila: plazo grande a la izquierda · cliente/tipo/prioridad y detalle · asesor · contadores · resolver
+function renderPendienteFila(p) {
+  const tipoClave = p.interno ? 'interno' : (p.tipoPendiente || 'soporte');
+  const col = _PM_COLORES[tipoClave] || _PM_COLORES.soporte;
+  const prio = prioridadInfo(p.prioridad);
+  const pl = _pfPlazo(p);
+  const tarea = (p.tipoPendiente === 'implementacion' && typeof implTareas !== 'undefined') ? implTareas.find(t => t.pendiente_id === p.id) : null;
+  const texto = tarea ? ('Tarea: ' + tarea.tarea) : (p.descripcion || '');
+  const nNotas = (notasByPendiente[p.id] || []).length;
+  const nArch = (typeof archivosByPendiente !== 'undefined' && archivosByPendiente[p.id] || []).length;
+  const puedoEditar = puedeEditarPendiente(p);
+  const asesor = (p.asesor || 'Sin asignar');
+  const abierta = window._pendAbiertos.has(p.id);
+  const tipoTxt = (_PM_TIPO_LABEL[tipoClave] || tipoClave).replace(/^\S+\s/, '') + (p.interno && p.categoriaLabel ? ' · ' + p.categoriaLabel : '');
+  return `
+    <div class="pf${abierta ? ' pf--abierta' : ''}" data-pend-id="${p.id}" style="--pf-col:${col.b}">
+      <div class="pf__row" onclick="togglePendFila('${p.id}')">
+        <span class="pf__cliente${p.interno ? ' pf__cliente--int' : ''}" title="${escapeHtml(p.interno ? 'Consultora Ferro' : p.cliente)}"><i class="pf__dot"></i>${p.interno ? escapeHtml(p.categoriaLabel || 'Interno') : escapeHtml(p.cliente)}</span>
+        <span class="pf__texto">${texto}</span>
+        <span class="pf__cont">${nNotas ? `💬 ${nNotas}` : ''}${nNotas && nArch ? ' ' : ''}${nArch ? `📎 ${nArch}` : ''}</span>
+        <span class="pf__prio"><i class="pf__pdot pf__pdot--${p.prioridad}"></i>${prio.label}</span>
+        <span class="pf__plazo pf__plazo--${pl.nivel}" title="Plazo: ${escapeHtml(prio.rango)}">${pl.sub === 'vencido' ? 'vencido hace ' + pl.valor : (pl.nivel === 'ok' ? 'quedan ' : 'vence en ') + pl.valor}</span>
+        <span class="pf__asesor" title="${escapeHtml(asesor)} · ${p.cuando}">${escapeHtml(asesor.split(' ')[0])}</span>
+        ${puedoEditar
+          ? `<button class="pf__ok" onclick="event.stopPropagation();cerrarPendiente('${p.id}',this)" title="Marcar como resuelto">✓</button>`
+          : `<span class="pf__ok pf__ok--lock" title="Solo el asesor asignado puede resolverlo">🔒</span>`}
+      </div>
+      ${abierta ? `<div class="pf__detalle">${renderPendienteCard(p, true)}</div>` : ''}
+    </div>`;
+}
+
+function renderPendienteCard(p, enDrawer) {
   // Color por tipo de pendiente (pastel)
   const TIPO_COLORES = {
     soporte:        { border: '#3b82f6', bg: 'rgba(59,130,246,0.06)'  },  // azul
@@ -501,6 +571,8 @@ function renderPendienteCard(p) {
   const whaticketUrl = (CLIENTES_LOOKUP[p.cliente] || {}).whaticket_url;
   // Permisos: solo el asesor asignado (o nadie asignado) puede modificar
   const puedoEditar = puedeEditarPendiente(p);
+  // Eliminar: solo el asesor dueño del pendiente, y no si viene de una tarea de implementación
+  const puedoEliminar = !!p.asesor && p.asesor === getCurrentUserName() && !implTareaInfo;
 
   // 600px: mismo breakpoint que css/styles.css usa para todo el modo mobile
   // (sidebar oculto, bottom nav, etc.) — tiene que coincidir siempre, si no
@@ -511,9 +583,9 @@ function renderPendienteCard(p) {
   // de "Marcar como resuelto"), sin tener que ir a buscar el botón abajo de
   // toda la tarjeta. Solo si es mobile y el usuario puede editar este
   // pendiente — en desktop no hay gesto táctil, así que ni se envuelve.
-  const swipeOpen  = (esMobile && puedoEditar) ? `<div class="pend-swipe"><div class="pend-swipe__action">✓ Resolver</div>` : '';
-  const swipeClose = (esMobile && puedoEditar) ? `</div>` : '';
-  const swipeClass = (esMobile && puedoEditar) ? ' pend-swipe-card' : '';
+  const swipeOpen  = (esMobile && puedoEditar && !enDrawer) ? `<div class="pend-swipe"><div class="pend-swipe__action">✓ Resolver</div>` : '';
+  const swipeClose = (esMobile && puedoEditar && !enDrawer) ? `</div>` : '';
+  const swipeClass = (esMobile && puedoEditar && !enDrawer) ? ' pend-swipe-card' : '';
   // En mobile, en vez del botón CTA de escritorio, un chip liviano tipo
   // "hint" nativo de mobile (flecha animada + texto chico) que avisa que
   // se puede resolver deslizando — no un botón grande y pesado como en desktop.
@@ -529,6 +601,7 @@ function renderPendienteCard(p) {
   if (esMobile) {
     const itemsMenu = [
       puedoEditar ? `<button class="pend-more-item" onclick="reasignarPendiente('${p.id}',this)">↔ Reasignar</button>` : '',
+      puedoEliminar ? `<button class="pend-more-item pend-more-item--del" onclick="eliminarPendiente('${p.id}')">🗑 Eliminar</button>` : '',
       whaticketUrl ? `<a class="pend-more-item" href="${escapeHtml(whaticketUrl)}" target="_blank" rel="noopener">🎫 Abrir Whaticket</a>` : '',
       implTareaInfo ? `<button class="pend-more-item" onclick="irATareaImpl('${implTareaInfo.id}','${implTareaInfo.clienteId}')">🔗 Ir a la tarea</button>` : '',
       `<button class="pend-more-item" onclick="toggleHistorial('${p.id}')">${historialAbierto[p.id] ? '▴ Ocultar historial' : '▾ Ver historial'}</button>`,
@@ -555,12 +628,13 @@ function renderPendienteCard(p) {
         ${whaticketUrl ? `<a class="btn-sm wt-btn" href="${escapeHtml(whaticketUrl)}" target="_blank" rel="noopener" title="Abrir chat en Whaticket">🎫 Whaticket</a>` : ''}
         ${implTareaInfo ? `<button class="btn-sm" style="color:var(--amber,#f59e0b);border-color:rgba(245,158,11,0.35)" onclick="irATareaImpl('${implTareaInfo.id}','${implTareaInfo.clienteId}')">🔗 Ir a la tarea</button>` : ''}
         <button class="btn-sm" onclick="toggleHistorial('${p.id}')">${historialAbierto[p.id] ? 'Ocultar' : 'Ver'} historial</button>
+        ${puedoEliminar ? `<button class="btn-sm btn-sm--del" onclick="eliminarPendiente('${p.id}')" title="Eliminar este pendiente">🗑 Eliminar</button>` : ''}
         ${!puedoEditar ? `<span class="readonly-badge" title="Solo ${escapeHtml(p.asesor)} puede modificar este pendiente">🔒 Asignado a ${escapeHtml(p.asesor)}</span>` : ''}
       </div>`;
   }
 
   return `${swipeOpen}
-    <div class="card${swipeClass}" data-pend-id="${p.id}" style="border-left:5px solid ${finalBorder};${(!p.interno && venc && venc.urgente) ? 'background:rgba(239,68,68,0.08)' : ''}">
+    <div class="card pc${swipeClass}" data-pend-id="${p.id}" style="border-left:5px solid ${finalBorder};${(!p.interno && venc && venc.urgente) ? 'background:rgba(239,68,68,0.08)' : ''}">
       <div class="card-header-row" style="margin-bottom:12px">
         <div class="identity-row identity-row--top">
           ${p.interno
@@ -581,6 +655,50 @@ function renderPendienteCard(p) {
               ${venc ? `<span class="badge badge-venc ${venc.badge}" title="Plazo según la prioridad: ${_prioInfo.rango}">⏰ ${venc.label}</span>` : ''}
               <span class="text-meta-sm">${p.cuando} &middot; ${p.asesor}</span>
             </div>
+          </div>
+        </div>
+        ${(() => {
+          // Badge top-right con el color del tipo de pendiente (igual que el borde izquierdo)
+          const TIPO_BADGE_LABEL = {
+            soporte:        '🎧 Soporte',
+            implementacion: '🚀 Implementación',
+            bug:            '🐛 Bug',
+            comercial:      '💼 Comercial',
+            interno:        '🔒 Interno',
+          };
+          const label = TIPO_BADGE_LABEL[tipoClave] || tipoClave;
+          const col   = tipoColor.border;
+          // En mobile se oculta (clase pend-tipo-top): el borde izquierdo de
+          // la tarjeta ya comunica el mismo color/tipo, así que acá era una
+          // pastilla de color redundante compitiendo por atención.
+          return `<span class="pend-tipo-top" style="flex-shrink:0;font-size:11px;font-weight:600;color:${col};background:${tipoColor.bg};border:1px solid ${col}33;border-radius:6px;padding:3px 10px;white-space:nowrap">${label}</span>`;
+        })()}
+      </div>
+      ${(() => {
+        // Cuerpo en 2 columnas: izquierda = qué pasó; derecha = archivos y notas (si hay)
+        const archHtml = typeof renderArchivosPend === 'function' ? renderArchivosPend(p.id) : '';
+        const hayLado = !!archHtml || notas.length > 0;
+        const lado = `
+          ${archHtml}
+          <div class="notas-section" data-pend-id="${p.id}">
+        ${notas.length > 0 ? `
+          <div class="notas-label">Notas (${notas.length})</div>
+          <div class="notas-list">
+            ${notas.map(renderNota).join('')}
+          </div>` : ''}
+        <div class="nota-form" id="nota-form-${p.id}" style="display:none">
+          <textarea class="nota-textarea" id="nota-input-${p.id}" placeholder="Que paso? Ej: llame, no atendio. Le mande mensaje al WhatsApp..."></textarea>
+          <div class="btn-row" style="margin-top:6px">
+            <button class="btn-primary btn-primary--sm" onclick="agregarNota('${p.id}')">Guardar nota</button>
+            <button class="btn-sm" onclick="toggleNotaForm('${p.id}', false)">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+        `;
+        return `
+        <div class="pc-body${hayLado ? '' : ' pc-body--solo'}">
+          <div class="pc-main">
             ${implTareaInfo ? (() => {
               const venceColor = implTareaInfo.diasRestantes !== null && implTareaInfo.diasRestantes < 0
                 ? 'var(--red)' : implTareaInfo.diasRestantes === 0 ? '#f59e0b' : 'var(--text2)';
@@ -606,48 +724,20 @@ function renderPendienteCard(p) {
                 </div>
               </div>`;
             })() : `<div class="pendiente-desc">${p.descripcion}</div>`}
-          </div>
-        </div>
-        ${(() => {
-          // Badge top-right con el color del tipo de pendiente (igual que el borde izquierdo)
-          const TIPO_BADGE_LABEL = {
-            soporte:        '🎧 Soporte',
-            implementacion: '🚀 Implementación',
-            bug:            '🐛 Bug',
-            comercial:      '💼 Comercial',
-            interno:        '🔒 Interno',
-          };
-          const label = TIPO_BADGE_LABEL[tipoClave] || tipoClave;
-          const col   = tipoColor.border;
-          // En mobile se oculta (clase pend-tipo-top): el borde izquierdo de
-          // la tarjeta ya comunica el mismo color/tipo, así que acá era una
-          // pastilla de color redundante compitiendo por atención.
-          return `<span class="pend-tipo-top" style="flex-shrink:0;font-size:11px;font-weight:600;color:${col};background:${tipoColor.bg};border:1px solid ${col}33;border-radius:6px;padding:3px 10px;white-space:nowrap">${label}</span>`;
-        })()}
-      </div>
-      ${p.intento  ? `<div class="info-pill"><div class="info-pill__label">Lo que se intento</div><div class="info-pill__body">${p.intento}</div></div>` : ''}
-      ${p.proxPaso ? `<div class="info-pill info-pill--accent"><div class="info-pill__label">Proximo paso</div><div class="info-pill__body">${p.proxPaso}</div></div>` : ''}
+            ${(p.intento || p.proxPaso) ? `<div class="pc-pills">
+        ${p.intento  ? `<div class="info-pill"><div class="info-pill__label">Lo que se intento</div><div class="info-pill__body">${p.intento}</div></div>` : ''}
+        ${p.proxPaso ? `<div class="info-pill info-pill--accent"><div class="info-pill__label">Proximo paso</div><div class="info-pill__body">${p.proxPaso}</div></div>` : ''}
 
-      ${typeof renderArchivosPend === 'function' ? renderArchivosPend(p.id) : ''}
-
-      <div class="notas-section" data-pend-id="${p.id}">
-        ${notas.length > 0 ? `
-          <div class="notas-label">Notas (${notas.length})</div>
-          <div class="notas-list">
-            ${notas.map(renderNota).join('')}
-          </div>` : ''}
-        <div class="nota-form" id="nota-form-${p.id}" style="display:none">
-          <textarea class="nota-textarea" id="nota-input-${p.id}" placeholder="Que paso? Ej: llame, no atendio. Le mande mensaje al WhatsApp..."></textarea>
-          <div class="btn-row" style="margin-top:6px">
-            <button class="btn-primary btn-primary--sm" onclick="agregarNota('${p.id}')">Guardar nota</button>
-            <button class="btn-sm" onclick="toggleNotaForm('${p.id}', false)">Cancelar</button>
+            </div>` : ''}
+            ${hayLado ? '' : lado}
           </div>
-        </div>
-      </div>
+          ${hayLado ? `<div class="pc-side">${lado}</div>` : ''}
+        </div>`;
+      })()}
 
       ${renderHistorial(p)}
 
-      ${filaAcciones}
+      <div class="pc-actions">${filaAcciones}</div>
     </div>${swipeClose}`;
 }
 
@@ -667,7 +757,9 @@ function renderNota(nota) {
     <div class="nota">
       <div class="nota-header">
         <span class="nota-autor">${nota.autor_nombre}</span>
-        <span class="nota-time">${tiempoRelativo(nota.created_at)}</span>
+        <span class="nota-time">${tiempoRelativo(nota.created_at)}
+          ${(currentMember && nota.autor_email === currentMember.email) ? `<button class="nota-delete" onclick="eliminarNota('${nota.id}','${nota.pendiente_id}')" title="Eliminar esta nota">×</button>` : ''}
+        </span>
       </div>
       <div class="nota-texto">${escapeHtml(nota.texto)}</div>
     </div>`;
@@ -685,6 +777,27 @@ function escapeHtml(str) {
 }
 
 // ────────── Notas ──────────
+
+// Elimina una nota (solo quien la escribió)
+async function eliminarNota(notaId, pendienteId) {
+  const lista = notasByPendiente[pendienteId] || [];
+  const nota = lista.find(n => n.id === notaId);
+  if (!nota) return;
+  if (!currentMember || nota.autor_email !== currentMember.email) {
+    alert('Solo quien escribió la nota puede eliminarla.');
+    return;
+  }
+  if (!confirm('¿Eliminar esta nota?')) return;
+  try {
+    await dbDelete('pendiente_notas', notaId);
+    notasByPendiente[pendienteId] = lista.filter(n => n.id !== notaId);
+    renderPendientes();
+    toast('Nota eliminada.');
+  } catch (e) {
+    console.error('Error eliminando nota', e);
+    alert('No se pudo eliminar la nota: ' + (e.message || e));
+  }
+}
 
 function toggleNotaForm(pendienteId, show) {
   const form = document.getElementById(`nota-form-${pendienteId}`);
@@ -1579,6 +1692,36 @@ async function cerrarPendienteEjecutar(id, btn) {
         btn.style.background = '';
       }
     }
+  }
+}
+
+// Elimina un pendiente (solo el asesor dueño). Borra también sus notas, historial y archivos.
+async function eliminarPendiente(id) {
+  const p = pendientes.find(x => x.id === id);
+  if (!p) return;
+  if (!p.asesor || p.asesor !== getCurrentUserName()) {
+    alert('Solo el asesor asignado puede eliminar este pendiente.');
+    return;
+  }
+  if (!confirm(`¿Eliminar el pendiente de "${p.cliente}"?\n\nSe borran también sus notas, historial y archivos. Esta acción no se puede deshacer.`)) return;
+  try {
+    // Archivos adjuntos: se borra el archivo físico si ningún otro registro lo usa
+    const arch = (typeof archivosByPendiente !== 'undefined' && archivosByPendiente[id]) || [];
+    await dbDelete('pendientes', id);   // notas, historial y registros de archivos caen en cascada
+    for (const path of [...new Set(arch.map(a => a.storage_path))]) {
+      const { count } = await sb().from('pendiente_archivos').select('id', { count: 'exact', head: true }).eq('storage_path', path);
+      if (!count) await sb().storage.from('pendientes-archivos').remove([path]);
+    }
+    pendientes = pendientes.filter(x => x.id !== id);
+    delete notasByPendiente[id];
+    if (typeof archivosByPendiente !== 'undefined') delete archivosByPendiente[id];
+    renderPendientes();
+    updatePendCount();
+    if (typeof refreshAlertas === 'function') refreshAlertas();
+    toast('Pendiente eliminado.');
+  } catch (e) {
+    console.error('Error eliminando pendiente', e);
+    alert('No se pudo eliminar el pendiente: ' + (e.message || e));
   }
 }
 

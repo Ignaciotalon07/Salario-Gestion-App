@@ -9086,3 +9086,72 @@ input[type=date]:focus {
 .docs-emp-sel { font: inherit; font-size: 13.5px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border);
   background: var(--surface2); color: var(--text); cursor: pointer; }
 .docs-emp-sel:focus { outline: none; border-color: #f97316; }
+
+/* Botón eliminar pendiente: al fondo a la derecha y en rojo */
+.btn-row .btn-sm--del { margin-left: auto; color: var(--red); border-color: rgba(239,68,68,.45); background: rgba(239,68,68,.08); }
+.btn-row .btn-sm--del:hover { background: var(--red); border-color: var(--red); color: #fff; }
+.pend-more-item--del { color: var(--red); }
+
+/* ── Tarjeta de pendiente: arriba el detalle (con "Lo que se intentó" y "Próximo paso" lado a lado),
+   debajo archivos y notas a todo el ancho; las notas se acomodan en columnas para no dejar huecos ── */
+.pc-body { display: flex; flex-direction: column; gap: 14px; }
+.pc-main { min-width: 0; }
+.pc-main .pendiente-desc { margin-top: 0; font-size: 13.5px; }
+.pc-pills { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; margin-top: 12px; }
+.pc-pills .info-pill { margin-bottom: 0; }
+.pc-side { min-width: 0; padding-top: 12px; border-top: 1px solid var(--border); }
+.pc-side .pend-archivos { margin-top: 0; margin-bottom: 12px; }
+.pc-side .notas-label { border-top: none; padding-top: 0; }
+.pc-side .notas-section { margin: 0; }
+.pc-side .notas-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; align-items: start; }
+.pc-side .notas-list .nota { margin: 0; }
+.pc-body--solo .notas-section { margin-top: 12px; }
+.pc-actions { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* ── Pendientes: lista minimalista en filas (solo texto, líneas finas, hover naranja) ── */
+.pend-filas { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.pf { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; min-width: 0; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
+.pf:hover, .pf--abierta { border-color: #f97316; }
+.pf--abierta { box-shadow: 0 6px 18px rgba(249,115,22,.10); }
+.pf__row { display: grid; grid-template-columns: minmax(140px, 210px) minmax(0, 1fr) 52px 110px 44px 80px 28px; align-items: center; column-gap: 18px; padding: 14px 16px; cursor: pointer; }
+.pf__row:hover .pf__cliente { color: #f97316; }
+.pf__cliente { display: flex; align-items: center; gap: 9px; font-weight: 500; font-size: 13.5px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--pf-col); flex-shrink: 0; display: inline-block; }
+.pf__texto { font-size: 13px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.pf__cont { font-size: 11.5px; color: var(--text3); white-space: nowrap; }
+.pf__prio { font-size: 12px; color: var(--text3); white-space: nowrap; }
+.pf__plazo { font-size: 12.5px; font-weight: 500; color: var(--text3); text-align: right; font-variant-numeric: tabular-nums; }
+.pf__plazo--ambar { color: var(--amber, #f59e0b); }
+.pf__plazo--rojo { color: var(--red, #ef4444); font-weight: 600; }
+.pf__asesor { font-size: 12px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf__ok { width: 26px; height: 26px; padding: 0; border-radius: 50%; cursor: pointer; font: inherit; font-size: 12px; background: transparent; color: var(--green, #22c55e); border: 1px solid var(--green, #22c55e); opacity: 0; transition: all .15s; justify-self: end; }
+.pf__row:hover .pf__ok { opacity: 1; }
+.pf__ok:hover { background: var(--green, #22c55e); border-color: var(--green, #22c55e); color: #fff; }
+.pf__ok--lock { border-color: transparent; font-size: 10px; opacity: .3 !important; display: inline-flex; align-items: center; justify-content: center; cursor: default; }
+.pf__ok--lock:hover { background: transparent; color: var(--text3); }
+.pf__detalle { border-top: 1px solid var(--border); background: var(--surface2); padding: 4px 18px 16px; }
+.pf__detalle .card.pc { border: none; box-shadow: none; background: transparent !important; padding: 8px 0 0; margin: 0; border-left: none !important; }
+@media (max-width: 1000px) {
+  .pf__row { grid-template-columns: minmax(0, 1fr) 44px 28px; row-gap: 4px; }
+  .pf__texto { grid-column: 1 / -1; grid-row: 2; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .pf__cont, .pf__prio, .pf__asesor { display: none; }
+  .pf__ok { opacity: 1; }
+}
+
+/* ── Ajuste de legibilidad de la lista de pendientes ── */
+.pf__row { grid-template-columns: minmax(130px, 170px) minmax(0, 1fr) 52px 140px 130px 70px 28px; column-gap: 20px; }
+.pf__texto { color: var(--text); font-size: 13.5px; }
+.pf__cliente--int { font-weight: 400; color: var(--text3); font-size: 12.5px; }
+.pf__prio { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text2); }
+.pf__pdot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); flex-shrink: 0; display: inline-block; opacity: .55; }
+.pf__pdot--muy_urgente { background: var(--red, #ef4444); opacity: 1; }
+.pf__pdot--prioritario { background: var(--amber, #f59e0b); opacity: 1; }
+.pf__pdot--semana { background: #3b82f6; opacity: 1; }
+.pf__pdot--mes { background: #8b5cf6; opacity: 1; }
+.pf__plazo { text-align: left; font-size: 12.5px; color: var(--text2); white-space: nowrap; }
+.pf__asesor { font-size: 12.5px; color: var(--text2); }
+.pf__cont { color: var(--text2); }
+@media (max-width: 1000px) { .pf__row { grid-template-columns: minmax(0, 1fr) auto 28px; } .pf__plazo { text-align: right; } }
+
+/* Al desplegar, el detalle ya se ve completo abajo: no repetirlo en la fila */
+.pf--abierta .pf__texto { visibility: hidden; }
