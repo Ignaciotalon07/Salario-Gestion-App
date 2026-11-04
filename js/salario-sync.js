@@ -5,6 +5,8 @@
 
 // Mapa { cliente_id: [filas de salario_sync] } — una fila por base (un cliente puede tener varias)
 window.salarioSync = {};
+// Historial mensual (migración 071): { cliente_id: [filas por base y mes] }
+window.salarioHist = {};
 // Envíos que la API rechazó por no tener un id_api válido (migración 063). Se muestran en Alertas.
 window.salarioRechazos = [];
 
@@ -41,6 +43,28 @@ async function initSalarioSync() {
     console.warn('No se pudieron cargar los envíos rechazados de Salario (¿falta la migración 063?)', e);
     window.salarioRechazos = [];
   }
+  // Historial mensual (si falta la migración 071, simplemente no hay historial)
+  try {
+    const { data: h, error: errH } = await sb().from('salario_historial').select('*');
+    if (errH) throw errH;
+    window.salarioHist = {};
+    (h || []).forEach(_salarioHistPoner);
+    sb().channel('salario-historial-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'salario_historial' }, (payload) => {
+        const { eventType, new: n, old: o } = payload;
+        if (eventType === 'DELETE') {
+          for (const k of Object.keys(window.salarioHist)) {
+            window.salarioHist[k] = window.salarioHist[k].filter(f => f.id !== (o && o.id));
+            if (!window.salarioHist[k].length) delete window.salarioHist[k];
+          }
+        } else if (n) _salarioHistPoner(n);
+        _salarioSyncRefrescarVista();
+        if (typeof salarioHistRefrescar === 'function') salarioHistRefrescar();
+      }).subscribe();
+  } catch (e) {
+    console.warn('No se pudo cargar el historial de Salario (¿falta la migración 071?)', e);
+    window.salarioHist = {};
+  }
   _salarioSyncRefrescarVista();
 
   sb().channel('salario-sync-changes')
@@ -57,6 +81,12 @@ async function initSalarioSync() {
       }
       _salarioSyncRefrescarVista();
     }).subscribe();
+}
+
+function _salarioHistPoner(r) {
+  const l = window.salarioHist[r.cliente_id] || (window.salarioHist[r.cliente_id] = []);
+  const i = l.findIndex(f => f.id === r.id);
+  if (i === -1) l.push(r); else l[i] = r;
 }
 
 // Agrega o reemplaza la fila de una base

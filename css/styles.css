@@ -9164,3 +9164,33 @@ input[type=date]:focus {
 /* Cards un poco más grandes (más alto y aire interno) */
 .pf__row { padding: 20px 20px; }
 .pend-filas { gap: 10px; }
+
+/* ── Historial mensual de Salario (modal) ── */
+.sh-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.sh-nav__btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); cursor: pointer; font-size: 12px; }
+.sh-nav__btn:hover:not(:disabled) { border-color: #f97316; color: #f97316; }
+.sh-nav__btn:disabled { opacity: .35; cursor: default; }
+.sh-nav__sel { font: inherit; font-size: 14px; font-weight: 600; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); min-width: 170px; }
+.sh-nav__tag { font-size: 11.5px; color: var(--text3); }
+.sh-nav__lnk { background: none; border: none; color: #f97316; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.sh-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.sh-card { background: var(--surface2); border-radius: 10px; padding: 10px 12px; }
+.sh-card__k { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); margin-bottom: 4px; }
+.sh-card__v { font-size: 18px; font-weight: 700; color: var(--text); display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sh-delta { font-size: 11px; font-weight: 600; }
+.sh-delta--up { color: var(--green, #22c55e); }
+.sh-delta--down { color: var(--red, #ef4444); }
+.sh-sec { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); margin: 20px 0 8px; }
+.sh-chart { position: relative; height: 220px; }
+.sh-vacio { font-size: 13px; color: var(--text3); padding: 4px 0; }
+.sh-cambios { display: flex; flex-direction: column; gap: 6px; }
+.sh-cambio { display: flex; gap: 10px; align-items: baseline; font-size: 13px; color: var(--text2); }
+.sh-cambio__s { width: 16px; text-align: center; font-size: 14px; }
+.sh-cambio__s--mas { color: var(--green, #22c55e); }
+.sh-cambio__s--menos { color: var(--red, #ef4444); }
+.sh-cambio__s--otro { color: var(--text3); }
+.sh-det { margin-top: 12px; font-size: 13px; }
+.sh-det summary { cursor: pointer; color: var(--text2); font-weight: 600; }
+.sh-lista { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.sh-lista span { background: var(--surface2); border-radius: 6px; padding: 3px 9px; font-size: 12px; color: var(--text2); }
+@media (max-width: 600px) { .sh-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

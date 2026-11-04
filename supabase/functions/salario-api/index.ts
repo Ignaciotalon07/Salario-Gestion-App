@@ -7,11 +7,19 @@
 //              "id_api":    1234,                                   // número de cliente en Salario (4 cifras) — lo normal
 //              "cliente_id": "uuid",                                // alternativa al id_api (uuid de la plataforma); si se manda id_api, este campo se ignora
 //              "base":      "DATOS1",                               // opcional: nombre de la base (si el cliente tiene más de una)
-//              "legajos":   123,                                    // opcional
+//              "anio":      2026,                                   // opcional: año del dato (si no viene, el actual)
+//              "mes":       10,                                     // opcional: mes del dato 1-12 (si no viene, el actual)
+//              "legajos":   160,                                    // opcional: TODOS los legajos (una persona con 5 legajos suma 5)
+//              "cuiles":    100,                                    // opcional: personas distintas (CUILes distintos)
+//              "version":   "5.2.1",                                // opcional: versión de Salario del cliente
+//              "motor":     "mysql",                                // opcional: "mysql" o "dbf"
 //              "convenios": ["Comercio", "UOCRA"],                  // opcional
 //              "empresas":  [{"nombre":"ACME SA","cuit":"30-1-2"}]  // opcional (empresas que tiene cargadas el cliente en Salario)
 //            }
 //   Solo se actualizan los campos que vengan; los demás quedan como estaban.
+//   Cada POST se guarda en el HISTORIAL del mes indicado (anio/mes) y, si ese mes es el más reciente
+//   que se mandó para la base, también pasa a ser el dato "actual". Se pueden mandar meses anteriores
+//   (para cargar historia): quedan en el historial sin pisar el dato actual. No se aceptan meses futuros.
 //   Si un cliente tiene varias bases, se manda UN POST por base con su nombre en "base" (el nombre de la
 //   empresa o DATOS1, DATOS2…). Sin "base" se usa "principal". La plataforma suma los legajos y junta
 //   convenios y empresas de todas las bases.
@@ -55,7 +63,7 @@ async function registrarRechazo(supabase: any, body: any, motivo: string) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "GET") return resp({ mensaje: "hola mundo desde Salario Gestión", version: "2026-10-23 id_api+base+rechazos" });
+  if (req.method === "GET") return resp({ mensaje: "hola mundo desde Salario Gestión", version: "2026-11-04 id_api+base+rechazos+historial" });
   if (req.method !== "POST") return new Response("Método no permitido", { status: 405 });
 
   // ── Autenticación por clave compartida ──
@@ -67,7 +75,7 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return resp({ error: "El cuerpo no es un JSON válido" }, 400); }
 
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const { legajos, convenios, empresas } = body ?? {};
+  const { legajos, convenios, empresas, cuiles, version, motor } = body ?? {};
   const base = String(body?.base ?? "").trim().slice(0, 100) || "principal";
   // Bases de prueba: se ignoran (no cuentan legajos ni convenios de datos de prueba)
   if (/^(prueba|pruebas|test|testing|demo|ejemplo)[\s_-]*\d*$/i.test(base)) {
@@ -93,9 +101,19 @@ Deno.serve(async (req) => {
     await registrarRechazo(supabase, body, "Sin id_api y el cliente_id no es un uuid válido");
     return resp({ error: "cliente_id debe ser un uuid" }, 400);
   }
-  if (legajos === undefined && convenios === undefined && empresas === undefined) {
-    return resp({ error: "Mandá al menos uno de: legajos, convenios, empresas" }, 400);
+  if (legajos === undefined && convenios === undefined && empresas === undefined
+      && cuiles === undefined && version === undefined && motor === undefined) {
+    return resp({ error: "Mandá al menos uno de: legajos, cuiles, convenios, empresas, version, motor" }, 400);
   }
+
+  // ── Período (año/mes) del dato: por defecto el mes actual (hora de Argentina) ──
+  const hoyAR = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
+  const anioAct = hoyAR.getFullYear(), mesAct = hoyAR.getMonth() + 1;
+  const anio = body?.anio === undefined || body?.anio === null || body?.anio === "" ? anioAct : Number(body.anio);
+  const mes  = body?.mes  === undefined || body?.mes  === null || body?.mes  === "" ? mesAct  : Number(body.mes);
+  if (!Number.isInteger(anio) || anio < 2000 || anio > 2100) return resp({ error: "anio debe ser un año válido (ej. 2026)" }, 400);
+  if (!Number.isInteger(mes) || mes < 1 || mes > 12) return resp({ error: "mes debe ser un entero entre 1 y 12" }, 400);
+  if (anio * 12 + mes > anioAct * 12 + mesAct) return resp({ error: "No se aceptan períodos futuros" }, 400);
 
   // ── Validación y normalización ──
   const fila: Record<string, unknown> = { base, updated_at: new Date().toISOString() };
@@ -104,6 +122,21 @@ Deno.serve(async (req) => {
     const n = Number(legajos);
     if (!Number.isInteger(n) || n < 0) return resp({ error: "legajos debe ser un entero >= 0" }, 400);
     fila.legajos = n;
+  }
+  if (cuiles !== undefined) {
+    const n = Number(cuiles);
+    if (!Number.isInteger(n) || n < 0) return resp({ error: "cuiles debe ser un entero >= 0" }, 400);
+    fila.cuiles = n;
+  }
+  if (version !== undefined) {
+    const v = String(version ?? "").trim().slice(0, 30);
+    if (!v) return resp({ error: "version no puede estar vacía" }, 400);
+    fila.version = v;
+  }
+  if (motor !== undefined) {
+    const m = String(motor ?? "").trim().toLowerCase();
+    if (m !== "mysql" && m !== "dbf") return resp({ error: 'motor debe ser "mysql" o "dbf"' }, 400);
+    fila.motor = m;
   }
   if (convenios !== undefined) {
     if (!Array.isArray(convenios)) return resp({ error: "convenios debe ser una lista" }, 400);
@@ -138,14 +171,29 @@ Deno.serve(async (req) => {
   const cliente = encontrados[0];
   fila.cliente_id = cliente.id;
 
-  const { error } = await supabase.from("salario_sync").upsert(fila, { onConflict: "cliente_id,base" });
-  if (error) return resp({ error: error.message }, 500);
+  // 1) Historial del mes (una fila por cliente + base + año + mes; solo se pisan los campos que vinieron)
+  const campos = Object.fromEntries(Object.entries(fila).filter(([k]) => !["cliente_id", "base", "updated_at"].includes(k)));
+  const { error: errH } = await supabase.from("salario_historial")
+    .upsert({ cliente_id: cliente.id, base, anio, mes, ...campos, updated_at: fila.updated_at }, { onConflict: "cliente_id,base,anio,mes" });
+  if (errH) return resp({ error: errH.message }, 500);
+
+  // 2) Dato "actual": solo si este período es igual o más nuevo que el que ya había para esa base
+  const { data: act } = await supabase.from("salario_sync").select("anio, mes").eq("cliente_id", cliente.id).eq("base", base).maybeSingle();
+  const perAct = act && act.anio && act.mes ? act.anio * 12 + act.mes : 0;
+  let actualizoActual = false;
+  if (anio * 12 + mes >= perAct) {
+    const { error } = await supabase.from("salario_sync").upsert({ ...fila, anio, mes }, { onConflict: "cliente_id,base" });
+    if (error) return resp({ error: error.message }, 500);
+    actualizoActual = true;
+  }
 
   return resp({
     ok: true,
     cliente: cliente.nombre,
     id_api: cliente.id_api,
     base,
-    guardado: Object.keys(fila).filter((k) => !["cliente_id", "base", "updated_at"].includes(k)),
+    periodo: `${anio}-${String(mes).padStart(2, "0")}`,
+    actual: actualizoActual,
+    guardado: Object.keys(campos),
   });
 });

@@ -170,10 +170,11 @@ function _renderDetalleHeader(cliente, consultasDelCliente) {
     </${onclick ? 'button' : 'div'}>`;
   const vivoPanel = `
     <div class="detalle-vivo">
-      ${vivoTarjeta('👥', 'Legajos', cantTxt(vivo.legajos) + (vivo.bases.length > 1 ? `<small style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-top:2px">${vivo.bases.map(b => _escHtml(b.nombre) + ': ' + (b.legajos ?? '—')).join(' · ')}</small>` : ''))}
+      ${vivoTarjeta('👥', 'Legajos', cantTxt(vivo.legajos) + (vivo.cuiles !== null ? `<small style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-top:2px">${vivo.cuiles} persona${vivo.cuiles !== 1 ? 's' : ''} (CUIL)</small>` : '') + (vivo.bases.length > 1 ? `<small style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-top:2px">${vivo.bases.map(b => _escHtml(b.nombre) + ': ' + (b.legajos ?? '—')).join(' · ')}</small>` : ''))}
       ${typeof renderTarjetaConexiones === 'function' ? renderTarjetaConexiones(cliente.id) : ''}
       ${vivoTarjeta('📑', 'Convenios', cantTxt(vivo.convenios ? vivo.convenios.length : null), `abrirSalarioModal('convenios','${_escHtml(cliente.id)}')`)}
       ${vivoTarjeta('🏢', 'Empresas', cantTxt(vivo.empresas ? vivo.empresas.length : null), `abrirSalarioModal('empresas','${_escHtml(cliente.id)}')`)}
+      ${typeof abrirSalarioHistorial === 'function' ? vivoTarjeta('📈', 'Historial', `${(typeof salarioPeriodosCliente === 'function' ? salarioPeriodosCliente(cliente.id).length : 0)} mes${(typeof salarioPeriodosCliente === 'function' && salarioPeriodosCliente(cliente.id).length === 1) ? '' : 'es'}`, `abrirSalarioHistorial('${_escHtml(cliente.id)}')`) : ''}
     </div>`;
 
   const btnWhaticket = cliente.whaticket_url ? `
@@ -213,6 +214,7 @@ function _renderDetalleHeader(cliente, consultasDelCliente) {
             ${areaBadge}
             ${autBadge}
             ${scoreBadge}
+            ${_chipsVersionMotor(vivo)}
             <span class="badge" style="background:var(--surface2);color:var(--text2)">${_escHtml(cliente.tipo || 'empresa')}</span>
           </div>
         </div>
@@ -231,6 +233,16 @@ function _renderDetalleHeader(cliente, consultasDelCliente) {
 // Indicador arriba a la derecha: cuándo llegaron por última vez datos de Salario para este cliente.
 // Verde: hoy o ayer · Ámbar: 2 días · Rojo: 3 días o más · Gris: nunca llegó nada.
 // El tooltip muestra la fecha y hora exacta de cada base.
+// Etiquetas "Salario 5.2.1" y "MySQL"/"DBF" junto al nombre del cliente
+function _chipsVersionMotor(vivo) {
+  const chips = [];
+  if (vivo.versiones && vivo.versiones.length)
+    chips.push(`<span class="badge" style="background:var(--surface2);color:var(--text2)" title="Versión de Salario que tiene instalada">Salario ${_escHtml(vivo.versiones.join(' / '))}</span>`);
+  if (vivo.motores && vivo.motores.length)
+    chips.push(`<span class="badge" style="background:var(--surface2);color:var(--text2)" title="Motor de datos de Salario">${vivo.motores.map(m => m === 'mysql' ? 'MySQL' : m === 'dbf' ? 'DBF' : _escHtml(m)).join(' / ')}</span>`);
+  return chips.join('');
+}
+
 function _chipSalarioActualizado(vivo, cliente) {
   const hace = typeof salarioHaceTiempo === 'function' ? salarioHaceTiempo : () => '';
   const dias = typeof salarioDiasSinDatos === 'function' ? salarioDiasSinDatos(vivo.actualizado) : null;
@@ -262,11 +274,14 @@ function _chipSalarioActualizado(vivo, cliente) {
 // no mandó nada para este cliente, quedan en null y la UI muestra "—".
 function _datosSalarioCliente(cliente) {
   const filas = (window.salarioSync || {})[cliente.id] || [];
-  if (!filas.length) return { legajos: null, convenios: null, empresas: null, actualizado: null, bases: [] };
+  if (!filas.length) return { legajos: null, cuiles: null, versiones: [], motores: [], convenios: null, empresas: null, actualizado: null, bases: [] };
   const nom = f => (f.base && f.base !== 'principal') ? f.base : 'Principal';
   const bases = filas.map(f => ({
     nombre: nom(f),
     legajos: f.legajos != null ? f.legajos : null,
+    cuiles: f.cuiles != null ? f.cuiles : null,
+    version: f.version || null,
+    motor: f.motor || null,
     convenios: Array.isArray(f.convenios) ? f.convenios : null,
     empresas: Array.isArray(f.empresas) ? f.empresas : null,
     actualizado: f.updated_at,
@@ -285,6 +300,9 @@ function _datosSalarioCliente(cliente) {
   }));
   return {
     legajos:     conLeg.length ? conLeg.reduce((s, b) => s + b.legajos, 0) : null,
+    cuiles:      bases.some(b => b.cuiles !== null) ? bases.reduce((s, b) => s + (b.cuiles || 0), 0) : null,
+    versiones:   [...new Set(bases.map(b => b.version).filter(Boolean))],
+    motores:     [...new Set(bases.map(b => b.motor).filter(Boolean))],
     convenios:   bases.some(b => b.convenios) ? conv : null,
     empresas:    bases.some(b => b.empresas)  ? emp  : null,
     actualizado: bases.map(b => b.actualizado).filter(Boolean).sort().pop() || null,
@@ -324,6 +342,7 @@ function abrirSalarioModal(tipo, clienteId) {
   document.getElementById('salario-overlay').classList.add('kb-modal--open');
 }
 function cerrarSalarioModal() {
+  if (typeof salarioHistCerrar === 'function') salarioHistCerrar();
   document.getElementById('salario-overlay').classList.remove('kb-modal--open');
 }
 

@@ -613,6 +613,7 @@ function renderPendienteCard(p, enDrawer) {
         ${btnResolver}
         <button class="btn-secondary btn-secondary--sm" onclick="toggleNotaForm('${p.id}', true)">Agregar nota</button>
         <button class="btn-secondary btn-secondary--sm" onclick="pendArchivosAgregar('${p.id}')" title="Adjuntar archivos a este pendiente">📎 Adjuntar</button>
+        ${puedoEditar && !implTareaInfo ? `<button class="btn-secondary btn-secondary--sm" onclick="editarPendiente('${p.id}')" title="Editar este pendiente">✎ Editar</button>` : ''}
         <div class="pend-more-wrap">
           <button class="pend-more-btn" onclick="togglePendMoreMenu('${p.id}', event)">⋯</button>
           <div class="pend-more-menu" id="pend-more-${p.id}">${itemsMenu}</div>
@@ -624,6 +625,7 @@ function renderPendienteCard(p, enDrawer) {
         ${btnResolver}
         <button class="btn-secondary btn-secondary--sm" onclick="toggleNotaForm('${p.id}', true)">Agregar nota</button>
         <button class="btn-secondary btn-secondary--sm" onclick="pendArchivosAgregar('${p.id}')" title="Adjuntar archivos a este pendiente">📎 Adjuntar</button>
+        ${puedoEditar && !implTareaInfo ? `<button class="btn-secondary btn-secondary--sm" onclick="editarPendiente('${p.id}')" title="Editar este pendiente">✎ Editar</button>` : ''}
         ${puedoEditar ? `<button class="btn-sm" onclick="reasignarPendiente('${p.id}',this)">Reasignar</button>` : ''}
         ${whaticketUrl ? `<a class="btn-sm wt-btn" href="${escapeHtml(whaticketUrl)}" target="_blank" rel="noopener" title="Abrir chat en Whaticket">🎫 Whaticket</a>` : ''}
         ${implTareaInfo ? `<button class="btn-sm" style="color:var(--amber,#f59e0b);border-color:rgba(245,158,11,0.35)" onclick="irATareaImpl('${implTareaInfo.id}','${implTareaInfo.clienteId}')">🔗 Ir a la tarea</button>` : ''}
@@ -845,6 +847,76 @@ async function agregarNota(pendienteId) {
 
 // ────────── Acciones existentes ──────────
 
+// ── Edición de un pendiente ya creado (reusa el mismo formulario) ──
+window._pendEditId = null;
+
+// Cambia textos y oculta lo que no se edita (asesor → "Reasignar"; interno; archivos → "Adjuntar")
+function _pfModoEdicion(on) {
+  window._pendEditId = on ? window._pendEditId : null;
+  const modal = document.getElementById('modal-pend-form');
+  if (!modal) return;
+  const tit = modal.querySelector('[data-pf-titulo]');
+  const sub = modal.querySelector('[data-pf-sub]');
+  if (tit) tit.textContent = on ? 'Editar pendiente' : 'Nuevo pendiente';
+  if (sub) sub.textContent = on ? 'Cambiá lo que haga falta; queda registrado en el historial' : 'Completá los datos del caso que quedó sin resolver';
+  const btn = modal.querySelector('.btn-primary');
+  if (btn) btn.textContent = on ? 'Guardar cambios' : 'Guardar pendiente';
+  ['pf-asesor-group', 'pf-asesores-multi-group', 'pf-archivos-row', 'pf-interno-row'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.dataset.pfEdit = on ? '1' : '';
+  });
+  // Estos bloques no se editan: se ocultan (al salir de edición toggleInternoForm los vuelve a mostrar)
+  ['pf-asesor-group', 'pf-asesores-multi-group', 'pf-archivos-row', 'pf-interno-row', 'pf-interno-hint'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && on) el.style.display = 'none';
+  });
+  if (!on) {
+    ['pf-archivos-row', 'pf-interno-row'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = ''; });
+    toggleInternoForm();
+  }
+}
+
+function editarPendiente(id) {
+  const p = pendientes.find(x => x.id === id);
+  if (!p) return;
+  if (!puedeEditarPendiente(p)) { toastError('Solo el asesor asignado puede editar este pendiente.'); return; }
+  if (typeof implTareas !== 'undefined' && implTareas.some(t => t.pendiente_id === id)) {
+    toastError('Este pendiente viene de una tarea de Implementación: editá la tarea desde Implementación.');
+    return;
+  }
+  _resetPendForm();
+  window._pendEditId = id;
+  // Interno o de cliente
+  const chk = document.getElementById('pf-interno');
+  if (chk) { chk.checked = !!p.interno; }
+  toggleInternoForm();
+  const set = (i, v) => { const el = document.getElementById(i); if (el) el.value = v == null ? '' : v; };
+  set('pf-desc', p.descripcion);
+  set('pf-prox', p.proxPaso);
+  set('pf-prio', p.prioridad);
+  if (p.interno) {
+    const sel = document.getElementById('pf-tipo-interno');
+    const existe = sel && Array.from(sel.options).some(o => o.value === p.tipoPendiente);
+    if (sel) sel.value = existe ? p.tipoPendiente : 'otro';
+    togglePfTipoInternoCustom();
+    if (!existe) set('pf-tipo-interno-custom', p.categoriaLabel);
+  } else {
+    set('pf-tipo', p.tipoPendiente);
+    // Cliente: el select oculto guarda el valor y el buscador muestra el nombre
+    const sel = document.getElementById('pf-cliente');
+    if (sel) { if (!Array.from(sel.options).some(o => (o.value || o.text) === p.cliente)) sel.add(new Option(p.cliente, p.cliente)); sel.value = p.cliente; }
+    set('pf-cliente-search', p.cliente);
+    // Categoría: de la lista o "otro"
+    const cat = document.getElementById('pf-cat');
+    const enLista = cat && Array.from(cat.options).some(o => o.value === p.categoriaLabel || o.text === p.categoriaLabel);
+    if (cat) cat.value = enLista ? p.categoriaLabel : 'otro';
+    togglePfCatCustom();
+    if (!enLista) set('pf-cat-custom', p.categoriaLabel);
+  }
+  _pfModoEdicion(true);
+  showPendForm();
+}
+
 function showPendForm() {
   const modal = document.getElementById('modal-pend-form');
   if (modal) { modal.style.display = 'flex'; document.body.style.overflow = 'hidden'; }
@@ -857,6 +929,7 @@ function cerrarPendForm() {
 }
 
 function _resetPendForm() {
+  _pfModoEdicion(false);
   setTimeout(() => { if (typeof aplicarRestriccionTipoPf === 'function') aplicarRestriccionTipoPf(); }, 0);
   if (typeof pfArchivosReset === 'function') pfArchivosReset();
   // Textareas y texto
@@ -998,7 +1071,7 @@ async function _guardarPendienteImpl() {
   if (esInterno) {
     asesoresDestino = Array.from(document.querySelectorAll('.pf-asesor-chip.selected:not(.pf-asesor-chip--todos)'))
       .map(c => c.dataset.asesor);
-    if (asesoresDestino.length === 0) {
+    if (asesoresDestino.length === 0 && !window._pendEditId) {
       toastError('Seleccioná al menos un asesor para el pendiente interno.');
       return;
     }
@@ -1011,7 +1084,8 @@ async function _guardarPendienteImpl() {
   }
 
   // Cliente en implementación: solo pendientes de Implementación
-  if (!esInterno && _pfClienteEsImpl(cliente) && tipoP !== 'implementacion') {
+  const _tipoOrig = window._pendEditId ? ((pendientes.find(x => x.id === window._pendEditId) || {}).tipoPendiente) : null;
+  if (!esInterno && _pfClienteEsImpl(cliente) && tipoP !== 'implementacion' && !(window._pendEditId && tipoP === _tipoOrig)) {
     toastError('Ese cliente está en implementación: solo se le pueden crear pendientes de tipo Implementación.');
     return;
   }
@@ -1027,6 +1101,43 @@ async function _guardarPendienteImpl() {
     resuelto:       false,
     interno:        esInterno
   };
+
+  // ── Edición: se actualiza el pendiente existente (el asesor no cambia: para eso está "Reasignar") ──
+  if (window._pendEditId) {
+    const id = window._pendEditId;
+    const viejo = pendientes.find(x => x.id === id);
+    const patch = {
+      prioridad: prio, categoria: categoriaFinal, descripcion: desc,
+      prox_paso: prox || null,
+      tipo_pendiente: baseRow.tipo_pendiente,
+    };
+    if (!esInterno) patch.cliente_nombre = cliente;
+    try {
+      const upd = await dbUpdate('pendientes', id, patch);
+      const idx = pendientes.findIndex(x => x.id === id);
+      if (idx !== -1) pendientes[idx] = dbRowToPendiente(upd);
+      // Historial: qué cambió
+      const cambios = [];
+      if (viejo) {
+        if (viejo.descripcion !== desc) cambios.push('descripción');
+        if ((viejo.proxPaso || '') !== (prox || '')) cambios.push('próximo paso');
+        if (viejo.prioridad !== prio) cambios.push(`prioridad: ${prioridadInfo(viejo.prioridad).label} → ${prioridadInfo(prio).label}`);
+        if ((viejo.categoriaLabel || '') !== (categoriaFinal || '')) cambios.push('categoría');
+        if (!esInterno && viejo.cliente !== cliente) cambios.push(`cliente: ${viejo.cliente} → ${cliente}`);
+        if (viejo.tipoPendiente !== baseRow.tipo_pendiente) cambios.push('tipo');
+      }
+      logEvento(id, 'editado', cambios.length ? cambios.join(' · ') : 'Sin cambios');
+      cerrarPendForm();
+      renderPendientes();
+      updatePendCount();
+      if (typeof refreshAlertas === 'function') refreshAlertas();
+      toast('Pendiente actualizado ✓');
+    } catch (e) {
+      console.error('Error editando pendiente', e);
+      alert('No se pudo editar el pendiente: ' + (e.message || e));
+    }
+    return;
+  }
 
   try {
     // Crear un pendiente por cada asesor seleccionado
@@ -2476,7 +2587,7 @@ function aplicarRestriccionTipoPf() {
   const esInternoChk = document.getElementById('pf-interno');
   const restringir = !(esInternoChk && esInternoChk.checked) && _pfClienteEsImpl(nombre);
   Array.from(sel.options).forEach(o => { o.disabled = restringir && o.value !== 'implementacion'; });
-  if (restringir) {
+  if (restringir && !window._pendEditId) {
     sel.value = 'implementacion';
     if (typeof onTipoPendienteChange === 'function') onTipoPendienteChange();
   }

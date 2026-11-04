@@ -15,7 +15,7 @@
     />
 
     <!-- Estilos -->
-    <link rel="stylesheet" href="css/styles.css?v=20261103x" />
+    <link rel="stylesheet" href="css/styles.css?v=20261104a" />
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -2527,13 +2527,14 @@
     <script src="js/clientes.js?v=20261028f"></script>
     <script src="js/archivos-vistos.js?v=20261029b"></script>
     <script src="js/pendiente-archivos.js?v=20261029f"></script>
-    <script src="js/pendientes.js?v=20261103u"></script>
+    <script src="js/pendientes.js?v=20261104b"></script>
     <script src="js/consultas.js?v=20261028d"></script>
     <script src="js/kb.js"></script>
     <script src="js/implementacion.js?v=20261029h"></script>
     <script src="js/reporte-implementacion.js?v=20261026p"></script>
-    <script src="js/cliente-detalle.js?v=20261028c"></script>
-    <script src="js/salario-sync.js?v=20261026b"></script>
+    <script src="js/cliente-detalle.js?v=20261104a"></script>
+    <script src="js/salario-sync.js?v=20261104a"></script>
+    <script src="js/salario-historial.js?v=20261104a"></script>
     <script src="js/conexiones.js?v=20261013c"></script>
     <script src="js/cliente-documentos.js?v=20261029h"></script>
     <script src="js/implementacion-disponibilidad.js?v=20261028b"></script>
@@ -3044,8 +3045,8 @@
     <div style="position:sticky;top:0;background:var(--surface);z-index:1;padding:24px 28px 16px">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
         <div>
-          <div style="font-size:17px;font-weight:700;color:var(--text)">Nuevo pendiente</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:2px">Completá los datos del caso que quedó sin resolver</div>
+          <div data-pf-titulo style="font-size:17px;font-weight:700;color:var(--text)">Nuevo pendiente</div>
+          <div data-pf-sub style="font-size:12px;color:var(--text3);margin-top:2px">Completá los datos del caso que quedó sin resolver</div>
         </div>
         <button onclick="cerrarPendForm()" style="background:none;border:none;cursor:pointer;font-size:20px;color:var(--text3);padding:0;line-height:1;margin-left:16px">✕</button>
       </div>
@@ -3162,7 +3163,7 @@
         <textarea id="pf-prox" style="min-height:60px"
           placeholder="Ej: Conectarse mañana temprano y revisar los permisos del usuario administrador..."></textarea>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 0 2px;border-top:1px solid var(--border);margin-top:4px">
+      <div id="pf-interno-row" style="display:flex;align-items:center;gap:10px;padding:10px 0 2px;border-top:1px solid var(--border);margin-top:4px">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:13px;color:var(--text2)">
           <input type="checkbox" id="pf-interno" onchange="toggleInternoForm()" style="width:16px;height:16px;cursor:pointer;accent-color:var(--accent)"/>
           <span><strong style="color:var(--text)">Pendiente interno</strong> — no contabiliza métricas de clientes</span>

@@ -84,6 +84,7 @@ Salario Gestion/
 │   │                           tipo de documento, buscador, leyenda)
 │   ├── proyectos.js         ← Implementación → Proyectos: lista, alta, detalle con tareas, % avance (cambios puntuales para clientes de soporte)
 │   ├── proyecto-documentos.js ← Vista "Documentos" del detalle de un proyecto (archivos + links de Drive)
+│   ├── salario-historial.js ← Modal 📈 Historial de Salario por cliente (selector de mes, variaciones, gráfico, cambios)
 │   ├── conexiones.js        ← Conexiones del cliente (tarjeta + modal)
 │   ├── reporte-implementacion.js ← Reporte semanal de implementación
 │   ├── asesor-detalle.js    ← Detalle de cada asesor (sección Equipo)
@@ -170,6 +171,8 @@ Salario Gestion/
     ├── 067_normalizar_nombres_cliente.sql ← Iguala cliente_nombre de consultas/pendientes al nombre real del cliente (había nombres con espacio doble que option.text colapsaba)
     ├── 068_pendiente_archivos_sin_pendiente.sql ← pendiente_id NULL permitido: registros de Implementación cargados a mano con archivos (se vinculan por consulta_id)
     ├── 069_archivos_vistos.sql     ← Tabla archivos_vistos (usuario, tipo, archivo_id): qué archivos ya vio/descargó cada persona
+    ├── 070_cliente_documentos_empresa.sql ← Columna `empresa` en cliente_documentos (desplegable + filtro por empresa en Documentos)
+    ├── 071_salario_historial.sql   ← Historial mensual de Salario: tabla salario_historial (cliente+base+año+mes) y columnas cuiles/version/motor/anio/mes en salario_sync
     └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 
@@ -509,3 +512,9 @@ Eso es todo. No hay más pasos.
 4. Login con cualquier cuenta del equipo
 
 No hay nada que instalar (sin `npm install`).
+
+## Notas recientes (nov 2026)
+
+- **API de Salario v2** (guía para el programador en `docs/guia-programador-api-salario.md`): campos nuevos `anio`, `mes`, `cuiles`, `version`, `motor` (`mysql`/`dbf`). `legajos` = TODOS los legajos; `cuiles` = personas distintas. Cada POST se guarda en `salario_historial` (mes indicado) y, si el período es el más nuevo, también en `salario_sync` (dato actual). Meses viejos se cargan sin pisar el actual; no se aceptan meses futuros. UI: chips "Salario x.y.z" y "MySQL/DBF" en el encabezado del cliente, "N personas (CUIL)" bajo Legajos y tarjeta 📈 Historial. PENDIENTE: correr 071, pegar la función nueva en Supabase y que el programador pruebe.
+- **Pendientes** (`renderPendienteFila` en pendientes.js): lista de filas-card (`.pf`) que se despliegan con el detalle completo (`renderPendienteCard(p, true)`); más nuevos primero; borde izquierdo con el color del tipo; eliminar pendiente solo para el asesor dueño (no los de tareas de implementación); notas se pueden borrar (solo el autor); botón 📎 Adjuntar en pendientes ya creados.
+- **Documentos**: campo empresa (070), círculo de visto (archivos_vistos, 069) y lo subido NO nace como visto.
