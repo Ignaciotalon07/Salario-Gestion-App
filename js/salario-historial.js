@@ -40,12 +40,16 @@ const _salMotorTxt = m => m === 'mysql' ? 'MySQL' : m === 'dbf' ? 'DBF' : (m || 
 function abrirSalarioHistorial(clienteId) {
   const pers = salarioPeriodosCliente(clienteId);
   window._salHist = { clienteId, periodo: pers[0] || null };
+  const hoja = document.querySelector('#salario-overlay .kb-modal-sheet');
+  if (hoja) { hoja.style.maxWidth = '920px'; hoja.style.width = '94%'; }
   document.getElementById('salario-overlay').classList.add('kb-modal--open');
   salarioHistRender();
 }
 
 function salarioHistCerrar() {
   window._salHist = null;
+  const hoja = document.querySelector('#salario-overlay .kb-modal-sheet');
+  if (hoja) { hoja.style.maxWidth = ''; hoja.style.width = ''; }
   if (_salHistChart) { _salHistChart.destroy(); _salHistChart = null; }
 }
 
@@ -99,31 +103,59 @@ function salarioHistRender() {
       cambios.push(['•', `Motor de datos: ${prev.motores.map(_salMotorTxt).join(', ') || '—'} → ${act.motores.map(_salMotorTxt).join(', ')}`]);
   }
 
+  const kpi = (lbl, val, extra, mudo) => `
+    <div class="sh-kpi${mudo ? ' sh-kpi--mudo' : ''}"><div class="sh-kpi__v">${val}${extra || ''}</div><div class="sh-kpi__k">${lbl}</div></div>`;
+  const vacio = v => v == null || v === '—' || (Array.isArray(v) && !v.length);
+  const chips = (arr, vacioTxt) => arr && arr.length
+    ? `<div class="sh-lista">${arr.map(x => `<span>${_escHtml(x)}</span>`).join('')}</div>`
+    : `<div class="sh-vacio">${vacioTxt}</div>`;
+  // Línea de tiempo de meses: del más viejo al más nuevo
+  const lineaMeses = [...pers].reverse().map(p => {
+    const [a, m] = p.split('-');
+    return `<button class="sh-mes${p === st.periodo ? ' sh-mes--on' : ''}" onclick="salarioHistIr('${p}')"><b>${SAL_MESES[Number(m) - 1].slice(0, 3)}</b><small>${a}</small></button>`;
+  }).join('');
+
   body.innerHTML = `
-    <div class="sh-nav">
-      <button class="sh-nav__btn" ${ant ? `onclick="salarioHistIr('${ant}')"` : 'disabled'} title="Mes anterior">◀</button>
-      <select class="sh-nav__sel" onchange="salarioHistIr(this.value)">
-        ${pers.map(p => `<option value="${p}" ${p === st.periodo ? 'selected' : ''}>${_salPerTxt(p)}</option>`).join('')}
-      </select>
-      <button class="sh-nav__btn" ${sig ? `onclick="salarioHistIr('${sig}')"` : 'disabled'} title="Mes siguiente">▶</button>
-      ${i === 0 ? '<span class="sh-nav__tag">Mes más reciente</span>' : `<button class="sh-nav__lnk" onclick="salarioHistIr('${pers[0]}')">Ir al más reciente →</button>`}
+    <div class="sh-head">
+      <div>
+        <div class="sh-head__t">${_salPerTxt(st.periodo)}</div>
+        <div class="sh-head__s">${i === 0 ? 'Mes más reciente' : `<button class="sh-nav__lnk" onclick="salarioHistIr('${pers[0]}')">Ir al más reciente →</button>`}${act.bases > 1 ? ` · ${act.bases} bases` : ''}</div>
+      </div>
     </div>
-    <div class="sh-cards">
-      ${card('👥', 'Legajos', nv(act.legajos), prev ? delta(act.legajos, prev.legajos) : '')}
-      ${card('🪪', 'Personas (CUIL)', nv(act.cuiles), prev ? delta(act.cuiles, prev.cuiles) : '')}
-      ${card('📑', 'Convenios', act.convenios ? act.convenios.length : '—', prev && act.convenios && prev.convenios ? delta(act.convenios.length, prev.convenios.length) : '')}
-      ${card('🏢', 'Empresas', act.empresas ? act.empresas.length : '—', prev && act.empresas && prev.empresas ? delta(act.empresas.length, prev.empresas.length) : '')}
-      ${card('🏷', 'Versión', act.versiones.length ? _escHtml(act.versiones.join(', ')) : '—')}
-      ${card('💾', 'Motor', act.motores.length ? act.motores.map(_salMotorTxt).join(', ') : '—')}
+    <div class="sh-meses">${lineaMeses}</div>
+
+    <div class="sh-kpis">
+      ${kpi('Legajos', nv(act.legajos), prev ? delta(act.legajos, prev.legajos) : '', act.legajos == null)}
+      ${kpi('Personas (CUIL)', nv(act.cuiles), prev ? delta(act.cuiles, prev.cuiles) : '', act.cuiles == null)}
+      ${kpi('Convenios', act.convenios ? act.convenios.length : '—', prev && act.convenios && prev.convenios ? delta(act.convenios.length, prev.convenios.length) : '', !act.convenios)}
+      ${kpi('Empresas', act.empresas ? act.empresas.length : '—', prev && act.empresas && prev.empresas ? delta(act.empresas.length, prev.empresas.length) : '', !act.empresas)}
+      ${kpi('Versión', act.versiones.length ? _escHtml(act.versiones.join(', ')) : '—', '', !act.versiones.length)}
+      ${kpi('Motor', act.motores.length ? act.motores.map(_salMotorTxt).join(', ') : '—', '', !act.motores.length)}
     </div>
-    <div class="sh-sec">Evolución${pers.length > 1 ? ' (últimos 12 meses)' : ''}</div>
-    <div class="sh-chart"><canvas id="sh-chart"></canvas></div>
-    <div class="sh-sec">Cambios respecto de ${ant ? _salPerTxt(ant) : 'el mes anterior'}</div>
-    ${!ant ? '<div class="sh-vacio">Es el primer mes con datos: todavía no hay con qué comparar.</div>'
-      : cambios.length ? `<div class="sh-cambios">${cambios.map(([s, t]) => `<div class="sh-cambio"><b class="sh-cambio__s sh-cambio__s--${s === '+' ? 'mas' : s === '−' ? 'menos' : 'otro'}">${s}</b><span>${_escHtml(t)}</span></div>`).join('')}</div>`
-        : '<div class="sh-vacio">Sin cambios respecto del mes anterior.</div>'}
-    ${act.convenios && act.convenios.length ? `<details class="sh-det"><summary>Convenios de ${_salPerTxt(st.periodo)} (${act.convenios.length})</summary><div class="sh-lista">${act.convenios.map(x => `<span>${_escHtml(x)}</span>`).join('')}</div></details>` : ''}
-    ${act.empresas && act.empresas.length ? `<details class="sh-det"><summary>Empresas de ${_salPerTxt(st.periodo)} (${act.empresas.length})</summary><div class="sh-lista">${act.empresas.map(x => `<span>${_escHtml(x)}</span>`).join('')}</div></details>` : ''}`;
+
+    <div class="sh-dos">
+      <div class="sh-panel">
+        <div class="sh-sec">Evolución</div>
+        <div class="sh-chart"><canvas id="sh-chart"></canvas></div>
+      </div>
+      <div class="sh-panel">
+        <div class="sh-sec">Cambios${ant ? ` desde ${_salPerTxt(ant)}` : ''}</div>
+        ${!ant ? '<div class="sh-vacio">Es el primer mes con datos: todavía no hay con qué comparar.</div>'
+          : cambios.length ? `<div class="sh-cambios">${cambios.map(([sg, t]) => `<div class="sh-cambio"><b class="sh-cambio__s sh-cambio__s--${sg === '+' ? 'mas' : sg === '−' ? 'menos' : 'otro'}">${sg}</b><span>${_escHtml(t)}</span></div>`).join('')}</div>`
+            : '<div class="sh-vacio">Sin cambios respecto del mes anterior.</div>'}
+      </div>
+    </div>
+
+    <div class="sh-dos">
+      <div class="sh-panel">
+        <div class="sh-sec">Convenios${act.convenios ? ` (${act.convenios.length})` : ''}</div>
+        ${chips(act.convenios, 'Sin datos de convenios en este mes.')}
+      </div>
+      <div class="sh-panel">
+        <div class="sh-sec">Empresas${act.empresas ? ` (${act.empresas.length})` : ''}</div>
+        ${chips(act.empresas, 'Sin datos de empresas en este mes.')}
+      </div>
+    </div>`;
 
   // Gráfico: últimos 12 meses con datos, del más viejo al más nuevo
   const serie = pers.slice(0, 12).reverse().map(p => ({ p, a: salarioAgregadoPeriodo(st.clienteId, p) }));
@@ -142,7 +174,7 @@ function salarioHistRender() {
       options: {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } },
-        scales: { y: { beginAtZero: false, grace: '10%', ticks: { precision: 0 } } },
+        scales: { y: { beginAtZero: true, grace: '10%', ticks: { precision: 0 } }, x: { grid: { display: false } } },
         onClick: (_e, els) => { if (els.length) salarioHistIr(serie[els[0].index].p); },
       },
     });

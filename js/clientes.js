@@ -474,46 +474,133 @@ function filtTipo(val) { tipoFilter = val; renderClientes(); }
 function sortClientes(v) { sortBy = v; renderClientes(); }
 
 // ────────── Exportar a Excel ──────────
+// Excel con diseño (ExcelJS): título, encabezado naranja, filas alternadas, filtros y totales.
+// Columnas: Cliente · CUIT · ID cliente · Tipo · Legajos · Convenios · Empresas · Conexiones
+// Los números vienen de Salario (salario_sync); si Salario todavía no mandó nada, se muestra "—".
 
-const AUT_LABELS_XLS = { baja: 'Baja', media: 'Media', alta: 'Alta' };
+// 20123456789 → 20-12345678-9
+function _xlsCuit(c) {
+  const d = String(c || '').replace(/\D/g, '');
+  return d.length === 11 ? `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}` : (c || '');
+}
 
-function exportarClientesExcel() {
-  if (typeof XLSX === 'undefined') {
-    alert('No se pudo cargar la librería de exportación a Excel. Revisá tu conexión e intentá de nuevo.');
-    return;
-  }
+async function exportarClientesExcel() {
   if (!clientes || clientes.length === 0) {
     alert('No hay clientes cargados todavía.');
     return;
   }
+  if (typeof ExcelJS === 'undefined') {
+    alert('No se pudo cargar la librería de exportación a Excel. Revisá tu conexión e intentá de nuevo.');
+    return;
+  }
 
-  const filas = [...clientes]
-    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
-    .map(c => ({
-      Cliente:      c.nombre,
-      'ID API':     c.idApi || '',
-      'Razón social': c.razon_social || '',
-      CUIT:         c.cuit || '',
-      Tipo:         (typeof TIPO_LABELS !== 'undefined' && TIPO_LABELS[c.tipo]) || c.tipo || '',
-      Área:         c.area === 'impl' ? 'Implementación' : 'Soporte',
-      Autonomía:    AUT_LABELS_XLS[c.autonomia] || c.autonomia || '',
-    }));
+  const lista = [...clientes].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  const filas = lista.map(c => {
+    const v = (typeof _datosSalarioCliente === 'function') ? _datosSalarioCliente(c) : {};
+    const nConex = (typeof _conexDeCliente === 'function') ? _conexDeCliente(c.id).length : 0;
+    return {
+      nombre: c.nombre,
+      cuit:   _xlsCuit(c.cuit),
+      idApi:  c.idApi || null,
+      tipo:   (typeof TIPO_LABELS !== 'undefined' && TIPO_LABELS[c.tipo]) || c.tipo || '',
+      legajos:   v.legajos != null ? v.legajos : null,
+      convenios: v.convenios ? v.convenios.length : null,
+      empresas:  v.empresas ? v.empresas.length : null,
+      conexiones: nConex,
+    };
+  });
 
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(filas);
-  ws['!cols'] = [
-    { wch: 28 }, // Cliente
-    { wch: 14 }, // ID API
-    { wch: 32 }, // Razón social
-    { wch: 15 }, // CUIT
-    { wch: 18 }, // Tipo
-    { wch: 16 }, // Área
-    { wch: 12 }, // Autonomía
+  const NARANJA = 'FFEA580C', NARANJA_CLARO = 'FFFFF7ED', GRIS = 'FF6B7280', OSCURO = 'FF1F2937', LINEA = 'FFE5E7EB';
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Salario Gestión';
+  const ws = wb.addWorksheet('Clientes', { views: [{ showGridLines: false, state: 'frozen', ySplit: 4 }] });
+
+  ws.columns = [
+    { key: 'nombre', width: 38 }, { key: 'cuit', width: 17 }, { key: 'idApi', width: 12 }, { key: 'tipo', width: 18 },
+    { key: 'legajos', width: 12 }, { key: 'convenios', width: 12 }, { key: 'empresas', width: 12 }, { key: 'conexiones', width: 13 },
   ];
-  XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
+  const ULT = 8;   // columnas A..H
 
-  const fecha = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `clientes_${fecha}.xlsx`);
+  // Título
+  ws.mergeCells(1, 1, 1, ULT);
+  const t = ws.getCell(1, 1);
+  t.value = 'Salario Gestión · Clientes';
+  t.font = { name: 'Calibri', size: 20, bold: true, color: { argb: NARANJA } };
+  t.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+  ws.getRow(1).height = 36;
+  // Subtítulo
+  ws.mergeCells(2, 1, 2, ULT);
+  const st = ws.getCell(2, 1);
+  const hoy = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' });
+  st.value = `Exportado el ${hoy}  ·  ${filas.length} clientes  ·  Datos de legajos, convenios y empresas enviados por Salario`;
+  st.font = { name: 'Calibri', size: 10.5, italic: true, color: { argb: GRIS } };
+  st.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+  ws.getRow(2).height = 20;
+  ws.getRow(3).height = 8;
+
+  // Encabezado
+  const enc = ['Cliente', 'CUIT', 'ID cliente', 'Tipo', 'Legajos', 'Convenios', 'Empresas', 'Conexiones'];
+  const hr = ws.getRow(4);
+  hr.height = 28;
+  enc.forEach((txt, i) => {
+    const c = hr.getCell(i + 1);
+    c.value = txt;
+    c.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NARANJA } };
+    c.alignment = { vertical: 'middle', horizontal: i >= 2 && i !== 3 ? 'center' : 'left', indent: i < 2 || i === 3 ? 1 : 0 };
+  });
+
+  // Filas de datos
+  const borde = { bottom: { style: 'thin', color: { argb: LINEA } } };
+  filas.forEach((f, idx) => {
+    const r = ws.getRow(5 + idx);
+    r.height = 21;
+    const vals = [f.nombre, f.cuit || '—', f.idApi != null ? f.idApi : '—', f.tipo || '—',
+      f.legajos != null ? f.legajos : '—', f.convenios != null ? f.convenios : '—', f.empresas != null ? f.empresas : '—', f.conexiones];
+    vals.forEach((val, i) => {
+      const c = r.getCell(i + 1);
+      c.value = val;
+      c.font = { name: 'Calibri', size: 11, bold: i === 0, color: { argb: val === '—' ? 'FF9CA3AF' : OSCURO } };
+      c.alignment = { vertical: 'middle', horizontal: i >= 2 && i !== 3 ? 'center' : 'left', indent: i < 2 || i === 3 ? 1 : 0 };
+      c.border = borde;
+      if (idx % 2 === 1) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NARANJA_CLARO } };
+    });
+  });
+
+  // Totales
+  const filaTot = 5 + filas.length;
+  const suma = k => filas.reduce((a, f) => a + (f[k] || 0), 0);
+  const tr = ws.getRow(filaTot);
+  tr.height = 26;
+  const tot = ['Total', '', '', '', suma('legajos'), suma('convenios'), suma('empresas'), suma('conexiones')];
+  tot.forEach((val, i) => {
+    const c = tr.getCell(i + 1);
+    c.value = val;
+    c.font = { name: 'Calibri', size: 11, bold: true, color: { argb: OSCURO } };
+    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFEDD5' } };
+    c.alignment = { vertical: 'middle', horizontal: i >= 2 && i !== 3 ? 'center' : 'left', indent: i < 2 || i === 3 ? 1 : 0 };
+    c.border = { top: { style: 'medium', color: { argb: NARANJA } } };
+  });
+
+  // Filtros en el encabezado y configuración de impresión
+  ws.autoFilter = { from: { row: 4, column: 1 }, to: { row: 4 + filas.length, column: ULT } };
+  ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 };
+
+  try {
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `clientes_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch (e) {
+    console.error('Error exportando clientes', e);
+    alert('No se pudo generar el Excel: ' + (e.message || e));
+  }
 }
 
 // ────────── Realtime ──────────
