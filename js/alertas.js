@@ -63,19 +63,34 @@ function refreshAlertas() {
     statsMes[c.cliente].total++;
     if (c.repetida === 'si') statsMes[c.cliente].rep++;
   });
+  // Todos los clientes con repetición elevada se juntan en UNA sola alerta (con listado desplegable)
+  const repetidos = [];
   Object.entries(statsMes).forEach(([nombre, s]) => {
     if (s.total < 3) return;
     const pct = Math.round((s.rep / s.total) * 100);
     if (pct < 40) return;
     const cli = allClientes.find(c => c.nombre === nombre);
+    repetidos.push({ nombre, pct, rep: s.rep, total: s.total, onClick: cli ? `goClienteDetail('${cli.id}')` : null });
+  });
+  repetidos.sort((a, b) => b.pct - a.pct || b.total - a.total);
+  if (repetidos.length === 1) {
+    const r = repetidos[0];
     alertas.push({
       tipo:    'red',
-      titulo:  nombre + ' — repetición elevada',
-      texto:   `${pct}% de consultas repetidas este mes (${s.rep} de ${s.total}). Algo no se está resolviendo de raíz.`,
+      titulo:  r.nombre + ' — repetición elevada',
+      texto:   `${r.pct}% de consultas repetidas este mes (${r.rep} de ${r.total}). Algo no se está resolviendo de raíz.`,
       accion:  'Ver cliente',
-      onClick: cli ? `goClienteDetail('${cli.id}')` : null
+      onClick: r.onClick
     });
-  });
+  } else if (repetidos.length > 1) {
+    alertas.push({
+      tipo:    'red',
+      titulo:  `${repetidos.length} clientes con repetición elevada`,
+      texto:   'Tienen 40% o más de consultas repetidas este mes: algo no se está resolviendo de raíz.',
+      listaKey: 'repeticion',
+      lista:   repetidos.map(r => ({ nombre: r.nombre, detalle: `${r.pct}% repetidas (${r.rep} de ${r.total})`, onClick: r.onClick })),
+    });
+  }
 
   // ── 2. SCORE BAJO (> 0 y < 4) ──
   const bajosScore = allClientes.filter(c => c.score > 0 && c.score < 4);
@@ -540,6 +555,12 @@ function refreshAlertas() {
 
 // ────────── Render ──────────
 
+window._alListasAbiertas = window._alListasAbiertas || {};
+function alToggleLista(key) {
+  window._alListasAbiertas[key] = !window._alListasAbiertas[key];
+  if (typeof refreshAlertas === 'function') refreshAlertas();
+}
+
 function _renderAlertas(alertas) {
   const cont  = document.getElementById('alertas-container');
   const sub   = document.getElementById('alertas-page-sub');
@@ -574,6 +595,25 @@ function _renderAlertas(alertas) {
   alertas.sort((a, b) => ((b.prio ? 1 : 0) - (a.prio ? 1 : 0)) || ((ORDEN[a.tipo] ?? 9) - (ORDEN[b.tipo] ?? 9)));
 
   cont.innerHTML = alertas.map(a => {
+    // Alerta agrupada: botón para desplegar el listado de clientes
+    if (a.lista) {
+      const abierta = !!(window._alListasAbiertas && window._alListasAbiertas[a.listaKey]);
+      return `
+      <div class="alert alert-${a.tipo}" style="flex-direction:column;align-items:stretch">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="flex:1">
+            <strong>${_alEscHtml(a.titulo)}</strong>&nbsp;${_alEscHtml(a.texto)}
+          </div>
+          <div class="alert__der"><button class="btn-sm" onclick="alToggleLista('${a.listaKey}')">${abierta ? 'Ocultar listado ▴' : 'Ver listado ▾'}</button></div>
+        </div>
+        ${abierta ? `<div class="alert__lista">${a.lista.map(it => `
+          <div class="alert__lista-fila">
+            <span class="alert__lista-n">${_alEscHtml(it.nombre)}</span>
+            <span class="alert__lista-d">${_alEscHtml(it.detalle)}</span>
+            ${it.onClick ? `<button class="btn-sm" onclick="${_alEscHtml(it.onClick)}">Ver cliente</button>` : ''}
+          </div>`).join('')}</div>` : ''}
+      </div>`;
+    }
     const boton = a.accion && a.onClick
       ? `<button class="btn-sm" onclick="${_alEscHtml(a.onClick)}">${_alEscHtml(a.accion)}</button>`
       : '';

@@ -16,6 +16,7 @@ let _detalleMesFiltro    = null;
 let _detalleTipoFiltro   = null;
 let _detalleLiqFiltro    = null; // clave normalizada del liquidador, o '__sin__' para consultas sin nombre
 let _detalleHistorialLimit = 5; // cuántas consultas mostrar inicialmente
+let _detalleTab = 'consultas';  // pestaña activa: 'consultas' | 'historico'
 
 // ────────── Entrada principal ──────────
 
@@ -25,6 +26,8 @@ function goClienteDetail(clienteId) {
   _detalleTipoFiltro     = null;
   _detalleLiqFiltro      = null;
   _detalleHistorialLimit = 5;
+  _detalleTab            = 'consultas';
+  window._histMes        = null;
 
   // Guardar la página actual antes de navegar
   const paginaActiva = document.querySelector('.page.active');
@@ -59,12 +62,23 @@ function renderDetalleCliente(clienteId) {
 
   // Armar el HTML de la página
   const page = document.getElementById('cliente-detalle');
-  page.innerHTML = `
-    ${_renderDetalleHeader(cliente, consultasDelCliente)}
-    ${_renderDetalleStats(cliente, consultasDelCliente)}
+  if (typeof _histDestruirCharts === 'function') _histDestruirCharts();
+  const nMeses = (typeof salarioPeriodosCliente === 'function') ? salarioPeriodosCliente(cliente.id).length : 0;
+  const tabs = `
+    <div class="dt-tabs">
+      <button class="dt-tab${_detalleTab === 'consultas' ? ' dt-tab--on' : ''}" onclick="detalleTab('consultas')">Consultas</button>
+      <button class="dt-tab${_detalleTab === 'historico' ? ' dt-tab--on' : ''}" onclick="detalleTab('historico')">Histórico de Salario</button>
+    </div>`;
+  const cuerpo = _detalleTab === 'historico' && typeof renderSalarioHistorico === 'function'
+    ? renderSalarioHistorico(cliente)
+    : `${_renderDetalleStats(cliente, consultasDelCliente)}
     ${_renderDetalleTipoStats(consultasDelCliente)}
     ${_renderDetalleMiniChart(cliente, consultasDelCliente)}
-    ${_renderDetalleFiltroYTabla(cliente, consultasDelCliente)}
+    ${_renderDetalleFiltroYTabla(cliente, consultasDelCliente)}`;
+  page.innerHTML = `
+    ${_renderDetalleHeader(cliente, consultasDelCliente)}
+    ${tabs}
+    ${cuerpo}
     <div style="margin-top:32px;padding-top:20px;border-top:1px solid var(--border);text-align:right">
       <button class="btn" style="background:#9b2215;color:#fff;border:none;padding:9px 20px;border-radius:8px;font-size:13px;cursor:pointer"
         onclick="eliminarCliente('${cliente.id}')">
@@ -73,8 +87,15 @@ function renderDetalleCliente(clienteId) {
     </div>
   `;
 
-  // Inicializar el mini chart después de que el DOM existe
-  _initDetalleMiniChart(consultasDelCliente);
+  // Inicializar los gráficos de la pestaña activa después de que el DOM existe
+  if (_detalleTab === 'historico' && typeof initSalarioHistorico === 'function') initSalarioHistorico(cliente);
+  else _initDetalleMiniChart(consultasDelCliente);
+}
+
+// Cambia de pestaña (Consultas / Histórico de Salario)
+function detalleTab(t) {
+  _detalleTab = t;
+  if (_detalleClienteId) renderDetalleCliente(_detalleClienteId);
 }
 
 // ────────── Header ──────────
@@ -174,7 +195,6 @@ function _renderDetalleHeader(cliente, consultasDelCliente) {
       ${typeof renderTarjetaConexiones === 'function' ? renderTarjetaConexiones(cliente.id) : ''}
       ${vivoTarjeta('📑', 'Convenios', cantTxt(vivo.convenios ? vivo.convenios.length : null), `abrirSalarioModal('convenios','${_escHtml(cliente.id)}')`)}
       ${vivoTarjeta('🏢', 'Empresas', cantTxt(vivo.empresas ? vivo.empresas.length : null), `abrirSalarioModal('empresas','${_escHtml(cliente.id)}')`)}
-      ${typeof abrirSalarioHistorial === 'function' ? vivoTarjeta('📈', 'Historial', `${(typeof salarioPeriodosCliente === 'function' ? salarioPeriodosCliente(cliente.id).length : 0)} mes${(typeof salarioPeriodosCliente === 'function' && salarioPeriodosCliente(cliente.id).length === 1) ? '' : 'es'}`, `abrirSalarioHistorial('${_escHtml(cliente.id)}')`) : ''}
     </div>`;
 
   const btnWhaticket = cliente.whaticket_url ? `
@@ -221,7 +241,8 @@ function _renderDetalleHeader(cliente, consultasDelCliente) {
         <div class="dh-acciones-mobile" style="margin-left:auto;flex-shrink:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
           ${botonesAcciones}
         </div>
-        ${datosPanel.replace('__VIVO__', vivoPanel + (btnWhaticket ? `<div class="detalle-datos__wa">${btnWhaticket}</div>` : ''))}
+        ${btnWhaticket ? `<div class="detalle-datos__wa">${btnWhaticket}</div>` : ''}
+        ${datosPanel.replace('__VIVO__', vivoPanel)}
         <div class="detalle-acciones-fila">
           ${btnWhaticket}
         </div>
@@ -323,23 +344,54 @@ function abrirSalarioModal(tipo, clienteId) {
   const itemSub = it => (typeof it === 'object' && it.cuit) ? `<span style="color:var(--text3);font-size:12px">CUIT ${_escHtml(it.cuit)}</span>` : '';
   document.getElementById('salario-modal-body').innerHTML = lista === null || lista === undefined
     ? `<div style="text-align:center;padding:28px 10px;color:var(--text3);font-size:14px">Sin datos todavía.<br>Salario aún no envió ${esConv ? 'los convenios' : 'las empresas'} de este cliente.</div>`
-    : `<div class="detalle-vivo__tag" style="margin-bottom:12px"><span class="detalle-vivo__dot"></span>${lista.length} ${esConv ? 'convenio(s)' : 'empresa(s)'}${vivo.bases.length > 1 ? ` · ${vivo.bases.length} bases` : ''}${vivo.actualizado && typeof salarioHaceTiempo === 'function' ? ` · actualizado ${salarioHaceTiempo(vivo.actualizado)}` : ''}</div>
+    : `<div class="sal-resumen"><span><b>${lista.length}</b> ${esConv ? 'convenios' : 'empresas'}</span><span>Juegos de datos: <b>${vivo.bases.length}</b></span>${vivo.actualizado && typeof salarioHaceTiempo === 'function' ? `<span class="sal-act${(Date.now() - new Date(vivo.actualizado).getTime()) / 86400000 > 28 ? ' sal-act--viejo' : ''}"><i></i>Actualizado ${salarioHaceTiempo(vivo.actualizado)}</span>` : ''}</div>
+       <div class="detalle-vivo__tag" style="margin-bottom:12px"><span class="detalle-vivo__dot"></span>${lista.length} ${esConv ? 'convenio(s)' : 'empresa(s)'}${vivo.bases.length ? ` · Juegos de datos: <b>${vivo.bases.length}</b>` : ''}${vivo.actualizado && typeof salarioHaceTiempo === 'function' ? ` · actualizado ${salarioHaceTiempo(vivo.actualizado)}` : ''}</div>
        ${(() => {
-         const fila = it => `
-         <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--border);font-size:14px">
-           <span>${_escHtml(itemTxt(it))}</span>${itemSub(it)}
-         </div>`;
+         // Empresa llega como "NOMBRE-12 Empleados": se separa el nombre de la cantidad
+         const datos = it => {
+           if (esConv) return { nombre: itemTxt(it), n: null, cuit: (typeof it === 'object' && it.cuit) || '' };
+           const e = _salEmpresa(itemTxt(it));   // sirve para texto suelto y para objetos con nombre
+           if (e.n == null && typeof it === 'object' && it.n != null) e.n = it.n;
+           return { nombre: e.nombre, n: e.n, cuit: (typeof it === 'object' && it.cuit) || '' };
+         };
+         const celda = it => { const d = datos(it); return `
+         <div class="sal-it" data-t="${_escHtml(d.nombre.toLowerCase())}"><span class="sal-it__n">${_escHtml(d.nombre)}${d.cuit ? `<small>CUIT ${_escHtml(d.cuit)}</small>` : ''}</span>${d.n != null ? `<span class="sal-it__c">${d.n}<small>${d.n === 1 ? 'empleado' : 'empleados'}</small></span>` : ''}</div>`; };
+         const ordenar = l => esConv ? l : [...l].sort((x, y) => (datos(y).n ?? -1) - (datos(x).n ?? -1));
+         const grilla = l => l.length ? `<div class="sal-grid">${ordenar(l).map(celda).join('')}</div>` : '<div class="sal-vacio">Sin datos en esta base.</div>';
+         const buscador = `<input class="sal-buscar" type="search" placeholder="Buscar ${esConv ? 'convenio' : 'empresa'}…" oninput="salModalBuscar(this.value)">`;
          if (vivo.bases.length > 1) {
-           // Varias bases: se agrupa por base para ver de dónde viene cada dato
-           return vivo.bases.map(b => {
-             const l = (esConv ? b.convenios : b.empresas) || [];
-             return `<div style="margin-top:14px;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#f97316">${_escHtml(b.nombre)} <span style="color:var(--text3);font-weight:600">(${l.length})</span></div>`
-               + (l.length ? l.map(fila).join('') : '<div style="color:var(--text3);font-size:13px;padding:8px 0">Sin datos en esta base.</div>');
-           }).join('');
+           const listas = vivo.bases.map(b => ({ nombre: b.nombre, l: (esConv ? b.convenios : b.empresas) || [] }));
+           const clave = l => l.map(itemTxt).map(x => x.toLowerCase().trim()).sort().join('|');
+           const iguales = listas.every(x => clave(x.l) === clave(listas[0].l));
+           // Si todas las bases traen exactamente lo mismo, no hace falta separarlas
+           if (iguales) return `<div class="sal-aviso">Las ${listas.length} bases (${listas.map(x => _escHtml(x.nombre)).join(', ')}) tienen ${esConv ? 'los mismos convenios' : 'las mismas empresas'}.</div>${buscador}${grilla(lista)}<div class="sal-nada" style="display:none">Sin resultados.</div>`;
+           const tabs = [{ nombre: 'Todas', l: lista }, ...listas];
+           return `${buscador}<div class="sal-tabs">${tabs.map((x, i) => `<button type="button" class="sal-tab${i === 0 ? ' sal-tab--on' : ''}" data-i="${i}" onclick="salModalTab(${i})">${_escHtml(x.nombre)} <span>${x.l.length}</span></button>`).join('')}</div>`
+             + tabs.map((x, i) => `<div class="sal-panel" data-i="${i}"${i === 0 ? '' : ' style="display:none"'}>${grilla(x.l)}</div>`).join('')
+             + '<div class="sal-nada" style="display:none">Sin resultados.</div>';
          }
-         return lista.length ? lista.map(fila).join('') : '<div style="color:var(--text3);font-size:14px">No hay registros.</div>';
+         return lista.length ? buscador + grilla(lista) + '<div class="sal-nada" style="display:none">Sin resultados.</div>' : '<div class="sal-vacio">No hay registros.</div>';
        })()}`;
+  const hoja = document.querySelector('#salario-overlay .kb-modal-sheet');
+  if (hoja) { hoja.style.maxWidth = '820px'; hoja.style.width = '94%'; }
   document.getElementById('salario-overlay').classList.add('kb-modal--open');
+}
+function salModalTab(i) {
+  document.querySelectorAll('#salario-modal-body .sal-tab').forEach(e => e.classList.toggle('sal-tab--on', Number(e.dataset.i) === i));
+  document.querySelectorAll('#salario-modal-body .sal-panel').forEach(e => { e.style.display = Number(e.dataset.i) === i ? '' : 'none'; });
+  const q = document.querySelector('#salario-modal-body .sal-buscar'); if (q) salModalBuscar(q.value);
+}
+// Filtra lo que se ve por texto
+function salModalBuscar(txt) {
+  const q = (txt || '').toLowerCase().trim();
+  let vis = 0;
+  document.querySelectorAll('#salario-modal-body .sal-it').forEach(e => {
+    const enPanelOculto = e.closest('.sal-panel') && e.closest('.sal-panel').style.display === 'none';
+    const ok = !q || e.dataset.t.includes(q);
+    e.style.display = ok ? '' : 'none';
+    if (ok && !enPanelOculto) vis++;
+  });
+  const n = document.querySelector('#salario-modal-body .sal-nada'); if (n) n.style.display = vis ? 'none' : '';
 }
 function cerrarSalarioModal() {
   if (typeof salarioHistCerrar === 'function') salarioHistCerrar();
@@ -377,7 +429,7 @@ function _renderDetalleStats(cliente, consultasDelCliente) {
   const hsTotal = consultasDelCliente.reduce((s, c) => s + (parseFloat(c.tiempo) || 0), 0);
   const hsMesTexto   = hsMes   > 0 ? fmtHs(hsMes)   : '—';
   const hsTotalTexto = hsTotal > 0 ? fmtHs(hsTotal)  : '—';
-  const hsMesColor   = hsMes >= 5 ? 'var(--red)' : hsMes >= 2 ? 'var(--amber)' : 'var(--accent)';
+  const hsMesColor   = hsMes >= 5 ? 'var(--red)' : hsMes >= 2 ? 'var(--amber)' : 'var(--text)';
 
   // Nombre del mes actual
   const nombreMes = ahora.toLocaleString('es-AR', { month: 'long' });
@@ -434,11 +486,11 @@ function _renderDetalleTipoStats(consultasDelCliente) {
         Consultas por tipo
       </div>
       <div style="display:flex;gap:0">
-        ${item('soporte',        '🎧', 'Soporte',         soporte,        'var(--accent)')}
+        ${item('soporte',        '🎧', 'Soporte',         soporte,        'var(--text)')}
         <div style="width:1px;background:var(--border);margin:8px 0"></div>
-        ${item('programacion',   '🐛', 'Programación',    programacion,   'var(--red)')}
+        ${item('programacion',   '🐛', 'Programación',    programacion,   'var(--text)')}
         <div style="width:1px;background:var(--border);margin:8px 0"></div>
-        ${item('implementacion', '🚀', 'Implementación',  implementacion, 'var(--purple,#a78bfa)')}
+        ${item('implementacion', '🚀', 'Implementación',  implementacion, 'var(--text)')}
       </div>
     </div>
   `;
@@ -497,7 +549,7 @@ function _initDetalleMiniChart(consultasDelCliente) {
         {
           label: 'Total',
           data: totales,
-          backgroundColor: 'rgba(99,102,241,0.75)',
+          backgroundColor: 'rgba(249,115,22,0.8)',
           borderRadius: 5,
           borderSkipped: false,
         },

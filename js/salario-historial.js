@@ -1,16 +1,24 @@
 // salario-historial.js — Historial mensual de los datos de Salario por cliente (migración 071)
-// Modal "📈 Historial": selector de mes, datos de ese mes con variación contra el anterior,
-// gráfico de evolución de legajos/personas y lista de cambios (convenios, empresas, versión, motor).
-// Los datos salen de window.salarioHist (js/salario-sync.js): una fila por cliente + base + año + mes.
+// Helpers del historial mensual de Salario (los usa la pestaña Histórico, js/salario-historico.js):
+// períodos por cliente, agregado por mes (suma las bases), parseo de empresas "NOMBRE-N Empleados" y diferencias entre meses.
+// Los datos salen de window.salarioHist (js/salario-sync.js).
 
 const SAL_MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-window._salHist = null;        // { clienteId, periodo: 'YYYY-MM' }
-let _salHistChart = null;
+window._salHist = null;        // { clienteId, tab: 'resumen'|'empresas'|'convenios', q: '' }
+const SAL_MAX_MESES = 12;
 
 const _salPer = r => `${r.anio}-${String(r.mes).padStart(2, '0')}`;
 function _salPerTxt(per) { const [a, m] = per.split('-'); return `${SAL_MESES[Number(m) - 1]} ${a}`; }
 function _salPerCorto(per) { const [a, m] = per.split('-'); return `${SAL_MESES[Number(m) - 1].slice(0, 3)} ${String(a).slice(2)}`; }
 const _salNom = x => (typeof x === 'string' ? x : (x && (x.nombre || x.razon_social)) || '').toString().trim();
+const _salMotorTxt = m => m === 'mysql' ? 'MySQL' : m === 'dbf' ? 'DBF' : (m || '');
+
+// "ACME SA-12 Empleados" → { nombre: "ACME SA", n: 12 } (si no trae la cantidad, n = null)
+function _salEmpresa(txt) {
+  const m = String(txt).match(/^(.*?)\s*-\s*(\d+)\s*empleados?\s*$/i);
+  return m ? { nombre: m[1].trim(), n: Number(m[2]) } : { nombre: String(txt).trim(), n: null };
+}
+const _salKey = s => String(s).toLowerCase().replace(/\s+/g, ' ').trim();
 
 // Períodos con datos de un cliente, del más nuevo al más viejo
 function salarioPeriodosCliente(clienteId) {
@@ -35,148 +43,20 @@ function salarioAgregadoPeriodo(clienteId, per) {
            versiones: uniq('version'), motores: uniq('motor'), bases: filas.length };
 }
 
-const _salMotorTxt = m => m === 'mysql' ? 'MySQL' : m === 'dbf' ? 'DBF' : (m || '');
-
-function abrirSalarioHistorial(clienteId) {
-  const pers = salarioPeriodosCliente(clienteId);
-  window._salHist = { clienteId, periodo: pers[0] || null };
-  const hoja = document.querySelector('#salario-overlay .kb-modal-sheet');
-  if (hoja) { hoja.style.maxWidth = '920px'; hoja.style.width = '94%'; }
-  document.getElementById('salario-overlay').classList.add('kb-modal--open');
-  salarioHistRender();
-}
-
-function salarioHistCerrar() {
-  window._salHist = null;
-  const hoja = document.querySelector('#salario-overlay .kb-modal-sheet');
-  if (hoja) { hoja.style.maxWidth = ''; hoja.style.width = ''; }
-  if (_salHistChart) { _salHistChart.destroy(); _salHistChart = null; }
-}
-
-function salarioHistRefrescar() { if (window._salHist) salarioHistRender(); }
-
-function salarioHistIr(per) { if (!window._salHist) return; window._salHist.periodo = per; salarioHistRender(); }
-
-function salarioHistRender() {
-  const st = window._salHist;
-  if (!st) return;
-  const c = (typeof clientes !== 'undefined' ? clientes : []).find(x => String(x.id) === String(st.clienteId));
-  const titulo = document.getElementById('salario-modal-titulo');
-  const body = document.getElementById('salario-modal-body');
-  if (!c || !titulo || !body) return;
-  titulo.textContent = `📈 Historial de Salario — ${c.nombre}`;
-  const pers = salarioPeriodosCliente(st.clienteId);
-  if (!pers.length) {
-    body.innerHTML = `<div style="text-align:center;padding:28px 10px;color:var(--text3);font-size:14px">Todavía no hay historial.<br>Se arma solo cuando Salario manda los datos de cada mes.</div>`;
-    return;
-  }
-  if (!st.periodo || !pers.includes(st.periodo)) st.periodo = pers[0];
-  const i = pers.indexOf(st.periodo);                      // pers está del más nuevo al más viejo
-  const ant = pers[i + 1] || null, sig = pers[i - 1] || null;
-  const act = salarioAgregadoPeriodo(st.clienteId, st.periodo);
-  const prev = ant ? salarioAgregadoPeriodo(st.clienteId, ant) : null;
-
-  const delta = (a, b) => {
-    if (a == null || b == null || a === b) return '';
-    const d = a - b;
-    return `<small class="sh-delta ${d > 0 ? 'sh-delta--up' : 'sh-delta--down'}">${d > 0 ? '▲' : '▼'} ${Math.abs(d)}</small>`;
-  };
-  const card = (ico, lbl, val, extra) => `
-    <div class="sh-card"><div class="sh-card__k">${ico} ${lbl}</div><div class="sh-card__v">${val}${extra || ''}</div></div>`;
-  const nv = v => v == null ? '—' : v;
-
-  // Cambios contra el mes anterior
-  const cambios = [];
-  if (prev) {
-    const dif = (nuevo, viejo) => (nuevo || []).filter(x => !(viejo || []).some(y => y.toLowerCase() === x.toLowerCase()));
-    dif(act.convenios, prev.convenios).forEach(x => cambios.push(['+', `Convenio nuevo: ${x}`]));
-    dif(prev.convenios, act.convenios).forEach(x => cambios.push(['−', `Convenio que ya no está: ${x}`]));
-    dif(act.empresas, prev.empresas).forEach(x => cambios.push(['+', `Empresa nueva: ${x}`]));
-    dif(prev.empresas, act.empresas).forEach(x => cambios.push(['−', `Empresa que ya no está: ${x}`]));
-    if (act.legajos != null && prev.legajos != null && act.legajos !== prev.legajos)
-      cambios.push([act.legajos > prev.legajos ? '+' : '−', `Legajos: ${prev.legajos} → ${act.legajos} (${act.legajos > prev.legajos ? '+' : ''}${act.legajos - prev.legajos})`]);
-    if (act.cuiles != null && prev.cuiles != null && act.cuiles !== prev.cuiles)
-      cambios.push([act.cuiles > prev.cuiles ? '+' : '−', `Personas: ${prev.cuiles} → ${act.cuiles}`]);
-    if (act.versiones.join() !== prev.versiones.join() && act.versiones.length)
-      cambios.push(['•', `Versión de Salario: ${prev.versiones.join(', ') || '—'} → ${act.versiones.join(', ')}`]);
-    if (act.motores.join() !== prev.motores.join() && act.motores.length)
-      cambios.push(['•', `Motor de datos: ${prev.motores.map(_salMotorTxt).join(', ') || '—'} → ${act.motores.map(_salMotorTxt).join(', ')}`]);
-  }
-
-  const kpi = (lbl, val, extra, mudo) => `
-    <div class="sh-kpi${mudo ? ' sh-kpi--mudo' : ''}"><div class="sh-kpi__v">${val}${extra || ''}</div><div class="sh-kpi__k">${lbl}</div></div>`;
-  const vacio = v => v == null || v === '—' || (Array.isArray(v) && !v.length);
-  const chips = (arr, vacioTxt) => arr && arr.length
-    ? `<div class="sh-lista">${arr.map(x => `<span>${_escHtml(x)}</span>`).join('')}</div>`
-    : `<div class="sh-vacio">${vacioTxt}</div>`;
-  // Línea de tiempo de meses: del más viejo al más nuevo
-  const lineaMeses = [...pers].reverse().map(p => {
-    const [a, m] = p.split('-');
-    return `<button class="sh-mes${p === st.periodo ? ' sh-mes--on' : ''}" onclick="salarioHistIr('${p}')"><b>${SAL_MESES[Number(m) - 1].slice(0, 3)}</b><small>${a}</small></button>`;
-  }).join('');
-
-  body.innerHTML = `
-    <div class="sh-head">
-      <div>
-        <div class="sh-head__t">${_salPerTxt(st.periodo)}</div>
-        <div class="sh-head__s">${i === 0 ? 'Mes más reciente' : `<button class="sh-nav__lnk" onclick="salarioHistIr('${pers[0]}')">Ir al más reciente →</button>`}${act.bases > 1 ? ` · ${act.bases} bases` : ''}</div>
-      </div>
-    </div>
-    <div class="sh-meses">${lineaMeses}</div>
-
-    <div class="sh-kpis">
-      ${kpi('Legajos', nv(act.legajos), prev ? delta(act.legajos, prev.legajos) : '', act.legajos == null)}
-      ${kpi('Personas (CUIL)', nv(act.cuiles), prev ? delta(act.cuiles, prev.cuiles) : '', act.cuiles == null)}
-      ${kpi('Convenios', act.convenios ? act.convenios.length : '—', prev && act.convenios && prev.convenios ? delta(act.convenios.length, prev.convenios.length) : '', !act.convenios)}
-      ${kpi('Empresas', act.empresas ? act.empresas.length : '—', prev && act.empresas && prev.empresas ? delta(act.empresas.length, prev.empresas.length) : '', !act.empresas)}
-      ${kpi('Versión', act.versiones.length ? _escHtml(act.versiones.join(', ')) : '—', '', !act.versiones.length)}
-      ${kpi('Motor', act.motores.length ? act.motores.map(_salMotorTxt).join(', ') : '—', '', !act.motores.length)}
-    </div>
-
-    <div class="sh-dos">
-      <div class="sh-panel">
-        <div class="sh-sec">Evolución</div>
-        <div class="sh-chart"><canvas id="sh-chart"></canvas></div>
-      </div>
-      <div class="sh-panel">
-        <div class="sh-sec">Cambios${ant ? ` desde ${_salPerTxt(ant)}` : ''}</div>
-        ${!ant ? '<div class="sh-vacio">Es el primer mes con datos: todavía no hay con qué comparar.</div>'
-          : cambios.length ? `<div class="sh-cambios">${cambios.map(([sg, t]) => `<div class="sh-cambio"><b class="sh-cambio__s sh-cambio__s--${sg === '+' ? 'mas' : sg === '−' ? 'menos' : 'otro'}">${sg}</b><span>${_escHtml(t)}</span></div>`).join('')}</div>`
-            : '<div class="sh-vacio">Sin cambios respecto del mes anterior.</div>'}
-      </div>
-    </div>
-
-    <div class="sh-dos">
-      <div class="sh-panel">
-        <div class="sh-sec">Convenios${act.convenios ? ` (${act.convenios.length})` : ''}</div>
-        ${chips(act.convenios, 'Sin datos de convenios en este mes.')}
-      </div>
-      <div class="sh-panel">
-        <div class="sh-sec">Empresas${act.empresas ? ` (${act.empresas.length})` : ''}</div>
-        ${chips(act.empresas, 'Sin datos de empresas en este mes.')}
-      </div>
-    </div>`;
-
-  // Gráfico: últimos 12 meses con datos, del más viejo al más nuevo
-  const serie = pers.slice(0, 12).reverse().map(p => ({ p, a: salarioAgregadoPeriodo(st.clienteId, p) }));
-  const cv = document.getElementById('sh-chart');
-  if (_salHistChart) { _salHistChart.destroy(); _salHistChart = null; }
-  if (cv && typeof Chart !== 'undefined') {
-    _salHistChart = new Chart(cv, {
-      type: 'line',
-      data: {
-        labels: serie.map(x => _salPerCorto(x.p)),
-        datasets: [
-          { label: 'Legajos', data: serie.map(x => x.a.legajos), borderColor: '#f97316', backgroundColor: '#f97316', tension: .25, pointRadius: 4, spanGaps: true },
-          { label: 'Personas (CUIL)', data: serie.map(x => x.a.cuiles), borderColor: '#3b82f6', backgroundColor: '#3b82f6', tension: .25, pointRadius: 4, spanGaps: true, borderDash: [5, 4] },
-        ],
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } },
-        scales: { y: { beginAtZero: true, grace: '10%', ticks: { precision: 0 } }, x: { grid: { display: false } } },
-        onClick: (_e, els) => { if (els.length) salarioHistIr(serie[els[0].index].p); },
-      },
-    });
-  }
+// Qué cambió entre dos meses (a = más nuevo, b = anterior). Devuelve datos para frases y detalle.
+function _salDiff(a, b) {
+  const dif = { legajos: null, cuiles: null, empNuevas: [], empIdas: [], empCambio: [], convNuevos: [], convIdos: [], version: null, motor: null };
+  if (!b) return dif;
+  if (a.legajos != null && b.legajos != null && a.legajos !== b.legajos) dif.legajos = a.legajos - b.legajos;
+  if (a.cuiles != null && b.cuiles != null && a.cuiles !== b.cuiles) dif.cuiles = a.cuiles - b.cuiles;
+  const mapa = l => { const m = new Map(); (l || []).forEach(t => { const e = _salEmpresa(t); m.set(_salKey(e.nombre), e); }); return m; };
+  const ea = mapa(a.empresas), eb = mapa(b.empresas);
+  ea.forEach((e, k) => { if (!eb.has(k)) dif.empNuevas.push(e); else { const o = eb.get(k); if (e.n != null && o.n != null && e.n !== o.n) dif.empCambio.push({ nombre: e.nombre, de: o.n, a: e.n }); } });
+  eb.forEach((e, k) => { if (!ea.has(k)) dif.empIdas.push(e); });
+  const ca = new Map((a.convenios || []).map(x => [_salKey(x), x])), cb = new Map((b.convenios || []).map(x => [_salKey(x), x]));
+  ca.forEach((v, k) => { if (!cb.has(k)) dif.convNuevos.push(v); });
+  cb.forEach((v, k) => { if (!ca.has(k)) dif.convIdos.push(v); });
+  if (a.versiones.length && a.versiones.join() !== b.versiones.join()) dif.version = [b.versiones.join(', ') || '—', a.versiones.join(', ')];
+  if (a.motores.length && a.motores.join() !== b.motores.join()) dif.motor = [b.motores.map(_salMotorTxt).join(', ') || '—', a.motores.map(_salMotorTxt).join(', ')];
+  return dif;
 }
