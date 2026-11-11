@@ -576,7 +576,12 @@ function _calcularFilas(consultasCli, consultasInt) {
   };
   const TIPO_LABELS = {
     soporte: '🎧 Soporte', programacion: '🐛 Programación',
-    comercial: '💼 Comercial', programacion_interna: '💻 Hs internas'
+    comercial: '💼 Comercial', programacion_interna: '💻 Hs internas', implementacion: '🚀 Implementación'
+  };
+  // Color de cada tipo de registro (para distinguirlos de un vistazo)
+  const TIPO_COLORES = {
+    soporte: '#f97316', implementacion: '#a78bfa', programacion_interna: '#14b8a6',
+    programacion: '#ef4444', comercial: '#22c55e'
   };
 
   const todas = [...consultasCli, ...consultasInt].sort(
@@ -630,7 +635,9 @@ function _calcularFilas(consultasCli, consultasInt) {
     const hora  = new Date(c.timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
     const catLabel  = (typeof CATS !== 'undefined' && CATS[c.categoria]?.label) || CATS_LABELS[c.categoria] || c.categoria || '—';
     const subtema   = c.subtema ? ` › ${c.subtema}` : '';
-    const tipoLabel = TIPO_LABELS[c.tipoConsulta || c.tipo_consulta] || '🎧 Soporte';
+    const tipoKey   = TIPO_LABELS[c.tipoConsulta || c.tipo_consulta] ? (c.tipoConsulta || c.tipo_consulta) : 'soporte';
+    const tipoLabel = TIPO_LABELS[tipoKey];
+    const tipoColor = TIPO_COLORES[tipoKey] || '#f97316';
     // El sistema usa formato HHMM: 0.50 = 50 min, 1.30 = 1h 30min (NO fracciones decimales de hora)
     const tiempoTxt = c.tiempo ? (typeof fmtHHMM === 'function' ? fmtHHMM(c.tiempo) : (() => {
       const v = parseFloat(c.tiempo); const hs = Math.floor(v); const min = Math.round((v - hs) * 100);
@@ -641,7 +648,7 @@ function _calcularFilas(consultasCli, consultasInt) {
     })()) : null;
 
     const clickAttr = c.id ? `onclick="_abrirDetalleRegistroAsesor('${c.id}')"` : '';
-    const hoverAttr = c.id ? `onmouseover="this.style.background='var(--hover)'" onmouseout="this.style.background=''"` : '';
+    const hoverAttr = c.id ? `onmouseover="this.style.background='${tipoColor}12'" onmouseout="this.style.background=''"` : '';
 
     return `
       <div ${clickAttr} ${hoverAttr} style="
@@ -650,6 +657,10 @@ function _calcularFilas(consultasCli, consultasInt) {
         border-bottom:1px solid var(--border);
         ${c.id ? 'cursor:pointer;transition:background .13s;' : ''}
       ">
+        <div style="flex:none;width:128px;display:flex;align-items:center;gap:10px">
+          <span style="flex:none;width:4px;height:30px;border-radius:4px;background:${tipoColor}"></span>
+          <span style="font-size:12px;font-weight:700;color:${tipoColor};white-space:nowrap">${tipoLabel}</span>
+        </div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
             ${esInterna
@@ -657,10 +668,9 @@ function _calcularFilas(consultasCli, consultasInt) {
               : _escAsesor(c.cliente || c.cliente_nombre || '—')}
           </div>
           <div style="font-size:11px;color:var(--text3);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <span>${tipoLabel}</span>
             ${!esInterna
-              ? `<span>· ${_escAsesor(catLabel + subtema)}</span>`
-              : (c.categoria && c.categoria !== '—' ? `<span>· ${_escAsesor(catLabel)}</span>` : '')}
+              ? `<span>${_escAsesor(catLabel + subtema)}</span>`
+              : (c.categoria && c.categoria !== '—' ? `<span>${_escAsesor(catLabel)}</span>` : '')}
             ${c.repetida === 'si' ? '<span style="color:var(--amber);font-weight:600">· Repetida</span>' : ''}
           </div>
         </div>
