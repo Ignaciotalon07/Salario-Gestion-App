@@ -192,7 +192,28 @@ async function cargarCatalogo() {
 const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const IA_MODELO = Deno.env.get("IA_MODELO") ?? "claude-haiku-5-5";
 
-async function resumirConIA(ms: Msg[]): Promise<{ problema: string; solucion: string; categoria: string | null; subtema: string | null } | null> {
+// Consultas anteriores del cliente (últimos 12 meses, solo soporte): sirven para decidir si la nueva es repetida
+type Previa = { id: string; categoria: string | null; subtema: string | null; descripcion: string | null; fecha: string };
+async function cargarPrevias(cliente_id: string | null): Promise<Previa[]> {
+  if (!cliente_id) return [];
+  const desde = new Date(Date.now() - 365 * 86400_000).toISOString();
+  const { data } = await sb.from("consultas")
+    .select("id,categoria,subtema,descripcion,created_at,tipo_consulta")
+    .eq("cliente_id", cliente_id).gte("created_at", desde)
+    .order("created_at", { ascending: false }).limit(25);
+  return (data ?? [])
+    .filter((c: any) => !c.tipo_consulta || c.tipo_consulta === "soporte")
+    .map((c: any) => ({ id: c.id, categoria: c.categoria, subtema: c.subtema, descripcion: c.descripcion, fecha: String(c.created_at).slice(0, 10) }));
+}
+
+// Repetida = el cliente YA consultó lo mismo o algo muy parecido (no importa hace cuánto, no por consultar seguido de temas distintos).
+// Decide solo la IA, comparando el problema contra las consultas anteriores. Sin IA, no se marca.
+function decidirRepetida(ia: { repetida_de: string | null } | null, previas: Previa[]): string | null {
+  if (!ia?.repetida_de) return null;
+  return previas.some((p) => p.id === ia.repetida_de) ? ia.repetida_de : null;
+}
+
+async function resumirConIA(ms: Msg[], previas: Previa[] = []): Promise<{ problema: string; solucion: string; categoria: string | null; subtema: string | null; repetida_de: string | null } | null> {
   if (!ANTHROPIC_KEY) return null;
   const lineas = ms
     .filter((m) => m.de === "cliente" || m.de === "asesor")
@@ -209,7 +230,7 @@ async function resumirConIA(ms: Msg[]): Promise<{ problema: string; solucion: st
   const prompt = `Sos un asistente de un equipo de soporte del software de liquidación de sueldos "Salario" (Argentina). Te paso la conversación de WhatsApp entre un cliente y un asesor. Redactá el registro de la consulta.
 
 Devolvé SOLO un JSON válido, sin texto extra ni bloques de código, con esta forma:
-{"problema": "...", "solucion": "...", "categoria": "...", "subtema": "..."}
+{"problema": "...", "solucion": "...", "categoria": "...", "subtema": "...", "repetida_de": null}
 
 Reglas:
 - "problema": qué necesitaba o qué problema tenía el cliente, en 1 o 2 oraciones claras, en tercera persona y tono neutro (ej: "El cliente consulta por cómo cargar el adicional por antigüedad cuando el recibo calcula distinto al esperado"). Sin saludos ni agradecimientos.
@@ -217,8 +238,9 @@ Reglas:
 - No inventes datos que no estén en la conversación. Si el cliente explicó el problema por audio y no hay otra pista, escribí en "problema": "El cliente explicó la consulta por audio (sin transcribir)."
 - "categoria" y "subtema": elegí la que mejor describa la consulta de ESTE catálogo (formato "clave (nombre): subtemas"). "categoria" debe ser exactamente la clave (la palabra antes del paréntesis) y "subtema" exactamente uno de los subtemas de esa categoría. Si ninguno encaja con claridad, poné null en "subtema" (o en ambos).
 ${catalogo.texto}
+- "repetida_de": SOLO si te paso consultas anteriores del cliente más abajo. Poné el id de la consulta anterior que trate del MISMO problema o de uno muy parecido (el cliente vuelve a preguntar lo mismo, o el problema reaparece). Si el tema es distinto, aunque sea de la misma categoría o del mismo mes, poné null. Ante la duda, null.
 - Español rioplatense neutro, sin emojis.
-
+${previas.length ? "\nConsultas anteriores de este cliente (id | fecha | categoría/subtema | detalle):\n" + previas.map((p) => `${p.id} | ${p.fecha} | ${p.categoria ?? "-"}/${p.subtema ?? "-"} | ${(p.descripcion ?? "").replace(/\s+/g, " ").slice(0, 220)}`).join("\n") + "\n" : ""}
 Conversación:
 ${conversacion}`;
 
@@ -248,7 +270,8 @@ ${conversacion}`;
       categoria = ck;
       subtema = catalogo.mapa[ck].find((x) => norm(x) === norm(String(j.subtema ?? ""))) ?? null;
     }
-    return { problema: String(j.problema).slice(0, 600), solucion: String(j.solucion ?? "").slice(0, 1500), categoria, subtema };
+    const rep = j.repetida_de ? String(j.repetida_de) : null;
+    return { problema: String(j.problema).slice(0, 600), solucion: String(j.solucion ?? "").slice(0, 1500), categoria, subtema, repetida_de: rep && previas.some((p) => p.id === rep) ? rep : null };
   } catch (e) {
     console.error("IA error", e);
     return null;
@@ -364,17 +387,10 @@ async function procesarTramo(t: any, tramo: Msg[], fin: Msg): Promise<string> {
   const { data: con } = await sb.from("whaticket_contactos").select("cliente_id").eq("whaticket_contact_id", t.contact?.id ?? "").maybeSingle();
   const cliente_id = con?.cliente_id ?? (await sugerirCliente(t.contact?.name)) ?? null;
 
-  // Repetida: otra consulta del cliente en los últimos 30 días
-  let repetida_consulta_id: string | null = null;
-  if (cliente_id) {
-    const desde30 = new Date(Date.now() - 30 * 86400_000).toISOString();
-    const { data: prev } = await sb.from("consultas").select("id")
-      .eq("cliente_id", cliente_id).gte("created_at", desde30)
-      .order("created_at", { ascending: false }).limit(1);
-    repetida_consulta_id = prev?.[0]?.id ?? null;
-  }
-
-  const ia = await resumirConIA(convTotal as Msg[]);
+  // Repetida: se decide con la IA comparando contra las consultas anteriores del cliente (mismo tema, no solo "consultó seguido")
+  const previas = await cargarPrevias(cliente_id);
+  const ia = await resumirConIA(convTotal as Msg[], previas);
+  const repetida_consulta_id = decidirRepetida(ia, previas);
 
   const fila = {
     ticket_id: t.id,
@@ -454,7 +470,8 @@ async function recalcularDetalles() {
   for (const b of data ?? []) {
     try {
       const conv = (b.mensajes ?? []).filter((m: any) => m.de === "cliente" || m.de === "asesor");
-      const ia = await resumirConIA(conv as Msg[]);
+      const previas = await cargarPrevias(b.cliente_id);
+      const ia = await resumirConIA(conv as Msg[], previas);
       const sugerido = b.cliente_id ? null : await sugerirCliente(b.contacto_nombre);
       const { error } = await sb.from("consultas_borradores").update({
         ...(sugerido ? { cliente_id: sugerido } : {}),
@@ -463,6 +480,7 @@ async function recalcularDetalles() {
         ia_generado: !!ia,
         categoria_sugerida: ia?.categoria ?? null,
         subtema_sugerido: ia?.subtema ?? null,
+        ...(b.cliente_id ? { repetida_sugerida: !!decidirRepetida(ia, previas), repetida_consulta_id: decidirRepetida(ia, previas) } : {}),
         material_sugerido: materialSugerido((b.mensajes ?? []) as Msg[]),
       }).eq("id", b.id);
       if (error) { console.error("update borrador", b.id, error.message); fallidos++; } else n++;

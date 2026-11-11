@@ -232,6 +232,8 @@ function abrirBorrador(id) {
     set('r-remota', b.conexion_sugerida ? 'si' : 'no');
     set('r-material', b.material_sugerido || 'ninguno');
     set('r-rep', b.repetida_sugerida ? 'si' : 'no');
+    window._repConsultaId = b.repetida_consulta_id || null;
+    if (typeof repBurbujaActualizar === 'function') repBurbujaActualizar();
     set('r-contacto', _bNombrePersona(b.contacto_nombre));
     // Categoría y subtema sugeridos por la IA (solo si existen como opción en el formulario)
     const selCat = document.getElementById('r-cat');
@@ -244,6 +246,7 @@ function abrirBorrador(id) {
       }
     }
     if (typeof actualizarContactosDatalist === 'function') actualizarContactosDatalist();
+    if (typeof repBurbujaActualizar === 'function') repBurbujaActualizar();
   }, 150);
 
   _renderChatBorrador(b);

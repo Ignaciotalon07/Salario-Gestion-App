@@ -1139,6 +1139,10 @@ function resetFormConsulta() {
   const subCustom = document.getElementById('r-sub-custom');
   if (subCustom) { subCustom.value = ''; subCustom.style.display = 'none'; }
 
+  // Globito de consulta repetida
+  window._repConsultaId = null;
+  if (typeof repBurbujaActualizar === 'function') repBurbujaActualizar();
+
   // Persona del cliente que consultó
   const contactoInp = document.getElementById('r-contacto');
   if (contactoInp) contactoInp.value = '';
