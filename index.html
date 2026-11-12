@@ -15,7 +15,7 @@
     />
 
     <!-- Estilos -->
-    <link rel="stylesheet" href="css/styles.css?v=20261107b" />
+    <link rel="stylesheet" href="css/styles.css?v=20261112k" />
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -651,8 +651,8 @@
                 <div class="page-sub" id="panel-page-sub"></div>
               </div>
               <div class="panel-header-right">
-                <button id="btn-registrar-consulta-panel" class="btn-primary" onclick="abrirModalConsulta()">
-                  + Registrar consulta
+                <button id="btn-registrar-consulta-panel" class="btn-primary btn-primary--ghost" onclick="abrirModalConsulta()">
+                  Registrar consulta
                 </button>
               </div>
             </div>
@@ -956,7 +956,7 @@
               </div>
               <div style="display:flex;gap:10px;flex-wrap:wrap">
                 <button class="btn-secondary" onclick="abrirModalReporteCp()" title="Informe en PDF de la sección Consultas">📄 Reporte PDF</button>
-                <button class="btn-primary" onclick="abrirModalConsulta()">+ Registrar consulta</button>
+                <button class="btn-primary btn-primary--ghost" onclick="abrirModalConsulta()">Registrar consulta</button>
               </div>
             </div>
 
@@ -1151,100 +1151,8 @@
                 <button id="btn-exportar-clientes" class="btn-secondary" onclick="exportarClientesExcel()">
                   Exportar clientes
                 </button>
-                <button class="btn-primary" onclick="showClienteForm()">
-                  + Agregar cliente
-                </button>
-              </div>
-            </div>
-
-            <div
-              id="cliente-form"
-              class="card"
-              style="
-                display: none;
-                border: 1px solid var(--accent);
-                background: var(--accent-light);
-              "
-            >
-              <div class="card-title" style="color: var(--accent-text)">
-                Nuevo cliente
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="fl">Nombre comercial</label>
-                  <input
-                    type="text"
-                    id="cf-nombre"
-                    placeholder="Ej: Estudio Maineri"
-                  />
-                </div>
-                <div class="form-group">
-                  <label class="fl">Razón social</label>
-                  <input
-                    type="text"
-                    id="cf-razon"
-                    placeholder="Ej: Consultores Asociados SRL"
-                  />
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="fl">CUIT</label>
-                  <input
-                    type="text"
-                    id="cf-cuit"
-                    placeholder="Ej: 30712275827"
-                  />
-                </div>
-                <div class="form-group">
-                  <label class="fl">Tipo</label>
-                  <select id="cf-tipo">
-                    <option value="empresa">Empresa</option>
-                    <option value="estudio">Estudio contable</option>
-                    <option value="colegio">Colegio</option>
-                    <option value="municipalidad">Municipalidad</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="fl">Área</label>
-                  <select id="cf-area">
-                    <option value="soporte">Soporte</option>
-                    <option value="impl">Implementación</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label class="fl">Link de Whaticket (opcional)</label>
-                  <input
-                    type="text"
-                    id="cf-whaticket"
-                    placeholder="https://app.whaticket.com/tickets/..."
-                  />
-                </div>
-              </div>
-              <div class="form-row">
-                <div class="form-group" style="flex: 1">
-                  <label class="fl">Nota inicial (opcional)</label>
-                  <input
-                    type="text"
-                    id="cf-nota"
-                    placeholder="Contexto del cliente"
-                  />
-                </div>
-              </div>
-              <div class="btn-row">
-                <button class="btn-primary" onclick="guardarCliente()">
-                  Guardar cliente
-                </button>
-                <button
-                  class="btn-secondary"
-                  onclick="
-                    document.getElementById('cliente-form').style.display =
-                      'none'
-                  "
-                >
-                  Cancelar
+                <button class="btn-primary btn-primary--ghost" onclick="showClienteForm()">
+                  Agregar cliente
                 </button>
               </div>
             </div>
@@ -1313,8 +1221,8 @@
                   Lo que quedó sin cerrar — visible para todo el equipo
                 </div>
               </div>
-              <button class="btn-primary" onclick="showPendForm()">
-                + Agregar pendiente
+              <button class="btn-primary btn-primary--ghost" onclick="showPendForm()">
+                Agregar pendiente
               </button>
             </div>
 
@@ -1643,7 +1551,7 @@
                 <div class="page-sub">Trabajos puntuales para clientes de soporte: tareas, fechas y avance</div>
               </div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
-                <button class="btn-primary" onclick="abrirNuevoProyecto()">＋ Nuevo proyecto</button>
+                <button class="btn-primary btn-primary--ghost" onclick="abrirNuevoProyecto()">Nuevo proyecto</button>
               </div>
             </div>
             <div id="impl-nav-proy"></div>
@@ -1781,7 +1689,7 @@
               <span id="eq-mes-label" class="panel-mes-nav__label">Cargando...</span>
               <button id="eq-mes-next" class="panel-mes-nav__btn" onclick="navEqMes(1)" disabled title="Mes siguiente">▶</button>
             </div>
-              <button class="btn-primary" onclick="abrirModalHoras()">+ Carga de horas</button>
+              <button class="btn-primary btn-primary--ghost" onclick="abrirModalHoras()">Carga de horas</button>
             </div>
 
             <div class="metrics-grid">
@@ -1887,36 +1795,142 @@
          BASE DE SOLUCIONES
     ════════════════════════════════════ -->
 
+<!-- ── Modal Nuevo cliente ── -->
+<div id="modal-cliente" class="kb-modal-overlay" style="display:none" onclick="if(event.target===this)cerrarClienteForm()">
+  <div class="kb-modal mh" style="max-width:600px;width:94%;max-height:92vh;overflow-y:auto">
+    <div class="mh__head">
+      <div class="mh__titulo">
+        <span class="mh__ico">🏢</span>
+        <div>
+          <div class="mh__title">Nuevo cliente</div>
+          <div class="mh__sub">Cargá los datos básicos del cliente</div>
+        </div>
+      </div>
+      <button class="kb-modal-close" onclick="cerrarClienteForm()" style="font-size:18px">✕</button>
+    </div>
+    <div class="mh__body" id="cliente-form">
+<div class="form-row">
+                <div class="form-group">
+                  <label class="fl">Nombre comercial</label>
+                  <input
+                    type="text"
+                    id="cf-nombre"
+                    placeholder="Ej: Estudio Maineri"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="fl">Razón social</label>
+                  <input
+                    type="text"
+                    id="cf-razon"
+                    placeholder="Ej: Consultores Asociados SRL"
+                  />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">CUIT</label>
+                  <input
+                    type="text"
+                    id="cf-cuit"
+                    placeholder="Ej: 30712275827"
+                  />
+                </div>
+                <div class="form-group">
+                  <label class="fl">Tipo</label>
+                  <select id="cf-tipo">
+                    <option value="empresa">Empresa</option>
+                    <option value="estudio">Estudio contable</option>
+                    <option value="colegio">Colegio</option>
+                    <option value="municipalidad">Municipalidad</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="fl">Área</label>
+                  <select id="cf-area">
+                    <option value="soporte">Soporte</option>
+                    <option value="impl">Implementación</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="fl">Link de Whaticket (opcional)</label>
+                  <input
+                    type="text"
+                    id="cf-whaticket"
+                    placeholder="https://app.whaticket.com/tickets/..."
+                  />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group" style="flex: 1">
+                  <label class="fl">Nota inicial (opcional)</label>
+                  <input
+                    type="text"
+                    id="cf-nota"
+                    placeholder="Contexto del cliente"
+                  />
+                </div>
+              </div>
+                  </div>
+    <div class="mh__foot">
+      <button class="mh__cancel" onclick="cerrarClienteForm()">Cancelar</button>
+      <button class="btn-primary" onclick="guardarCliente()">Guardar cliente</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Modal Carga de horas ── -->
 <div id="modal-horas" class="kb-modal-overlay" style="display:none" onclick="if(event.target===this)cerrarModalHoras()">
-  <div class="kb-modal" style="max-width:460px;width:94%">
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 16px;border-bottom:1px solid var(--border)">
-      <div style="font-size:16px;font-weight:600">Carga de horas</div>
+  <div class="kb-modal mh" style="max-width:460px;width:94%">
+    <div class="mh__head">
+      <div class="mh__titulo">
+        <span class="mh__ico">⏱</span>
+        <div>
+          <div class="mh__title">Carga de horas</div>
+          <div class="mh__sub">Registrá el tiempo que no es de un cliente</div>
+        </div>
+      </div>
       <button class="kb-modal-close" onclick="cerrarModalHoras()" style="font-size:18px">✕</button>
     </div>
-    <div style="padding:20px 24px 24px;display:flex;flex-direction:column;gap:16px">
-      <div class="form-group">
-        <label class="fl">Tipo de trabajo</label>
-        <select id="mh-tipo" class="form-input">
-          <option value="">— Seleccioná el tipo —</option>
-          <option value="actualizacion">Actualización</option>
-          <option value="programacion">Programación</option>
-          <option value="revision">Revisión</option>
-        </select>
+    <div class="mh__body">
+      <div>
+        <div class="mh__l">Tipo de registro</div>
+        <input type="hidden" id="mh-tipo" value=""/>
+        <div class="mh__pills" id="mh-tipo-pills">
+          <button type="button" class="mh__pill" data-v="actualizacion" onclick="mhElegirTipo('actualizacion')"><span>🔄</span>Actualización</button>
+          <button type="button" class="mh__pill" data-v="programacion" onclick="mhElegirTipo('programacion')"><span>💻</span>Programación</button>
+          <button type="button" class="mh__pill" data-v="revision" onclick="mhElegirTipo('revision')"><span>🔍</span>Revisión</button>
+          <button type="button" class="mh__pill" data-v="reunion" onclick="mhElegirTipo('reunion')"><span>👥</span>Reunión</button>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="fl">Horas trabajadas</label>
-        <input type="text" id="mh-horas" class="form-input" placeholder="Ej: 0.30 = 30min · 1.45 = 1h 45min" style="max-width:220px" oninput="mhActualizarReferencia()"/>
-        <div id="mh-horas-ref" style="font-size:12.5px;color:var(--text3);margin-top:6px;min-height:18px"></div>
+
+      <div class="mh__row">
+        <div>
+          <div class="mh__l">Horas</div>
+          <input type="text" id="mh-horas" class="mh__in mh__in--big" placeholder="0.00" inputmode="decimal" autocomplete="off" oninput="mhActualizarReferencia()"/>
+          <div id="mh-horas-ref" class="mh__hint">0.30 = 30 min · 1.45 = 1h 45min</div>
+        </div>
+        <div>
+          <div class="mh__l">Fecha</div>
+          <input type="date" id="mh-fecha" class="mh__in mh__in--big mh__in--fecha" oninput="mhActualizarFecha()"/>
+          <div class="mh__chips">
+            <button type="button" class="mh__chip" onclick="mhFechaRapida(0)">Hoy</button>
+            <button type="button" class="mh__chip" onclick="mhFechaRapida(1)">Ayer</button>
+          </div>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="fl">Detalle de lo realizado</label>
-        <textarea id="mh-detalle" class="form-input" rows="4" placeholder="Describí qué se hizo en esas horas..."></textarea>
+
+      <div>
+        <div class="mh__l">Detalle</div>
+        <textarea id="mh-detalle" class="mh__in" rows="3" placeholder="Describí qué se hizo en esas horas…"></textarea>
       </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
-        <button class="btn-secondary" onclick="cerrarModalHoras()">Cancelar</button>
-        <button class="btn-primary" onclick="guardarHoras()">Guardar horas</button>
-      </div>
+    </div>
+    <div class="mh__foot">
+      <div id="mh-fecha-aviso" class="mh__aviso"></div>
+      <button class="mh__cancel" onclick="cerrarModalHoras()">Cancelar</button>
+      <button class="btn-primary" onclick="guardarHoras()">Guardar horas</button>
     </div>
   </div>
 </div>
@@ -2072,8 +2086,8 @@
                 <div class="page-title">Base de soluciones</div>
                 <div class="page-sub">Conocimiento compartido del equipo</div>
               </div>
-              <button class="btn-primary" onclick="showKbForm()">
-                + Nueva solución
+              <button class="btn-primary btn-primary--ghost" onclick="showKbForm()">
+                Nueva solución
               </button>
             </div>
 
@@ -2199,7 +2213,7 @@
                 <div class="page-title">Repositorio</div>
                 <div class="page-sub">Archivos y recursos del equipo</div>
               </div>
-              <button class="btn-primary" onclick="abrirFormRepo()">+ Nuevo item</button>
+              <button class="btn-primary btn-primary--ghost" onclick="abrirFormRepo()">Nuevo item</button>
             </div>
 
             <!-- Métricas: línea liviana de texto, sin caja -->
@@ -2285,7 +2299,7 @@
                     <option value="">Todos los clientes</option>
                   </select>
                 </div>
-                <button class="btn-primary" onclick="generarReporte()" style="align-self:flex-end">Generar</button>
+                <button class="btn-primary btn-primary--ghost btn-primary--sinmas" onclick="generarReporte()" style="align-self:flex-end">Generar</button>
               </div>
             </div>
 
@@ -2525,7 +2539,7 @@
     <script src="js/storage.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/nav.js?v=20261020a"></script>
-    <script src="js/clientes.js?v=20261105a"></script>
+    <script src="js/clientes.js?v=20261112a"></script>
     <script src="js/archivos-vistos.js?v=20261029b"></script>
     <script src="js/pendiente-archivos.js?v=20261029f"></script>
     <script src="js/pendientes.js?v=20261104b"></script>
@@ -2543,9 +2557,9 @@
     <script src="js/disponibilidad-reporte.js?v=20261028b"></script>
     <script src="js/proyectos.js?v=20261023a"></script>
     <script src="js/proyecto-documentos.js?v=20261029h"></script>
-    <script src="js/equipo-ausencias.js?v=20261028b"></script>
-    <script src="js/asesor-detalle.js?v=20261111e"></script>
-    <script src="js/charts.js?v=20261028a"></script>
+    <script src="js/equipo-ausencias.js?v=20261112a"></script>
+    <script src="js/asesor-detalle.js?v=20261112a"></script>
+    <script src="js/charts.js?v=20261112b"></script>
     <script src="js/alertas.js?v=20261105a"></script>
     <script src="js/consultas-page.js?v=20261021a"></script>
     <script src="js/repositorio.js?v=20261015c"></script>

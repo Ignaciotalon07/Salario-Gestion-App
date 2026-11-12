@@ -572,7 +572,7 @@ function _calcularFilas(consultasCli, consultasInt) {
   const CATS_LABELS = {
     liquidacion: 'Liquidación', errores: 'Errores', configuracion: 'Configuración',
     actualizaciones: 'Actualizaciones', fuera: 'Fuera del sistema',
-    actualizacion: 'Actualización', programacion: 'Programación', revision: 'Revisión'
+    actualizacion: 'Actualización', programacion: 'Programación', revision: 'Revisión', reunion: 'Reunión'
   };
   const TIPO_LABELS = {
     soporte: '🎧 Soporte', programacion: '🐛 Programación',

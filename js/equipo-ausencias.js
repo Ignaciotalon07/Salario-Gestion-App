@@ -387,7 +387,7 @@ function renderAusencias() {
         <div class="card-title" style="margin:0">Ausencias del equipo</div>
         <div class="estruct-sub">Cada asesor tiene su color. Los días que carga se pintan en el calendario. Todos ven lo mismo; cada uno edita solo lo suyo.</div>
       </div>
-      <button class="btn-primary" onclick="ausAbrirForm()">+ Cargar mi ausencia</button>
+      <button class="btn-primary btn-primary--ghost" onclick="ausAbrirForm()">Cargar mi ausencia</button>
     </div>
     <div class="panel-mes-nav" style="margin:0 0 12px">
       <button class="panel-mes-nav__btn" onclick="ausNavMes(-1)" title="Año anterior">◀</button>

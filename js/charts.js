@@ -983,10 +983,40 @@ function abrirModalHoras() {
   if (tipo)   tipo.value   = '';
   if (horas)   horas.value   = '';
   if (detalle) detalle.value = '';
+  mhElegirTipo('');
+  mhFechaRapida(0);
   mhActualizarReferencia();
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
-  if (tipo) tipo.focus();
+  if (horas) horas.focus();
+}
+
+// ── Tipo de trabajo (pastillas) ──
+function mhElegirTipo(v) {
+  const inp = document.getElementById('mh-tipo');
+  if (inp) inp.value = v;
+  document.querySelectorAll('#mh-tipo-pills .mh__pill').forEach(b => b.classList.toggle('mh__pill--on', b.dataset.v === v));
+}
+
+// ── Fecha del registro (por defecto hoy; sirve para cargar algo que quedó de días anteriores) ──
+function _mhIso(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function mhFechaRapida(diasAtras) {
+  const d = new Date(); d.setDate(d.getDate() - diasAtras);
+  const inp = document.getElementById('mh-fecha');
+  if (inp) { inp.max = _mhIso(new Date()); inp.value = _mhIso(d); }
+  mhActualizarFecha();
+}
+function mhActualizarFecha() {
+  const inp = document.getElementById('mh-fecha'), av = document.getElementById('mh-fecha-aviso');
+  if (!inp) return;
+  const hoy = _mhIso(new Date());
+  const ayer = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return _mhIso(d); })();
+  document.querySelectorAll('.mh__chip').forEach((b, i) => b.classList.toggle('mh__chip--on', inp.value === (i === 0 ? hoy : ayer)));
+  if (!av) return;
+  if (inp.value && inp.value !== hoy) {
+    const [y, m, d] = inp.value.split('-');
+    av.textContent = `Se va a registrar el ${d}/${m}/${y.slice(2)}`;
+  } else av.textContent = '';
 }
 
 // Referencia debajo del campo: "0.20" → "= 20 min" (el formato es HH.MM, no decimales de hora)
@@ -995,9 +1025,9 @@ function mhActualizarReferencia() {
   const ref = document.getElementById('mh-horas-ref');
   if (!inp || !ref) return;
   const txt = (inp.value || '').trim();
-  if (!txt) { ref.textContent = ''; return; }
+  if (!txt) { ref.textContent = '0.30 = 30 min · 1.45 = 1h 45min'; ref.style.color = ''; return; }
   const min = hhmmAMinutos(txt);
-  ref.textContent = min > 0 ? `Estás cargando: ${fmtMinutos(min)}` : 'Valor no válido. Usá el formato 0.30 = 30 min · 1.45 = 1h 45min';
+  ref.textContent = min > 0 ? `= ${fmtMinutos(min)}` : 'Valor no válido · usá 0.30 = 30 min, 1.45 = 1h 45min';
   ref.style.color = min > 0 ? 'var(--text2)' : 'var(--red)';
 }
 
@@ -1011,6 +1041,11 @@ async function guardarHoras() {
   const horasRaw = (document.getElementById('mh-horas') || {}).value || '';
   const horas    = horasRaw ? parsearHHMM(horasRaw) : null;
   const detalle  = ((document.getElementById('mh-detalle') || {}).value || '').trim();
+  const fechaSel = ((document.getElementById('mh-fecha') || {}).value || '').trim();
+  const hoyIso   = _mhIso(new Date());
+  if (fechaSel && fechaSel > hoyIso) { alert('La fecha no puede ser futura.'); return; }
+  // Si es otra fecha se guarda a las 12:00 de ese día (evita corrimientos por zona horaria); si es hoy, queda la hora actual
+  const fechaISO = (fechaSel && fechaSel !== hoyIso) ? new Date(`${fechaSel}T12:00:00`).toISOString() : null;
 
   if (!tipo) {
     alert('Seleccioná el tipo de trabajo.');
@@ -1045,7 +1080,8 @@ async function guardarHoras() {
       tiempo_resolucion: horas,
       material:          null,
       conexion_remota:   null,
-      tipo_consulta:     'programacion_interna'
+      tipo_consulta:     'programacion_interna',
+      ...(fechaISO ? { created_at: fechaISO } : {})
     });
 
     // Actualizar array en memoria
@@ -1061,7 +1097,7 @@ async function guardarHoras() {
         tiempo:       horas,
         tipoConsulta: 'programacion_interna',
         tipo_consulta:'programacion_interna',
-        timestamp:    new Date().toISOString()
+        timestamp:    fechaISO || new Date().toISOString()
       });
     }
 

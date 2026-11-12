@@ -302,8 +302,15 @@ function renderClienteCard(c) {
 // ────────── Form: agregar cliente ──────────
 
 function showClienteForm() {
-  const f = document.getElementById('cliente-form');
-  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+  const m = document.getElementById('modal-cliente');
+  if (!m) return;
+  m.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  const n = document.getElementById('cf-nombre'); if (n) n.focus();
+}
+function cerrarClienteForm() {
+  const m = document.getElementById('modal-cliente');
+  if (m) { m.style.display = 'none'; document.body.style.overflow = ''; }
 }
 
 async function guardarCliente() {
@@ -374,7 +381,7 @@ async function guardarCliente() {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
-    document.getElementById('cliente-form').style.display = 'none';
+    cerrarClienteForm();
     if (area !== 'impl') toast('Cliente agregado correctamente');
   } catch (e) {
     console.error('Error guardando cliente', e);
