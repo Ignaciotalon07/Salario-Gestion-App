@@ -348,6 +348,10 @@ function suscribirConsultas() {
             }
           }
         })
+    // Edición de un registro (por cualquier asesor): se actualiza en memoria y se refrescan las métricas
+    .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'consultas' },
+        (payload) => { if (typeof registroAplicarCambio === 'function') registroAplicarCambio(payload.new); })
     .subscribe();
 }
 

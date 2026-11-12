@@ -1428,7 +1428,15 @@ function _abrirDetalleRegistroAsesor(id) {
       ${solId && typeof _renderKbArchivosDetalle === 'function' ? _renderKbArchivosDetalle(solId) : ''}
 
       <!-- Footer -->
-      <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border2);display:flex;justify-content:flex-end">
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border2);display:flex;justify-content:flex-end;gap:10px">
+        ${(typeof puedoEditarRegistro === 'function' && puedoEditarRegistro(c)) ? `
+        <button onclick="registroEditarAbrir('${id}')" style="
+          background:transparent;border:1px solid #f97316;color:#f97316;
+          font-size:13px;font-family:inherit;padding:7px 16px;border-radius:8px;cursor:pointer;transition:background .15s,color .15s;"
+          onmouseenter="this.style.background='#f97316';this.style.color='#fff'"
+          onmouseleave="this.style.background='transparent';this.style.color='#f97316'">
+          ✏️ Editar
+        </button>` : ''}
         ${puedeBorrar ? `
         <button onclick="_eliminarDesdeDetalle('${id}')" style="
           background:transparent;border:1px solid var(--red,#c0392b);color:var(--red,#c0392b);
