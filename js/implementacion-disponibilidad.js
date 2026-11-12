@@ -442,13 +442,17 @@ function _dispCapDia(cap, dia) {
 function _dispMesInfo(items, primerDia, extra, cap) {
   const ultimo = new Date(primerDia.getFullYear(), primerDia.getMonth() + 1, 0);
   let peor = null, capMin = cap;
-  for (let d = new Date(primerDia); d <= ultimo; d = _addDays(d, 1)) {
+  // En el mes en curso solo se miran los días que faltan (desde hoy): lo ya terminado no ocupa lugar a futuro.
+  // Los meses pasados conservan su carga histórica.
+  const hoyD = _dispHoy();
+  const desde = (primerDia <= hoyD && hoyD <= ultimo) ? new Date(hoyD) : new Date(primerDia);
+  for (let d = desde; d <= ultimo; d = _addDays(d, 1)) {
     let n = _dispCargaDia(items, d);
     if (extra && extra.inicio <= d && d <= extra.fin) n++;
     const c = _dispCapDia(cap, d);
     if (c < capMin) capMin = c;
     const hol = c - n;
-    if (!peor || hol < peor.libres || (hol === peor.libres && n > peor.pico)) peor = { pico: n, cap: c, libres: hol };
+    if (!peor || hol < peor.libres || (hol === peor.libres && n > peor.pico)) peor = { pico: n, cap: c, libres: hol, dia: new Date(d) };
   }
   return { ...peor, capMin, reducida: capMin < cap };
 }
@@ -681,7 +685,7 @@ function renderDisponibilidadImpl() {
     const ini = new Date(cur.getFullYear(), cur.getMonth(), 1);
     const info = _dispMesInfo(conFechas, ini, null, cap);
     const infoSim = sim ? _dispMesInfo(conFechas, ini, sim, cap) : info;
-    meses.push({ ini, dias, pico: info.pico, cap: info.cap, libres: info.libres, reducida: info.reducida, capMin: info.capMin,
+    meses.push({ ini, dias, dia: info.dia, pico: info.pico, cap: info.cap, libres: info.libres, reducida: info.reducida, capMin: info.capMin,
                  libresSim: infoSim.libres, w: (dias / totalDias) * 100 });
     cur = hasta;
   }
@@ -943,7 +947,12 @@ function renderDisponibilidadImpl() {
               const pisa = sim && m.libresSim < 0 && m.libresSim < m.libres ? ' disp-cell--pisa' : '';
               const txt = libres <= 0 ? 'Lleno' : `${libres} libre${libres !== 1 ? 's' : ''}`;
               const aus = m.reducida ? ' 🏖️' : '';
-              return `<div class="disp-cell disp-cell--${cls}${pisa}" style="width:${m.w}%" title="${m.pico} de ${m.cap} clientes simultáneos (día más ajustado del mes)${m.reducida ? ' · la capacidad baja por ausencias del equipo' : ''}">
+              // Cuáles son los que ocupan lugar el día más cargado del mes (incluye finalizados que seguían activos ese día y la estructuración)
+              const quienes = m.dia ? conFechas.filter(it => it.inicio && it.fin && it.inicio <= m.dia && m.dia <= it.fin)
+                .map(it => '• ' + String(it.c.nombre).replace(/"/g, '') + (it.finalizado ? ' (finalizado)' : it.estado === 'porArrancar' ? ' (por arrancar)' : '')) : [];
+              if (m.dia && _dispEstructActiva(m.dia)) quienes.push('• Estructuración interna');
+              const detalleDia = m.dia ? `&#10;&#10;Día más cargado: ${m.dia.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}&#10;${quienes.join('&#10;')}` : '';
+              return `<div class="disp-cell disp-cell--${cls}${pisa}" style="width:${m.w}%" title="${m.pico} de ${m.cap} clientes simultáneos (día más ajustado del mes)${detalleDia}${m.reducida ? ' · la capacidad baja por ausencias del equipo' : ''}">
                 ${m.w < 6 ? '' : `<b>${m.pico}/${m.cap}${aus}</b><span>${txt}</span>`}</div>`;
             }).join('')}
           </div>
