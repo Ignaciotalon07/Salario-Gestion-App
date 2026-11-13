@@ -233,6 +233,7 @@ function abrirBorrador(id) {
     set('r-material', b.material_sugerido || 'ninguno');
     set('r-rep', b.repetida_sugerida ? 'si' : 'no');
     window._repConsultaId = b.repetida_consulta_id || null;
+    if (typeof borradorSolSugeridaMostrar === 'function') borradorSolSugeridaMostrar(b);
     if (typeof repBurbujaActualizar === 'function') repBurbujaActualizar();
     set('r-contacto', _bNombrePersona(b.contacto_nombre));
     // Categoría y subtema sugeridos por la IA (solo si existen como opción en el formulario)
@@ -368,4 +369,48 @@ async function descartarBorradorActivo() {
   const id = window._borradorActivoId;
   if (!id) return;
   if (await descartarBorrador(id)) cerrarModalConsulta();
+}
+
+
+// ───────────────────────────────────────────────────────────────
+// Solución de la base sugerida por la IA (integración #12)
+// La IA compara el chat con la Base de soluciones y propone una existente.
+// El asesor siempre confirma: "Usar esta" la vincula (suma 1 uso y NO crea una solución nueva).
+// ───────────────────────────────────────────────────────────────
+function borradorSolSugeridaMostrar(b) {
+  const box = document.getElementById('r-sol-sugerida');
+  if (!box) return;
+  const s = b && b.solucion_id_sugerida && Array.isArray(soluciones)
+    ? soluciones.find(x => String(x.id) === String(b.solucion_id_sugerida)) : null;
+  if (!s) { box.innerHTML = ''; box.style.display = 'none'; return; }
+  const cat = (typeof CATS !== 'undefined' && CATS[s.cat]) || { label: s.cat || '', bg: '#eee', text: '#444' };
+  const alta = b.solucion_coincidencia === 'alta';
+  box.style.display = '';
+  box.innerHTML = `
+    <div class="sol-sug">
+      <div class="sol-sug__h"><span>💡 La IA encontró una solución en la base</span><b class="sol-sug__c sol-sug__c--${alta ? 'alta' : 'media'}">${alta ? 'Coincidencia alta' : 'Coincidencia media: confirmala'}</b></div>
+      <div class="sol-sug__t">${_borrEsc(s.titulo)}</div>
+      <div class="sol-sug__m"><span class="badge" style="background:${cat.bg};color:${cat.text}">${_borrEsc(cat.label)}</span> ${_borrEsc(s.sub || '')} · ${s.usos || 0} uso${s.usos === 1 ? '' : 's'}</div>
+      <div class="sol-sug__b">
+        <button type="button" class="btn-sm sol-sug__ok" onclick="borradorSolSugeridaUsar('${s.id}')">✓ Usar esta</button>
+        <button type="button" class="btn-sm" onclick="borradorSolSugeridaOtra()">Elegir otra</button>
+        <button type="button" class="btn-sm" onclick="borradorSolSugeridaOcultar()">Es una solución nueva</button>
+      </div>
+    </div>`;
+}
+function borradorSolSugeridaUsar(id) {
+  if (typeof consultaSolucionId !== 'undefined') consultaSolucionId = id;
+  if (typeof renderSolucionElegida === 'function') renderSolucionElegida();
+  borradorSolSugeridaOcultar();
+}
+function borradorSolSugeridaOtra() {
+  borradorSolSugeridaOcultar();
+  if (typeof elegirSolucionConsulta === 'function') elegirSolucionConsulta();
+}
+function borradorSolSugeridaOcultar() {
+  const box = document.getElementById('r-sol-sugerida');
+  if (box) { box.innerHTML = ''; box.style.display = 'none'; }
+}
+function _borrEsc(t) {
+  return String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

@@ -1069,6 +1069,7 @@ function abrirClienteImpl(clienteId) {
 }
 
 function cerrarClienteImpl() {
+  if (typeof clienteIaReset === 'function') clienteIaReset(); // la charla de la IA se borra
   _resetFiltrosImpl();
   window._implClienteAbierto = null;
   // Si se abrió desde Disponibilidad, volver ahí

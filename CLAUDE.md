@@ -68,6 +68,7 @@ Salario Gestion/
 │   ├── nav.js               ← goTo() para cambiar de página + marcarRepositorioVisto()
 │   ├── clientes.js          ← CRUD + realtime de clientes
 │   ├── cliente-detalle.js   ← Vista de historial, stats y mini chart por cliente
+│   ├── cliente-ia.js        ← Botón "✨ Preguntale a la IA" + panel lateral de chat por cliente (Edge Function `cliente-ia`; la charla vive solo con el panel abierto, no se guarda)
 │   ├── pendientes.js        ← CRUD + realtime + notas + audit log + modal solución
 │   ├── archivos-vistos.js    ← Archivos vistos por persona (a color = sin ver, gris = visto/descargado): documentos de clientes y proyectos, adjuntos de tareas (migración 069)
 │   ├── pendiente-archivos.js ← Archivos adjuntos en pendientes (form + tarjeta; bucket `pendientes-archivos`, migración 065)
@@ -173,6 +174,7 @@ Salario Gestion/
     ├── 069_archivos_vistos.sql     ← Tabla archivos_vistos (usuario, tipo, archivo_id): qué archivos ya vio/descargó cada persona
     ├── 070_cliente_documentos_empresa.sql ← Columna `empresa` en cliente_documentos (desplegable + filtro por empresa en Documentos)
     ├── 071_salario_historial.sql   ← Historial mensual de Salario: tabla salario_historial (cliente+base+año+mes) y columnas cuiles/version/motor/anio/mes en salario_sync
+    ├── 072_borradores_solucion_sugerida.sql ← solucion_id_sugerida + solucion_coincidencia (alta/media) en borradores: la IA propone una solución EXISTENTE de la base (integración #12)
     └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 
@@ -414,14 +416,35 @@ Cuando el usuario te pida cambios:
 
 ## Cosas que NO están terminadas
 
-- **Integración Whaticket "Por registrar"** (EN CURSO, probar con el equipo): plan en
+- **Integraciones nuevas con la API de Whaticket** (EN PAUSA, decidido nov 2026; base `https://api.whaticket.com/api/v1`, spec en `/openapi.json`).
+  Lista del usuario: 1 Base de soluciones → Knowledge base de Whaticket, 2 Gaps → "Soluciones por escribir",
+  3 Respuestas rápidas, 8 Avisos masivos a clientes, 10 Implementación con seguimiento automático por WhatsApp,
+  12 IA en borradores "Por registrar", 13 Servidor MCP (https://mcp.whaticket.com/mcp, solo para usar desde Claude).
+  El Wäbot NO está activo y el usuario no quiere que atienda clientes todavía: quiere que los asesores vean una
+  sugerencia con las soluciones de Salario Gestión y que, si no hay respuesta, se avise que hay que documentarla.
+  Hallazgos de la spec: la API permite mensajes con `isNote: true` (nota interna, nunca llega al cliente); el Wäbot
+  se activa con un paso tipo `ai` en una cola (le entrega el chat y responde al cliente); crear artículos de la KB
+  exige la clave de OpenAI configurada en Whaticket; artículos = solo texto (título 2-100, texto, alias, status);
+  el token actual (`WHATICKET_TOKEN`) es de solo lectura y para escribir hace falta uno nuevo con permisos
+  (`knowledgeBase:*`, `fastResponses:*`, envío de mensajes). Rate limit 600/min.
+  Camino elegido (PENDIENTE de arrancar): **copiloto propio** = Edge Function que cada ~2 min mira preguntas nuevas
+  de clientes en chats abiertos, busca en la tabla `soluciones` (IA) y deja una nota interna con la sugerencia, o
+  una nota "sin solución en la base" + registro en una lista "Soluciones por escribir" que se cierra al cargar la
+  solución. Las soluciones se modifican desde 4 lugares (kb.js, consultas.js, alertas.js, votos/usos): si algo
+  se sincroniza con Whaticket, que cuelgue de la base de datos (hash + trigger de borrados), no de un botón.
+
+- **#12 IA en borradores (HECHO, cerrado por el momento)**: migración 072 (`solucion_id_sugerida`, `solucion_coincidencia`), `whaticket-sync` compara el chat con la tabla `soluciones` (códigos S1..Sn, máx. 80 candidatas) y la tarjeta "La IA encontró una solución en la base" en el formulario de Registrar consulta (`borradorSolSugeridaMostrar` en borradores.js). Decisión: NUNCA se vincula sola; si el asesor guarda sin tocar la tarjeta se crea solución nueva (como antes). Además la regla de "repetida" ahora la decide la IA comparando con consultas anteriores del cliente (12 meses) y el formulario muestra el globito `#r-rep-burbuja` (`js/repetida-burbuja.js`) con la consulta anterior.
+- **Limpieza de la Base de soluciones** (PENDIENTE, idea del usuario): herramienta de revisión para duplicados, sin uso y soluciones muy específicas (montos/fechas de un caso), con cola Conservar/Eliminar. Borrar una solución deja `consultas.solucion_id` en NULL (ON DELETE SET NULL); no borra consultas. El espacio en BD que se libera es mínimo; el beneficio es calidad (sugerencias de la IA, alerta de "para revisar").
+- **Editar registros** (HECHO, `js/registro-editar.js`): solo el asesor dueño, desde el historial del asesor; actualiza métricas y score del cliente; realtime UPDATE en `consultas.js`. PENDIENTE: botón también en el detalle de consulta del cliente y regla en la base (RLS/trigger) para que "solo el dueño" no dependa del navegador.
+
+- **Integración Whaticket "Por registrar"** (EN USO: todo el equipo la usa hace ~3 semanas, desde fines de oct 2026; el piloto con 2 asesores ya no aplica): plan en
   `docs/integracion-whaticket.md`. HECHO: migraciones 051 (borradores), 052 (cron, plantilla sin key),
   053 (columna `consultas.contacto`); Edge Function `supabase/functions/whaticket-sync` (corre cada 2 min;
   `{"accion":"vincular_clientes"}` vincula clientes↔contactos por `clientes.whaticket_url`);
   UI `js/borradores.js` (ítem de menú "Por registrar" con badge, lista, panel de chat al costado del
   modal "Registrar consulta", Descartar, tile en Panel general; hook en `guardarConsulta()` →
   `borradorMarcarRegistrado`). Campo "¿Quién consultó?" (`contacto`) en el form e historial del cliente.
-  PENDIENTE: piloto con 2 asesores; Dividir/Reasignar; rol `coordinador`; ítem en menú mobile;
+  PENDIENTE: Dividir/Reasignar; rol `coordinador`; ítem en menú mobile;
   Etapa 2 IA y Etapa 3 audios; repo público (pasar a privado, ver doc §9).
   PENDIENTE: **revisar el tiempo sugerido de consultas** (`tiempoActivoHoras` en
   `whaticket-sync/index.ts`). Hoy solo suma pausas < 15 min (+ tramo AnyDesk), así que cuando el
@@ -477,12 +500,7 @@ Cuando el usuario te pida cambios:
   botón del header). Habilitar Documentos o devolver el botón.
 - **Implementación → Feedback**: tarjeta de acceso deshabilitada ("Pronto").
   Idea: encuesta post-implementación por cliente. Sin definir.
-- **API de Salario** (Legajos, Convenios, Empresas en vivo): EN CURSO. Edge Function
-  `supabase/functions/salario-api` (POST por cliente, auth con header `x-api-key` = secreto
-  `SALARIO_API_KEY`, Verify JWT desactivado) → tabla `salario_sync` (migración 059; 062 agrega `base`: el programador manda un POST por base y la plataforma suma legajos y junta convenios/empresas, con desglose por base; bases de PRUEBA/TEST/DEMO se ignoran). El cliente se identifica por `id_api` (número de 4 cifras de Salario, único en `clientes`) o, alternativamente, `cliente_id` (uuid). Front: `js/salario-sync.js`
-  carga + realtime; `_datosSalarioCliente()` en `js/cliente-detalle.js` lee de ahí. PENDIENTE: confirmar
-  que se corrió 059, pegar la función, crear el secreto y que el programador de VFP mande el header y
-  los campos `legajos`, `convenios`, `empresas`.
+- **API de Salario** (Legajos, Convenios, Empresas en vivo): HECHO y CONFIRMADO (nov 2026: el programador de VFP ya manda todo y los datos llegan bien). Edge Function `supabase/functions/salario-api` (POST por cliente, auth con header `x-api-key` = secreto `SALARIO_API_KEY`, Verify JWT desactivado) → tabla `salario_sync` (migración 059; 062 agrega `base`: un POST por base y la plataforma suma legajos y junta convenios/empresas, con desglose por base; bases de PRUEBA/TEST/DEMO se ignoran). El cliente se identifica por `id_api` (4 cifras de Salario, único en `clientes`) o `cliente_id` (uuid). Front: `js/salario-sync.js` + `_datosSalarioCliente()` en `js/cliente-detalle.js`. Detalle de la v2 en "Notas recientes". Solo queda mantenimiento (envíos rechazados se ven en Alertas).
 - Backlog viejo: búsqueda semántica en KB, PWA.
 
 ## Levantar la base de datos desde cero
@@ -515,6 +533,8 @@ No hay nada que instalar (sin `npm install`).
 
 ## Notas recientes (nov 2026)
 
-- **API de Salario v2** (guía para el programador en `docs/guia-programador-api-salario.md`): campos nuevos `anio`, `mes`, `cuiles`, `version`, `motor` (`mysql`/`dbf`). `legajos` = TODOS los legajos; `cuiles` = personas distintas. Cada POST se guarda en `salario_historial` (mes indicado) y, si el período es el más nuevo, también en `salario_sync` (dato actual). Meses viejos se cargan sin pisar el actual; no se aceptan meses futuros. UI: chips "Salario x.y.z" y "MySQL/DBF" en el encabezado del cliente, "N personas (CUIL)" bajo Legajos y tarjeta 📈 Historial. PENDIENTE: correr 071, pegar la función nueva en Supabase y que el programador pruebe.
+- **IA por cliente** (HECHO, cerrado por el momento): botón "✨ Preguntale a la IA" en el detalle de cliente y en Implementación (`js/cliente-ia.js`, Edge Function `cliente-ia`, Verify JWT activado, usa el token del usuario → RLS). Recibe TODA la info del cliente (ficha, consultas, pendientes con notas, Salario actual/histórico, implementación con notas, proyectos, documentos; nunca las claves de conexiones). Los números se calculan en código; la IA solo redacta. La charla vive en memoria: cerrar el panel la conserva; se borra con "Nueva charla", al volver a la lista, al cambiar de cliente, tras 30 min sin uso o al recargar. Detalle acotado a las 200 consultas y 100 pendientes más recientes (los totales usan 24 meses). Por ahora la usan solo los asesores del equipo.
+
+- **API de Salario v2** (guía para el programador en `docs/guia-programador-api-salario.md`): campos nuevos `anio`, `mes`, `cuiles`, `version`, `motor` (`mysql`/`dbf`). `legajos` = TODOS los legajos; `cuiles` = personas distintas. Cada POST se guarda en `salario_historial` (mes indicado) y, si el período es el más nuevo, también en `salario_sync` (dato actual). Meses viejos se cargan sin pisar el actual; no se aceptan meses futuros. UI: chips "Salario x.y.z" y "MySQL/DBF" en el encabezado del cliente, "N personas (CUIL)" bajo Legajos y tarjeta 📈 Historial. (HECHO y confirmado: 071 corrida, función desplegada, datos llegando bien.)
 - **Pendientes** (`renderPendienteFila` en pendientes.js): lista de filas-card (`.pf`) que se despliegan con el detalle completo (`renderPendienteCard(p, true)`); más nuevos primero; borde izquierdo con el color del tipo; eliminar pendiente solo para el asesor dueño (no los de tareas de implementación); notas se pueden borrar (solo el autor); botón 📎 Adjuntar en pendientes ya creados.
 - **Documentos**: campo empresa (070), círculo de visto (archivos_vistos, 069) y lo subido NO nace como visto.

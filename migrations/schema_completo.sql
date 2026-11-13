@@ -1079,3 +1079,12 @@ SELECT cliente_id, base,
 FROM salario_sync
 WHERE updated_at IS NOT NULL
 ON CONFLICT (cliente_id, base, anio, mes) DO NOTHING;
+
+-- 8w. Solución de la base sugerida en borradores "Por registrar" — ver 072_borradores_solucion_sugerida.sql
+ALTER TABLE consultas_borradores
+  ADD COLUMN IF NOT EXISTS solucion_id_sugerida uuid REFERENCES soluciones(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS solucion_coincidencia text;
+ALTER TABLE consultas_borradores DROP CONSTRAINT IF EXISTS consultas_borradores_solucion_coincidencia_chk;
+ALTER TABLE consultas_borradores
+  ADD CONSTRAINT consultas_borradores_solucion_coincidencia_chk
+  CHECK (solucion_coincidencia IS NULL OR solucion_coincidencia IN ('alta', 'media'));

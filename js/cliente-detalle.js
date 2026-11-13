@@ -217,6 +217,7 @@ function _renderDetalleHeader(cliente, consultasDelCliente) {
         <button class="btn-secondary detalle-back" onclick="volverAClientes()">← Volver</button>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end">
           ${_chipSalarioActualizado(vivo, cliente)}
+          <button type="button" class="cia-btn" onclick="clienteIaAbrir()" title="Preguntale a la IA datos de este cliente">✨ Preguntale a la IA</button>
           <button class="btn-primary" onclick="irARegistrarConsulta('${_escHtml(cliente.nombre)}')">+ Consulta</button>
         </div>
       </div>
@@ -924,6 +925,7 @@ async function eliminarConsultaDesdeModal(id) {
 // ────────── Volver ──────────
 
 function volverAClientes() {
+  if (typeof clienteIaReset === 'function') clienteIaReset(); // la charla de la IA se borra
   _detalleClienteId  = null;
   _detalleMesFiltro  = null;
   _detalleTipoFiltro = null;

@@ -192,6 +192,41 @@ async function cargarCatalogo() {
 const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const IA_MODELO = Deno.env.get("IA_MODELO") ?? "claude-haiku-5-5";
 
+// ── Soluciones de la Base de soluciones (para sugerir una existente) ──
+type SolBase = { id: string; titulo: string; cat: string | null; sub: string | null };
+let _solsCache: { at: number; lista: SolBase[] } | null = null;
+async function cargarSolucionesBase(): Promise<SolBase[]> {
+  if (_solsCache && Date.now() - _solsCache.at < 300_000) return _solsCache.lista;
+  let lista: SolBase[] = [];
+  try {
+    const { data } = await sb.from("soluciones").select("id,titulo,cat,sub").order("titulo").limit(2000);
+    lista = (data ?? []).filter((x: any) => x.titulo).map((x: any) => ({ id: x.id, titulo: String(x.titulo), cat: x.cat ?? null, sub: x.sub ?? null }));
+  } catch (e) {
+    console.error("soluciones base", e);
+  }
+  _solsCache = { at: Date.now(), lista };
+  return lista;
+}
+
+// Si la base es grande se mandan a la IA solo las más parecidas al chat (por palabras en común);
+// con pocas soluciones se mandan todas.
+const MAX_CANDIDATAS = 80;
+function candidatasSoluciones(sols: SolBase[], ms: Msg[]): SolBase[] {
+  if (sols.length <= MAX_CANDIDATAS) return sols;
+  const palabras = (t: string) => norm(t).split(/[^a-z0-9ñ]+/).filter((w) => w.length >= 4);
+  const chat = new Set(palabras(ms.filter((m) => m.de === "cliente" || m.de === "asesor").map((m) => m.texto).join(" ")));
+  return sols
+    .map((x) => {
+      const ws = new Set(palabras(`${x.titulo} ${x.sub ?? ""} ${x.cat ?? ""}`));
+      let n = 0;
+      for (const w of ws) if (chat.has(w)) n++;
+      return { x, n };
+    })
+    .sort((a, b) => b.n - a.n)
+    .slice(0, MAX_CANDIDATAS)
+    .map((o) => o.x);
+}
+
 // Consultas anteriores del cliente (últimos 12 meses, solo soporte): sirven para decidir si la nueva es repetida
 type Previa = { id: string; categoria: string | null; subtema: string | null; descripcion: string | null; fecha: string };
 async function cargarPrevias(cliente_id: string | null): Promise<Previa[]> {
@@ -213,7 +248,7 @@ function decidirRepetida(ia: { repetida_de: string | null } | null, previas: Pre
   return previas.some((p) => p.id === ia.repetida_de) ? ia.repetida_de : null;
 }
 
-async function resumirConIA(ms: Msg[], previas: Previa[] = []): Promise<{ problema: string; solucion: string; categoria: string | null; subtema: string | null; repetida_de: string | null } | null> {
+async function resumirConIA(ms: Msg[], previas: Previa[] = [], solsBase: SolBase[] = []): Promise<{ problema: string; solucion: string; categoria: string | null; subtema: string | null; repetida_de: string | null; solucion_id: string | null; coincidencia: string | null } | null> {
   if (!ANTHROPIC_KEY) return null;
   const lineas = ms
     .filter((m) => m.de === "cliente" || m.de === "asesor")
@@ -230,7 +265,7 @@ async function resumirConIA(ms: Msg[], previas: Previa[] = []): Promise<{ proble
   const prompt = `Sos un asistente de un equipo de soporte del software de liquidación de sueldos "Salario" (Argentina). Te paso la conversación de WhatsApp entre un cliente y un asesor. Redactá el registro de la consulta.
 
 Devolvé SOLO un JSON válido, sin texto extra ni bloques de código, con esta forma:
-{"problema": "...", "solucion": "...", "categoria": "...", "subtema": "...", "repetida_de": null}
+{"problema": "...", "solucion": "...", "categoria": "...", "subtema": "...", "repetida_de": null, "solucion_ref": null, "coincidencia": null}
 
 Reglas:
 - "problema": qué necesitaba o qué problema tenía el cliente, en 1 o 2 oraciones claras, en tercera persona y tono neutro (ej: "El cliente consulta por cómo cargar el adicional por antigüedad cuando el recibo calcula distinto al esperado"). Sin saludos ni agradecimientos.
@@ -239,8 +274,9 @@ Reglas:
 - "categoria" y "subtema": elegí la que mejor describa la consulta de ESTE catálogo (formato "clave (nombre): subtemas"). "categoria" debe ser exactamente la clave (la palabra antes del paréntesis) y "subtema" exactamente uno de los subtemas de esa categoría. Si ninguno encaja con claridad, poné null en "subtema" (o en ambos).
 ${catalogo.texto}
 - "repetida_de": SOLO si te paso consultas anteriores del cliente más abajo. Poné el id de la consulta anterior que trate del MISMO problema o de uno muy parecido (el cliente vuelve a preguntar lo mismo, o el problema reaparece). Si el tema es distinto, aunque sea de la misma categoría o del mismo mes, poné null. Ante la duda, null.
+- "solucion_ref" y "coincidencia": SOLO si te paso la lista "Soluciones de la base" más abajo. Si alguna de esas soluciones resuelve ESTE problema del cliente, poné en "solucion_ref" su código exacto (ej: "S12") y en "coincidencia" "alta" (es claramente el mismo problema) o "media" (es parecida, el asesor debe confirmarla). Si ninguna resuelve este problema, o si solo comparte la categoría o el tema general, poné null en los dos. Ante la duda, null: es mejor no sugerir que sugerir una solución equivocada.
 - Español rioplatense neutro, sin emojis.
-${previas.length ? "\nConsultas anteriores de este cliente (id | fecha | categoría/subtema | detalle):\n" + previas.map((p) => `${p.id} | ${p.fecha} | ${p.categoria ?? "-"}/${p.subtema ?? "-"} | ${(p.descripcion ?? "").replace(/\s+/g, " ").slice(0, 220)}`).join("\n") + "\n" : ""}
+${solsBase.length ? "\nSoluciones de la base (código | categoría/subtema | problema que resuelve):\n" + solsBase.map((x, i) => `S${i + 1} | ${x.cat ?? "-"}/${x.sub ?? "-"} | ${x.titulo.replace(/\s+/g, " ").slice(0, 160)}`).join("\n") + "\n" : ""}${previas.length ? "\nConsultas anteriores de este cliente (id | fecha | categoría/subtema | detalle):\n" + previas.map((p) => `${p.id} | ${p.fecha} | ${p.categoria ?? "-"}/${p.subtema ?? "-"} | ${(p.descripcion ?? "").replace(/\s+/g, " ").slice(0, 220)}`).join("\n") + "\n" : ""}
 Conversación:
 ${conversacion}`;
 
@@ -271,7 +307,14 @@ ${conversacion}`;
       subtema = catalogo.mapa[ck].find((x) => norm(x) === norm(String(j.subtema ?? ""))) ?? null;
     }
     const rep = j.repetida_de ? String(j.repetida_de) : null;
-    return { problema: String(j.problema).slice(0, 600), solucion: String(j.solucion ?? "").slice(0, 1500), categoria, subtema, repetida_de: rep && previas.some((p) => p.id === rep) ? rep : null };
+    // Solución sugerida: el código tiene que existir en la lista que se mandó (nunca se inventa)
+    let solucion_id: string | null = null, coincidencia: string | null = null;
+    const ref = String(j.solucion_ref ?? "").trim().toUpperCase().match(/^S(\d+)$/);
+    if (ref && solsBase[Number(ref[1]) - 1]) {
+      solucion_id = solsBase[Number(ref[1]) - 1].id;
+      coincidencia = String(j.coincidencia ?? "").toLowerCase() === "alta" ? "alta" : "media";
+    }
+    return { problema: String(j.problema).slice(0, 600), solucion: String(j.solucion ?? "").slice(0, 1500), categoria, subtema, repetida_de: rep && previas.some((p) => p.id === rep) ? rep : null, solucion_id, coincidencia };
   } catch (e) {
     console.error("IA error", e);
     return null;
@@ -389,7 +432,8 @@ async function procesarTramo(t: any, tramo: Msg[], fin: Msg): Promise<string> {
 
   // Repetida: se decide con la IA comparando contra las consultas anteriores del cliente (mismo tema, no solo "consultó seguido")
   const previas = await cargarPrevias(cliente_id);
-  const ia = await resumirConIA(convTotal as Msg[], previas);
+  const solsBase = candidatasSoluciones(await cargarSolucionesBase(), convTotal as Msg[]);
+  const ia = await resumirConIA(convTotal as Msg[], previas, solsBase);
   const repetida_consulta_id = decidirRepetida(ia, previas);
 
   const fila = {
@@ -410,6 +454,8 @@ async function procesarTramo(t: any, tramo: Msg[], fin: Msg): Promise<string> {
     repetida_consulta_id,
     detalle_sugerido: ia?.problema ?? detalleSugerido(convTotal as Msg[]),
     solucion_sugerida: ia?.solucion || null,
+    solucion_id_sugerida: ia?.solucion_id ?? null,
+    solucion_coincidencia: ia?.coincidencia ?? null,
     ia_generado: !!ia,
     categoria_sugerida: ia?.categoria ?? null,
     subtema_sugerido: ia?.subtema ?? null,
@@ -471,12 +517,15 @@ async function recalcularDetalles() {
     try {
       const conv = (b.mensajes ?? []).filter((m: any) => m.de === "cliente" || m.de === "asesor");
       const previas = await cargarPrevias(b.cliente_id);
-      const ia = await resumirConIA(conv as Msg[], previas);
+      const solsBase = candidatasSoluciones(await cargarSolucionesBase(), conv as Msg[]);
+      const ia = await resumirConIA(conv as Msg[], previas, solsBase);
       const sugerido = b.cliente_id ? null : await sugerirCliente(b.contacto_nombre);
       const { error } = await sb.from("consultas_borradores").update({
         ...(sugerido ? { cliente_id: sugerido } : {}),
         detalle_sugerido: ia?.problema ?? detalleSugerido(conv as Msg[]),
         solucion_sugerida: ia?.solucion || null,
+        solucion_id_sugerida: ia?.solucion_id ?? null,
+        solucion_coincidencia: ia?.coincidencia ?? null,
         ia_generado: !!ia,
         categoria_sugerida: ia?.categoria ?? null,
         subtema_sugerido: ia?.subtema ?? null,

@@ -6009,7 +6009,7 @@ input[type=date]:focus {
 }
 
 /* Detalle del cliente (pantalla completa) */
-.impl-detalle-toolbar { margin-bottom: 14px; }
+.impl-detalle-toolbar { margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
 /* Los filtros dentro de la card usan los estilos originales de .impl-filters */
 .impl-cliente-card--detalle .impl-cliente-header { cursor: default; }
 /* En el detalle (card alta y ancha) el degradé decorativo de la esquina
@@ -9435,3 +9435,74 @@ input[type=date]:focus {
 .mh__cancel { background: none; border: 0; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--text3); cursor: pointer; }
 .mh__cancel:hover { color: var(--text); }
 .mh__aviso { margin-right: auto; font-size: 12.5px; font-weight: 600; color: #f97316; }
+
+/* Solución de la base sugerida por la IA en "Por registrar" */
+.sol-sug { margin: 0 0 10px; padding: 12px 14px; border: 1px solid color-mix(in srgb, #f97316 40%, var(--border)); background: color-mix(in srgb, #f97316 7%, transparent); border-radius: 12px; }
+.sol-sug__h { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12.5px; font-weight: 700; color: #f97316; }
+.sol-sug__c { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 999px; }
+.sol-sug__c--alta { background: rgba(34,197,94,.15); color: #22c55e; }
+.sol-sug__c--media { background: rgba(245,158,11,.15); color: #f59e0b; }
+.sol-sug__t { margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.35; }
+.sol-sug__m { margin-top: 5px; font-size: 12px; color: var(--text3); }
+.sol-sug__b { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.sol-sug__ok { background: #f97316 !important; border-color: #f97316 !important; color: #fff !important; }
+
+/* ====== IA por cliente (js/cliente-ia.js) ====== */
+.cia-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+  background: transparent; color: #ea580c; border: 1px solid rgba(249,115,22,.45);
+  transition: background .15s, border-color .15s;
+}
+.cia-btn:hover { background: rgba(249,115,22,.1); border-color: #f97316; }
+
+.cia-overlay { position: fixed; inset: 0; z-index: 1200; display: none; background: rgba(15,23,42,.35); justify-content: flex-end; }
+.cia-overlay.cia-open { display: flex; }
+.cia-overlay.cia-in  { animation: hoyFadeIn .28s ease; }
+.cia-overlay.cia-out { animation: hoyFadeOut .22s ease-in forwards; }
+.cia-overlay.cia-in  .cia-drawer { animation: hoyDrawerIn .28s cubic-bezier(.22,.8,.3,1); }
+.cia-overlay.cia-out .cia-drawer { animation: hoyDrawerOut .22s ease-in forwards; }
+
+.cia-drawer {
+  width: min(440px, 100%); height: 100%; display: flex; flex-direction: column;
+  background: var(--surface); border-left: 1px solid var(--border); box-shadow: -12px 0 40px rgba(0,0,0,.12);
+}
+.cia-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 16px 18px 14px; border-bottom: 1px solid var(--border); }
+.cia-head__t { font-size: 15px; font-weight: 700; color: var(--text); }
+.cia-head__s { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.cia-head__acc { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.cia-ghost { background: transparent; border: none; color: var(--text3); font-size: 12px; cursor: pointer; padding: 5px 8px; border-radius: 8px; }
+.cia-ghost:hover { background: var(--surface2); color: var(--text2); }
+.cia-x { background: transparent; border: none; color: var(--text3); font-size: 15px; cursor: pointer; padding: 5px 8px; border-radius: 8px; }
+.cia-x:hover { background: var(--surface2); color: var(--text); }
+
+.cia-msgs { flex: 1; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.cia-bienvenida__t { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.cia-bienvenida__s { font-size: 13px; color: var(--text3); margin-bottom: 14px; line-height: 1.5; }
+.cia-chips { display: flex; flex-direction: column; gap: 7px; }
+.cia-chip {
+  text-align: left; background: var(--surface2); border: 1px solid var(--border); color: var(--text2);
+  font-size: 13px; padding: 9px 12px; border-radius: 10px; cursor: pointer; transition: border-color .15s, color .15s;
+}
+.cia-chip:hover { border-color: #f97316; color: #ea580c; }
+
+.cia-msg { max-width: 92%; font-size: 13.5px; line-height: 1.55; padding: 10px 13px; border-radius: 14px; word-wrap: break-word; }
+.cia-msg p { margin: 0 0 6px; } .cia-msg p:last-child { margin-bottom: 0; }
+.cia-msg ul { margin: 4px 0 6px; padding-left: 18px; } .cia-msg li { margin-bottom: 3px; }
+.cia-msg--user { align-self: flex-end; background: #f97316; color: #fff; border-bottom-right-radius: 4px; }
+.cia-msg--ia   { align-self: flex-start; background: var(--surface2); color: var(--text); border-bottom-left-radius: 4px; }
+.cia-msg--error { background: rgba(239,68,68,.1); color: var(--red); }
+.cia-puntos { display: inline-flex; gap: 4px; padding: 3px 0; }
+.cia-puntos i { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); animation: ciaPunto 1s infinite ease-in-out; }
+.cia-puntos i:nth-child(2) { animation-delay: .15s; } .cia-puntos i:nth-child(3) { animation-delay: .3s; }
+@keyframes ciaPunto { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+
+.cia-form { display: flex; align-items: flex-end; gap: 8px; padding: 12px 16px 6px; border-top: 1px solid var(--border); }
+.cia-form textarea {
+  flex: 1; resize: none; font: inherit; font-size: 13.5px; padding: 9px 12px; max-height: 120px;
+  background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 12px; outline: none;
+}
+.cia-form textarea:focus { border-color: #f97316; }
+.cia-send { width: 36px; height: 36px; border-radius: 10px; border: none; background: #f97316; color: #fff; font-size: 17px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+.cia-send:hover { background: #ea580c; } .cia-send:disabled { opacity: .5; cursor: default; }
+.cia-pie { font-size: 11px; color: var(--text3); padding: 4px 18px 12px; }

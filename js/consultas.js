@@ -1168,6 +1168,7 @@ function resetFormConsulta() {
   if (desc) desc.value = '';
 
   // Solución elegida de la base y su textarea
+  if (typeof borradorSolSugeridaOcultar === 'function') borradorSolSugeridaOcultar();
   consultaSolucionId = null;
   _consultaArchivosStaged = [];
   _renderConsultaArchivos();
