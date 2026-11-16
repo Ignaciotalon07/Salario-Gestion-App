@@ -389,16 +389,10 @@ Salario Gestion/
 
 ## Login y usuarios
 
-Hay 6 cuentas en `team_members` (tabla en Supabase):
-- ignaciotalon07@gmail.com (Google OAuth)
-- matias@salario.local (password)
-- daniel@salario.local (password)
-- danielferro@salario.local (password)
-- renzo@salario.local (password)
-- Alfredo.Cesar@consultoraferro.com.ar (password)
-
-Password por defecto para los 5 emails con dominio salario.local: `123456`
-(cambiar en producción).
+Hay 6 cuentas en la tabla `team_members` de Supabase (una por integrante del equipo; los
+emails y claves NO se guardan en este repo). Se entra con email y contraseña (nadie usa
+Google). Las altas, bajas y cambios de clave se hacen desde Supabase (Authentication → Users
+y tabla `team_members`). Las claves ya son reales; no hay clave por defecto.
 
 ## Workflow con Claude
 
