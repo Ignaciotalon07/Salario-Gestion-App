@@ -178,6 +178,9 @@ Salario Gestion/
     ├── 073_portal_clientes.sql     ← Portal de clientes (Onboarding) paso 1: tabla portal_usuarios (usuario↔cliente), portal_cliente_id(), documentos con origen/visible_cliente, policies de Storage por carpeta de cliente y vistas seguras portal_mi_cliente / portal_etapas (pruebas: docs/portal-pruebas-seguridad.sql)
     ├── 074_team_members_solo_equipo.sql ← team_members: la policy de lectura pasa de USING (true) a is_team_member() (los clientes del portal no ven al equipo)
     ├── 075_portal_etapas_cliente.sql ← Portal paso 2: portal_etapas suma le_toca_cliente/bloqueada y función portal_completar_etapa(tarea_id) (el cliente solo completa etapas con responsable 'cliente'; valida predecesoras, cierra pendiente, deja evento)
+    ├── 076_portal_empresas.sql     ← Portal "Información requerida" paso 1: tabla cliente_empresas (datos de la sección 1 del Word; una principal por cliente + otras empresas para estudios), RLS del cliente por portal_cliente_id() y cliente_documentos.empresa_id
+    ├── 077_portal_novedades.sql    ← Portal: avisos al equipo. team_members.avisos_portal (quién recibe), tabla portal_novedades (se llena por triggers: etapa completada / empresa cargada o editada / archivo subido por el cliente; junta repetidas en 10 min) y portal_novedades_vistas (visto por persona). Clientes sin acceso
+    ├── 078_portal_novedades_vistas_por_cliente.sql ← Corrige portal_novedades_vistas: el "visto" es por persona Y por cliente (PK usuario_email+cliente_id)
     └── schema_completo.sql         ← Todo junto para levantar desde cero (sección 8c = documentos)
 ```
 

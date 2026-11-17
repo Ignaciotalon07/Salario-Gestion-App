@@ -241,6 +241,131 @@ window.addEventListener('app-ready', () => {
   setInterval(refrescarPendAsignados, 60000);
 });
 
+// ────────── Portal de clientes: lo que hizo el cliente (para el Panel general) ──────────
+// La tabla portal_novedades se llena sola (triggers en la base) cuando un cliente completa una
+// etapa, carga/edita una empresa o sube un archivo. Solo lo ve quien tiene avisos_portal = true
+// en team_members (por ahora Ignacio; se habilita a otros con un UPDATE, ver migración 077).
+// Un aviso por cliente, con "hace X min". Se da por visto (por persona y por cliente) al tocar
+// "Ver" o al abrir la pestaña Información del cliente.
+window._portalNovedades = window._portalNovedades || [];   // [{clienteId, cliente, items, ids, cuando}]
+let _portalAvisosFlag = null;          // null = todavía no se sabe · true/false
+let _portalNovIds = null;              // ids ya conocidos (para sonar solo ante novedades NUEVAS)
+
+const _portalEsc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// Se consulta aparte (no en el login) para que, pase lo que pase, nunca bloquee la entrada
+async function portalAvisosActivo() {
+  if (_portalAvisosFlag !== null) return _portalAvisosFlag;
+  try {
+    if (typeof currentMember === 'undefined' || !currentMember || typeof sb !== 'function') return false;
+    const { data, error } = await sb().from('team_members').select('avisos_portal')
+      .eq('email', currentMember.email).maybeSingle();
+    _portalAvisosFlag = !error && !!(data && data.avisos_portal);
+  } catch (e) { _portalAvisosFlag = false; }
+  return _portalAvisosFlag;
+}
+
+function _portalNovTexto(items) {
+  const de = t => items.filter(i => t.includes(i.tipo));
+  const etapas = de(['etapa_completada']);
+  const cargadas = de(['empresa_cargada']);
+  const editadas = de(['empresa_editada']).filter(e => !cargadas.some(c => c.detalle === e.detalle));
+  const archivos = de(['archivo_subido']);
+  const q = s => '«' + _portalEsc(s) + '»';
+  const partes = [];
+  if (etapas.length === 1) partes.push(`completó la etapa ${q(etapas[0].detalle)}`);
+  else if (etapas.length > 1) partes.push(`completó <strong>${etapas.length}</strong> etapas`);
+  if (cargadas.length === 1) partes.push(`cargó la empresa ${q(cargadas[0].detalle)}`);
+  else if (cargadas.length > 1) partes.push(`cargó <strong>${cargadas.length}</strong> empresas`);
+  if (editadas.length === 1) partes.push(`actualizó la empresa ${q(editadas[0].detalle)}`);
+  else if (editadas.length > 1) partes.push(`actualizó <strong>${editadas.length}</strong> empresas`);
+  if (archivos.length) partes.push('subió archivos');
+  if (!partes.length) return 'hizo cambios en el portal';
+  return partes.length > 1 ? partes.slice(0, -1).join(', ') + ' y ' + partes[partes.length - 1] : partes[0];
+}
+
+async function refrescarPortalNovedades() {
+  try {
+    if (!(await portalAvisosActivo()) || typeof sb !== 'function') return;
+    const desde = new Date(Date.now() - 7 * 86400000).toISOString();
+    const [nov, vis] = await Promise.all([
+      sb().from('portal_novedades').select('id, cliente_id, tipo, detalle, created_at')
+        .gte('created_at', desde).order('created_at', { ascending: false }),
+      sb().from('portal_novedades_vistas').select('cliente_id, visto_hasta')
+        .eq('usuario_email', currentMember.email)
+    ]);
+    if (nov.error) throw nov.error;
+    if (vis.error) throw vis.error;
+
+    const visto = {};
+    (vis.data || []).forEach(v => { visto[v.cliente_id] = new Date(v.visto_hasta).getTime(); });
+    const grupos = {};
+    (nov.data || []).forEach(n => {
+      const t = new Date(n.created_at).getTime();
+      if (visto[n.cliente_id] && t <= visto[n.cliente_id]) return;       // ya lo vi
+      const g = grupos[n.cliente_id] || (grupos[n.cliente_id] = { clienteId: n.cliente_id, items: [], ids: [], cuando: n.created_at });
+      g.items.push(n); g.ids.push(n.id + '@' + n.created_at);            // mismo id con otra fecha = novedad nueva
+    });
+    const cli = (typeof clientes !== 'undefined') ? clientes : [];
+    const lista = Object.values(grupos).map(g => {
+      const c = cli.find(x => x.id === g.clienteId);
+      return { ...g, cliente: c ? c.nombre : 'Un cliente' };
+    }).sort((a, b) => new Date(b.cuando) - new Date(a.cuando));
+
+    // ¿Hay algo que no conocía? → suena (y parpadea el título si no estoy mirando la pestaña)
+    const todos = lista.flatMap(g => g.ids);
+    if (_portalNovIds !== null) {
+      const nuevas = lista.filter(g => g.ids.some(id => !_portalNovIds.has(id)));
+      if (nuevas.length) {
+        avisoSonido('mensaje');
+        if (document.hidden) {
+          avisoParpadearTitulo(`🌐 ${nuevas[0].cliente} cargó algo en el portal`, () => !document.hidden);
+        }
+      }
+    }
+    _portalNovIds = new Set(todos);
+    window._portalNovedades = lista;
+    if (typeof renderSaludoPanel === 'function') renderSaludoPanel();
+  } catch (e) { console.warn('No se pudieron cargar las novedades del portal', e); }
+}
+
+// Da por vistas las novedades de un cliente (queda guardado en la base, por persona)
+async function portalNovedadesMarcarVistas(clienteId) {
+  try {
+    const g = (window._portalNovedades || []).find(x => x.clienteId === clienteId);
+    if (!g || !(await portalAvisosActivo())) return;
+    window._portalNovedades = window._portalNovedades.filter(x => x.clienteId !== clienteId);
+    if (typeof renderSaludoPanel === 'function') renderSaludoPanel();
+    const { error } = await sb().from('portal_novedades_vistas').upsert(
+      { usuario_email: currentMember.email, cliente_id: clienteId, visto_hasta: g.cuando },
+      { onConflict: 'usuario_email,cliente_id' });
+    if (error) throw error;
+  } catch (e) { console.warn('No se pudo marcar como vista la novedad del portal', e); }
+}
+
+// Botón "Ver" del aviso: abre el detalle del cliente en Implementación
+function portalIrACliente(clienteId) {
+  portalNovedadesMarcarVistas(clienteId);
+  if (typeof goTo === 'function' && typeof _saludoNavBtn === 'function') goTo(_saludoNavBtn('implementacion'), 'implementacion');
+  setTimeout(() => {
+    if (typeof abrirClienteImpl === 'function') abrirClienteImpl(clienteId);
+    // Si ya existe la pestaña Información del cliente, se abre directo ahí
+    if (typeof implTabInfoDisponible === 'function' && typeof setImplTab === 'function') setImplTab('info');
+  }, 80);
+}
+
+window.addEventListener('app-ready', async () => {
+  if (!(await portalAvisosActivo())) return;
+  setTimeout(refrescarPortalNovedades, 3000);
+  setInterval(refrescarPortalNovedades, 60000);
+  try {
+    sb().channel('portal-novedades')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'portal_novedades' },
+          () => setTimeout(refrescarPortalNovedades, 800))
+      .subscribe();
+  } catch (e) { console.warn('No se pudo suscribir a las novedades del portal', e); }
+});
+
 // ────────── 2) Viernes: actualizar tareas y mandar los Gantt ──────────
 const AVISO_VIERNES_USUARIOS = ['Ignacio Talon', 'Matias Ferro'];
 const AVISO_VIERNES_HORA     = 16;   // desde las 16:00

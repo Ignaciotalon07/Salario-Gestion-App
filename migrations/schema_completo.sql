@@ -1344,3 +1344,210 @@ $$;
 
 REVOKE ALL ON FUNCTION portal_completar_etapa(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION portal_completar_etapa(uuid) TO authenticated;
+
+
+-- 8aa. Portal: fichas de empresa por cliente — ver 076_portal_empresas.sql
+-- ── 1. Tabla ─────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS cliente_empresas (
+  id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  cliente_id          uuid        NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+  es_principal        boolean     NOT NULL DEFAULT false,
+  razon_social        text        NOT NULL,
+  cuit                text,
+  domicilio           text,       -- para el encabezado de los recibos
+  tipo_empleador      text,
+  obra_social         text,       -- obra social general (código y nombre)
+  art                 text,       -- nombre de la ART
+  actividad_principal text,       -- código AFIP y descripción
+  convenios           text,       -- convenios, separados por coma
+  cant_legajos        integer,
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  updated_at          timestamptz NOT NULL DEFAULT now(),
+  actualizado_por     text
+);
+
+CREATE INDEX IF NOT EXISTS idx_cliente_empresas_cliente ON cliente_empresas (cliente_id);
+-- Una sola empresa principal por cliente
+CREATE UNIQUE INDEX IF NOT EXISTS uq_cliente_empresa_principal
+  ON cliente_empresas (cliente_id) WHERE es_principal;
+
+CREATE OR REPLACE FUNCTION cliente_empresas_touch()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at := now();
+  -- Quién la tocó por última vez: el cliente (portal) o el integrante del equipo
+  NEW.actualizado_por := CASE WHEN is_team_member()
+                              THEN coalesce(auth.jwt() ->> 'email', 'equipo')
+                              ELSE 'Cliente (portal)' END;
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_cliente_empresas_touch ON cliente_empresas;
+CREATE TRIGGER trg_cliente_empresas_touch
+  BEFORE INSERT OR UPDATE ON cliente_empresas
+  FOR EACH ROW EXECUTE FUNCTION cliente_empresas_touch();
+
+-- ── 2. RLS ───────────────────────────────────────────────────────────
+ALTER TABLE cliente_empresas ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "equipo gestiona cliente_empresas" ON cliente_empresas;
+CREATE POLICY "equipo gestiona cliente_empresas" ON cliente_empresas
+  FOR ALL TO authenticated
+  USING (is_team_member()) WITH CHECK (is_team_member());
+
+DROP POLICY IF EXISTS "cliente ve sus empresas" ON cliente_empresas;
+CREATE POLICY "cliente ve sus empresas" ON cliente_empresas
+  FOR SELECT TO authenticated
+  USING (cliente_id = portal_cliente_id());
+
+DROP POLICY IF EXISTS "cliente carga sus empresas" ON cliente_empresas;
+CREATE POLICY "cliente carga sus empresas" ON cliente_empresas
+  FOR INSERT TO authenticated
+  WITH CHECK (cliente_id = portal_cliente_id());
+
+DROP POLICY IF EXISTS "cliente edita sus empresas" ON cliente_empresas;
+CREATE POLICY "cliente edita sus empresas" ON cliente_empresas
+  FOR UPDATE TO authenticated
+  USING (cliente_id = portal_cliente_id())
+  WITH CHECK (cliente_id = portal_cliente_id());
+
+-- Puede borrar las empresas que sumó, nunca la principal
+DROP POLICY IF EXISTS "cliente borra sus empresas" ON cliente_empresas;
+CREATE POLICY "cliente borra sus empresas" ON cliente_empresas
+  FOR DELETE TO authenticated
+  USING (cliente_id = portal_cliente_id() AND es_principal = false);
+
+-- Realtime para que el equipo vea los cambios al instante
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE cliente_empresas;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- ── 3. Documentos vinculados a la empresa ────────────────────────────
+-- Si se borra la empresa, los archivos quedan (sin empresa) para no perderlos.
+ALTER TABLE cliente_documentos
+  ADD COLUMN IF NOT EXISTS empresa_id uuid REFERENCES cliente_empresas(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_cliente_documentos_empresa_id ON cliente_documentos (empresa_id);
+
+-- El cliente solo puede vincular un archivo a una empresa de SU cliente
+DROP POLICY IF EXISTS "cliente sube documentos" ON cliente_documentos;
+CREATE POLICY "cliente sube documentos" ON cliente_documentos
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    cliente_id = portal_cliente_id() AND origen = 'cliente' AND subido_por_user = auth.uid()
+    AND (empresa_id IS NULL OR EXISTS (
+          SELECT 1 FROM cliente_empresas e
+          WHERE e.id = empresa_id AND e.cliente_id = portal_cliente_id()))
+  );
+
+
+-- 8ab. Portal: novedades y avisos al equipo — ver 077_portal_novedades.sql
+-- ── 1. Quién recibe avisos ───────────────────────────────────────────
+ALTER TABLE team_members ADD COLUMN IF NOT EXISTS avisos_portal boolean NOT NULL DEFAULT false;
+
+-- ── 2. Novedades ─────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS portal_novedades (
+  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  cliente_id  uuid        NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+  tipo        text        NOT NULL CHECK (tipo IN ('etapa_completada','empresa_cargada','empresa_editada','archivo_subido')),
+  detalle     text,                 -- nombre de la etapa / razón social / nombre del archivo
+  ref_id      uuid,                 -- tarea o empresa a la que se refiere (para juntar repetidas)
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_portal_novedades_fecha   ON portal_novedades (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_portal_novedades_cliente ON portal_novedades (cliente_id, created_at DESC);
+
+ALTER TABLE portal_novedades ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "equipo ve portal_novedades" ON portal_novedades;
+CREATE POLICY "equipo ve portal_novedades" ON portal_novedades
+  FOR SELECT TO authenticated USING (is_team_member());
+-- Sin policy de escritura: solo escriben los triggers (SECURITY DEFINER).
+
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE portal_novedades;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- ── 3. "Visto hasta" por integrante ──────────────────────────────────
+CREATE TABLE IF NOT EXISTS portal_novedades_vistas (
+  usuario_email text        NOT NULL,
+  cliente_id    uuid        NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+  visto_hasta   timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (usuario_email, cliente_id)
+);
+ALTER TABLE portal_novedades_vistas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "cada uno su visto" ON portal_novedades_vistas;
+CREATE POLICY "cada uno su visto" ON portal_novedades_vistas
+  FOR ALL TO authenticated
+  USING (is_team_member() AND usuario_email = (auth.jwt() ->> 'email'))
+  WITH CHECK (is_team_member() AND usuario_email = (auth.jwt() ->> 'email'));
+
+-- ── 4. Registro de una novedad (junta repetidas de los últimos 10 min) ──
+CREATE OR REPLACE FUNCTION portal_registrar_novedad(p_cliente uuid, p_tipo text, p_detalle text, p_ref uuid)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE v_id uuid;
+BEGIN
+  SELECT id INTO v_id FROM portal_novedades
+   WHERE cliente_id = p_cliente AND tipo = p_tipo
+     AND ref_id IS NOT DISTINCT FROM p_ref
+     AND created_at > now() - interval '10 minutes'
+   ORDER BY created_at DESC LIMIT 1;
+
+  IF v_id IS NOT NULL THEN
+    UPDATE portal_novedades SET created_at = now(), detalle = p_detalle WHERE id = v_id;
+  ELSE
+    INSERT INTO portal_novedades (cliente_id, tipo, detalle, ref_id)
+    VALUES (p_cliente, p_tipo, p_detalle, p_ref);
+  END IF;
+END $$;
+REVOKE ALL ON FUNCTION portal_registrar_novedad(uuid, text, text, uuid) FROM PUBLIC, anon, authenticated;
+
+-- ── 5. Triggers ──────────────────────────────────────────────────────
+-- a) Empresa cargada o editada POR EL CLIENTE (no cuenta lo que edita el equipo)
+CREATE OR REPLACE FUNCTION trg_novedad_empresa() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF is_team_member() THEN RETURN NEW; END IF;
+  PERFORM portal_registrar_novedad(
+    NEW.cliente_id,
+    CASE WHEN TG_OP = 'INSERT' THEN 'empresa_cargada' ELSE 'empresa_editada' END,
+    NEW.razon_social, NEW.id);
+  RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS trg_novedad_empresa ON cliente_empresas;
+CREATE TRIGGER trg_novedad_empresa AFTER INSERT OR UPDATE ON cliente_empresas
+  FOR EACH ROW EXECUTE FUNCTION trg_novedad_empresa();
+
+-- b) Etapa completada por el cliente (portal_completar_etapa deja ese evento)
+CREATE OR REPLACE FUNCTION trg_novedad_etapa() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE t implementacion_tareas%ROWTYPE;
+BEGIN
+  SELECT * INTO t FROM implementacion_tareas WHERE id = NEW.tarea_id;
+  IF FOUND THEN
+    PERFORM portal_registrar_novedad(t.cliente_id, 'etapa_completada', t.tarea, t.id);
+  END IF;
+  RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS trg_novedad_etapa ON implementacion_tarea_eventos;
+CREATE TRIGGER trg_novedad_etapa AFTER INSERT ON implementacion_tarea_eventos
+  FOR EACH ROW WHEN (NEW.autor_nombre = 'Cliente (portal)')
+  EXECUTE FUNCTION trg_novedad_etapa();
+
+-- c) Archivo subido por el cliente (lo usará la subida de archivos del portal)
+CREATE OR REPLACE FUNCTION trg_novedad_archivo() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  PERFORM portal_registrar_novedad(NEW.cliente_id, 'archivo_subido', NEW.nombre, NULL);
+  RETURN NEW;
+END $$;
+DROP TRIGGER IF EXISTS trg_novedad_archivo ON cliente_documentos;
+CREATE TRIGGER trg_novedad_archivo AFTER INSERT ON cliente_documentos
+  FOR EACH ROW WHEN (NEW.origen = 'cliente')
+  EXECUTE FUNCTION trg_novedad_archivo();
+

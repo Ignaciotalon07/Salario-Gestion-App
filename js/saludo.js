@@ -662,6 +662,16 @@ function renderSaludoPanel() {
           cta: 'Ver en Alertas →', accion: '_saludoIrAAlertasApi()',
         };
       }) : []),
+    // Portal de clientes: un aviso por cliente que completó una etapa, cargó una empresa o subió archivos
+    ...(window._portalNovedades || []).slice(0, 5).map(g => ({
+      bucket: 'notif',
+      count: 1, color: '#f97316', icon: '🌐',
+      msg: `<strong>${escapeHtmlSaludo(g.cliente)}</strong> ${_portalNovTexto(g.items)} en el portal.`,
+      hace: g.cuando,
+      prio: true,   // novedad activa: va arriba de todo
+      cta: 'Ver lo que cargó →',
+      accion: `portalIrACliente('${g.clienteId}')`,
+    })),
     // Un tile por cada pendiente que otra persona me generó o reasignó
     ...pendAsig.map(a => ({
       bucket: 'notif',

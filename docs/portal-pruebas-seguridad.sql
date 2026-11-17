@@ -39,6 +39,10 @@ UNION ALL SELECT 'soluciones',                      (SELECT count(*) FROM soluci
 UNION ALL SELECT 'team_members',                    (SELECT count(*) FROM team_members)::text,        '0'
 UNION ALL SELECT 'portal_usuarios: solo ve SU fila', (SELECT count(*) FROM portal_usuarios)::text,    '1'
 -- Documentos: solo los suyos (origen cliente) o los que el equipo marcó visibles
+UNION ALL SELECT 'portal_novedades (interna del equipo)', (SELECT count(*) FROM portal_novedades)::text, '0'
+UNION ALL SELECT 'portal_novedades_vistas', (SELECT count(*) FROM portal_novedades_vistas)::text, '0'
+UNION ALL SELECT 'cliente_empresas de OTROS clientes',
+       (SELECT count(*) FROM cliente_empresas WHERE cliente_id <> portal_cliente_id())::text, '0'
 UNION ALL SELECT 'cliente_documentos de OTROS clientes',
        (SELECT count(*) FROM cliente_documentos WHERE cliente_id <> portal_cliente_id())::text, '0'
 UNION ALL SELECT 'cliente_documentos del equipo NO visibles',
