@@ -87,6 +87,8 @@ Salario Gestion/
 │   ├── proyecto-documentos.js ← Vista "Documentos" del detalle de un proyecto (archivos + links de Drive)
 │   ├── salario-historial.js ← Modal 📈 Historial de Salario por cliente (selector de mes, variaciones, gráfico, cambios)
 │   ├── conexiones.js        ← Conexiones del cliente (tarjeta + modal)
+│   ├── cliente-info.js      ← Pestaña "Información" del detalle de Implementación: empresas que cargó el cliente en el portal (editables por el equipo), quién/cuándo las tocó y movimientos del portal; al abrirla marca las novedades como vistas
+│   ├── portal-listas.js     ← Listas (obras sociales, ART, CLAE) para los buscadores del portal y el formulario del equipo
 │   ├── reporte-implementacion.js ← Reporte semanal de implementación
 │   ├── asesor-detalle.js    ← Detalle de cada asesor (sección Equipo)
 │   ├── equipo-ausencias.js  ← Calendario de ausencias + formulario (sección Equipo)

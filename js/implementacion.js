@@ -1048,13 +1048,19 @@ function setImplTab(tab) {
 function renderImplTabs(c, totalTareas) {
   const nDocs = (typeof getCantDocsCliente === 'function') ? getCantDocsCliente(c.id) : 0;
   const tab = window._implTab;
+  const nEmp = (typeof getCantEmpresasCliente === 'function') ? getCantEmpresasCliente(c.id) : 0;
+  const puntito = (typeof infoHayNovedadesSinVer === 'function' && infoHayNovedadesSinVer(c.id))
+    ? '<span class="impl-detalle-tab__dot" title="Novedades del portal sin ver"></span>' : '';
   return `
     <div class="impl-detalle-tabs">
-      <button class="impl-detalle-tab ${tab !== 'documentos' ? 'active' : ''}" onclick="setImplTab('tareas')">
+      <button class="impl-detalle-tab ${(tab !== 'documentos' && tab !== 'info') ? 'active' : ''}" onclick="setImplTab('tareas')">
         📋 Tareas <span class="impl-detalle-tab__n">${totalTareas}</span>
       </button>
       <button class="impl-detalle-tab ${tab === 'documentos' ? 'active' : ''}" onclick="setImplTab('documentos')">
         📁 Documentos <span class="impl-detalle-tab__n">${nDocs}</span>
+      </button>
+      <button class="impl-detalle-tab ${tab === 'info' ? 'active' : ''}" onclick="setImplTab('info')">
+        🧾 Información ${nEmp ? `<span class="impl-detalle-tab__n">${nEmp}</span>` : ''}${puntito}
       </button>
     </div>`;
 }
@@ -1250,6 +1256,7 @@ function renderImplementacion() {
         const destino = slot.querySelector('#impl-detalle-filtros-slot');
         if (filtros && destino) destino.appendChild(filtros);
         if (window._implTab === 'documentos' && typeof docsPostRender === 'function') docsPostRender();
+        if (window._implTab === 'info' && typeof infoPostRender === 'function') infoPostRender();
       }
       return;
     }
@@ -1644,7 +1651,8 @@ function renderClienteImplCard(c, detalle = false) {
       </div>
 
       <div class="impl-cliente-body">
-        ${(detalle && window._implTab === 'documentos') ? renderDocumentosCliente(c) : `
+        ${(detalle && window._implTab === 'info' && typeof renderInfoCliente === 'function') ? renderInfoCliente(c) :
+          (detalle && window._implTab === 'documentos') ? renderDocumentosCliente(c) : `
         ${detalle ? '<div id="impl-detalle-filtros-slot"></div>' : ''}
         ${renderClienteViewToggle(c)}
         ${window._implEditMode[c.id]
