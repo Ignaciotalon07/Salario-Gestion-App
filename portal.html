@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Portal de clientes — Salario</title>
+  <link rel="icon" type="image/png" href="assets/img/isologotipo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* Portal de clientes — estilo minimalista: azul de base, naranja de acción */
+    :root {
+      --bg: #f5f4f0; --surface: #fff; --surface2: #f0efe9;
+      --border: rgba(0,0,0,.08); --border2: rgba(0,0,0,.14);
+      --text: #1a1a18; --text2: #6b6b66; --text3: #9e9e99;
+      --azul: #2d2d8e; --azul-oscuro: #1e1e6e; --azul-claro: #eeedfb;
+      --naranja: #f97316; --naranja-hover: #ea580c; --naranja-bg: #fff4ea;
+      --verde: #2d6a2d; --verde-bg: #eef7ee;
+      --rojo: #c0392b; --rojo-bg: #fdf0ef;
+      --radius: 10px; --radius-lg: 14px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.45; }
+    [hidden] { display: none !important; }
+    button { font-family: inherit; cursor: pointer; }
+
+    /* ── Login ── */
+    #vista-login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .login-card { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 32px 28px; box-shadow: 0 8px 30px rgba(30,30,110,.08); }
+    .login-logo { display: block; height: 44px; margin: 0 auto 14px; }
+    .login-card h1 { font-size: 20px; margin: 0 0 4px; text-align: center; color: var(--azul-oscuro); }
+    .login-card p.sub { text-align: center; color: var(--text2); margin: 0 0 22px; }
+    label.campo { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin: 0 0 5px; }
+    input.campo { width: 100%; padding: 10px 12px; border: 1px solid var(--border2); border-radius: var(--radius); font: inherit; background: var(--surface); color: var(--text); margin-bottom: 14px; }
+    input.campo:focus { outline: 2px solid var(--naranja); outline-offset: -1px; border-color: transparent; }
+    .btn { border: 1px solid transparent; border-radius: var(--radius); padding: 10px 16px; font-weight: 600; font-size: 14px; transition: background .15s; }
+    .btn-naranja { background: var(--naranja); color: #fff; width: 100%; }
+    .btn-naranja:hover { background: var(--naranja-hover); }
+    .btn[disabled] { opacity: .6; cursor: default; }
+    .msg-error { background: var(--rojo-bg); color: var(--rojo); border-radius: var(--radius); padding: 9px 12px; font-size: 13px; margin-bottom: 14px; }
+
+    /* ── Portal ── */
+    .topbar { background: var(--azul-oscuro); color: #fff; }
+    .topbar-in { max-width: 860px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+    .topbar img { height: 30px; }
+    .topbar .quien { flex: 1; min-width: 0; }
+    .topbar .quien small { display: block; opacity: .7; font-size: 11.5px; }
+    .topbar .quien strong { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+    .btn-salir { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.35); padding: 6px 12px; font-size: 12.5px; border-radius: 8px; }
+    .btn-salir:hover { background: rgba(255,255,255,.12); }
+
+    main { max-width: 860px; margin: 0 auto; padding: 22px 20px 60px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 16px; }
+
+    .avance-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .avance-top h2 { margin: 0; font-size: 16px; color: var(--azul-oscuro); }
+    .avance-pct { font-size: 26px; font-weight: 700; color: var(--naranja); }
+    .barra { height: 10px; background: var(--surface2); border-radius: 99px; overflow: hidden; margin: 10px 0 8px; }
+    .barra > span { display: block; height: 100%; background: var(--naranja); border-radius: 99px; transition: width .4s; }
+    .avance-sub { color: var(--text2); font-size: 12.5px; }
+
+    .aviso-toca { background: var(--naranja-bg); border: 1px solid #fed7aa; color: #7c3a06; border-radius: var(--radius); padding: 10px 14px; margin-top: 12px; font-size: 13px; }
+
+    .fase { margin-bottom: 16px; }
+    .fase-head { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+    .fase-head h3 { margin: 0; font-size: 14px; color: var(--azul-oscuro); }
+    .fase-head .cuenta { color: var(--text3); font-size: 12px; margin-left: auto; }
+    .etapa { display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 6px; }
+    .etapa.toca { border-color: var(--naranja); background: var(--naranja-bg); }
+    .etapa.hecha .etapa-nombre { color: var(--text2); }
+    .punto { width: 22px; height: 22px; flex: 0 0 22px; border-radius: 50%; border: 2px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; }
+    .etapa.hecha .punto { background: var(--verde); border-color: var(--verde); }
+    .etapa.curso .punto { border-color: var(--azul); background: var(--azul-claro); }
+    .etapa.toca:not(.hecha) .punto { border-color: var(--naranja); }
+    .etapa-cuerpo { flex: 1; min-width: 0; }
+    .etapa-nombre { font-weight: 500; }
+    .etapa-meta { font-size: 12px; color: var(--text3); margin-top: 1px; }
+    .chip { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; margin-left: 6px; vertical-align: 1px; }
+    .chip-toca { background: var(--naranja); color: #fff; }
+    .chip-equipo { background: var(--azul-claro); color: var(--azul); }
+    .chip-ambos { background: #f1ebfb; color: #5b3a9e; }
+    .btn-hecha { background: var(--naranja); color: #fff; padding: 7px 12px; font-size: 12.5px; white-space: nowrap; border-radius: 8px; }
+    .btn-hecha:hover { background: var(--naranja-hover); }
+    .espera { font-size: 12px; color: var(--text3); white-space: nowrap; }
+
+    .vacio { text-align: center; color: var(--text2); padding: 40px 20px; }
+    #toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--azul-oscuro); color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 90vw; }
+    #toast.on { opacity: 1; }
+    @media (max-width: 560px) { .etapa { flex-wrap: wrap; } .btn-hecha, .espera { margin-left: 34px; } }
+  </style>
+</head>
+<body>
+
+  <!-- Login -->
+  <section id="vista-login" hidden>
+    <form class="login-card" id="form-login" autocomplete="on">
+      <img class="login-logo" src="assets/img/isologotipo.png" alt="Salario" />
+      <h1>Portal de clientes</h1>
+      <p class="sub">Ingresá con el email y la clave que te enviamos.</p>
+      <div id="login-error" class="msg-error" hidden></div>
+      <label class="campo" for="l-email">Email</label>
+      <input class="campo" id="l-email" type="email" required autocomplete="username" />
+      <label class="campo" for="l-clave">Clave</label>
+      <input class="campo" id="l-clave" type="password" required autocomplete="current-password" />
+      <button class="btn btn-naranja" id="l-btn" type="submit">Ingresar</button>
+    </form>
+  </section>
+
+  <!-- Portal -->
+  <section id="vista-portal" hidden>
+    <header class="topbar">
+      <div class="topbar-in">
+        <img src="assets/img/isologotipo.png" alt="Salario" />
+        <div class="quien"><small>Tu implementación</small><strong id="p-cliente"></strong></div>
+        <button class="btn-salir" id="btn-salir" type="button">Salir</button>
+      </div>
+    </header>
+    <main>
+      <div class="card" id="p-avance"></div>
+      <div id="p-fases"></div>
+    </main>
+  </section>
+
+  <div id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script>
+  // ───────────────────────── Portal de clientes ─────────────────────────
+  // Misma base de Supabase que la plataforma del equipo, pero con OTRA clave de
+  // sesión: abrir el portal en tu navegador no pisa la sesión del equipo.
+  // La seguridad está en la base (RLS + vistas portal_*), no en este archivo.
+  const sb = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.publishableKey, {
+    auth: { storageKey: 'sb-portal-auth', persistSession: true, autoRefreshToken: true }
+  });
+
+  const FASES = [
+    { key: 'relevamiento',  nombre: 'Relevamiento',  icono: '🔍' },
+    { key: 'analisis',      nombre: 'Análisis',      icono: '📊' },
+    { key: 'configuracion', nombre: 'Configuración', icono: '⚙️' },
+    { key: 'pruebas',       nombre: 'Pruebas',       icono: '✅' },
+    { key: 'golive',        nombre: 'Go-live',       icono: '🚀' }
+  ];
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function toast(txt) {
+    const t = $('toast'); t.textContent = txt; t.classList.add('on');
+    clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 3500);
+  }
+  function fmtFecha(f) {
+    if (!f) return '';
+    const d = new Date(String(f).slice(0, 10) + 'T00:00:00');
+    return isNaN(d) ? '' : d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
+  }
+  function mostrar(vista) {
+    $('vista-login').hidden  = vista !== 'login';
+    $('vista-portal').hidden = vista !== 'portal';
+  }
+  function loginError(txt) {
+    const e = $('login-error'); e.textContent = txt || ''; e.hidden = !txt;
+  }
+
+  // ── Login ──
+  $('form-login').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    loginError('');
+    const btn = $('l-btn'); btn.disabled = true; btn.textContent = 'Ingresando…';
+    const { error } = await sb.auth.signInWithPassword({
+      email: $('l-email').value.trim(), password: $('l-clave').value
+    });
+    btn.disabled = false; btn.textContent = 'Ingresar';
+    if (error) { loginError('Email o clave incorrectos.'); return; }
+    $('l-clave').value = '';
+    await iniciar();
+  });
+
+  $('btn-salir').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    mostrar('login');
+  });
+
+  // ── Carga de datos (solo las vistas seguras portal_*) ──
+  let etapas = [];
+
+  async function iniciar() {
+    const { data: ses } = await sb.auth.getSession();
+    if (!ses.session) { mostrar('login'); return; }
+
+    const { data: cli, error } = await sb.from('portal_mi_cliente').select('*').maybeSingle();
+    if (error || !cli) {
+      // Usuario válido pero sin cliente vinculado (o acceso desactivado)
+      await sb.auth.signOut();
+      mostrar('login');
+      loginError('Tu acceso al portal no está habilitado. Escribinos y lo revisamos.');
+      return;
+    }
+    $('p-cliente').textContent = cli.nombre;
+    mostrar('portal');
+    await cargarEtapas();
+  }
+
+  async function cargarEtapas() {
+    const { data, error } = await sb.from('portal_etapas').select('*').order('orden');
+    if (error) { toast('No se pudieron cargar las etapas. Probá recargar la página.'); return; }
+    etapas = data || [];
+    render();
+  }
+
+  // ── Dibujo ──
+  function render() {
+    const total = etapas.length;
+    if (!total) {
+      $('p-avance').innerHTML = '';
+      $('p-fases').innerHTML = '<div class="card vacio">Todavía no hay etapas cargadas para tu implementación. Pronto vas a verlas acá.</div>';
+      return;
+    }
+    const hechas = etapas.filter(e => e.estado === 'completada').length;
+    const pct = Math.round(hechas / total * 100);
+    const tocan = etapas.filter(e => e.le_toca_cliente && e.estado !== 'completada' && !e.bloqueada);
+
+    $('p-avance').innerHTML = `
+      <div class="avance-top"><h2>Avance de tu implementación</h2><div class="avance-pct">${pct}%</div></div>
+      <div class="barra"><span style="width:${pct}%"></span></div>
+      <div class="avance-sub">${hechas} de ${total} etapas completadas</div>
+      ${tocan.length ? `<div class="aviso-toca"><strong>Te toca a vos:</strong> ${tocan.length === 1 ? 'tenés 1 etapa pendiente de tu parte' : 'tenés ' + tocan.length + ' etapas pendientes de tu parte'} (marcadas en naranja).</div>` : ''}`;
+
+    // Agrupa por fase: primero las 5 base y después cualquier otra que haya
+    const keys = FASES.map(f => f.key);
+    etapas.forEach(e => { const k = e.fase || 'relevamiento'; if (!keys.includes(k)) keys.push(k); });
+    $('p-fases').innerHTML = keys.map(k => {
+      const lista = etapas.filter(e => (e.fase || 'relevamiento') === k);
+      if (!lista.length) return '';
+      const base = FASES.find(f => f.key === k);
+      const nombre = base ? base.nombre : k.charAt(0).toUpperCase() + k.slice(1);
+      const icono = base ? base.icono : '📌';
+      const ok = lista.filter(e => e.estado === 'completada').length;
+      return `<div class="fase">
+        <div class="fase-head"><span>${icono}</span><h3>${esc(nombre)}</h3><span class="cuenta">${ok}/${lista.length}</span></div>
+        ${lista.map(htmlEtapa).join('')}
+      </div>`;
+    }).join('');
+  }
+
+  function htmlEtapa(e) {
+    const hecha = e.estado === 'completada';
+    const cls = ['etapa', hecha ? 'hecha' : '', e.estado === 'en_progreso' ? 'curso' : '', e.le_toca_cliente && !hecha ? 'toca' : ''].join(' ');
+    const chip = e.le_toca_cliente
+      ? '<span class="chip chip-toca">Te toca a vos</span>'
+      : (e.responsable_tipo === 'ambos' ? '<span class="chip chip-ambos">Entre ambos</span>' : '<span class="chip chip-equipo">Equipo Salario</span>');
+    let meta = '';
+    if (hecha && e.fecha_completada) meta = 'Completada el ' + fmtFecha(e.fecha_completada);
+    else if (e.fecha_inicio || e.fecha_fin) meta = 'Previsto: ' + fmtFecha(e.fecha_inicio) + (e.fecha_fin ? ' al ' + fmtFecha(e.fecha_fin) : '');
+    else if (e.estado === 'en_progreso') meta = 'En curso';
+    else if (e.estado === 'demorada') meta = 'Demorada';
+
+    let accion = '';
+    if (e.le_toca_cliente && !hecha) {
+      accion = e.bloqueada
+        ? '<span class="espera">Esperando una etapa anterior</span>'
+        : `<button class="btn btn-hecha" data-id="${esc(e.id)}" type="button">Marcar como hecha</button>`;
+    }
+    return `<div class="${cls}">
+      <div class="punto">${hecha ? '✓' : ''}</div>
+      <div class="etapa-cuerpo"><div class="etapa-nombre">${esc(e.tarea)}${chip}</div>${meta ? `<div class="etapa-meta">${esc(meta)}</div>` : ''}</div>
+      ${accion}
+    </div>`;
+  }
+
+  // ── Marcar como hecha (la base valida que sea de su cliente y de responsable "cliente") ──
+  $('p-fases').addEventListener('click', async ev => {
+    const btn = ev.target.closest('.btn-hecha');
+    if (!btn) return;
+    const e = etapas.find(x => x.id === btn.dataset.id);
+    if (!e) return;
+    if (!confirm('¿Confirmás que completaste esta etapa?\n\n' + e.tarea)) return;
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    const { error } = await sb.rpc('portal_completar_etapa', { p_tarea_id: e.id });
+    if (error) {
+      toast(error.message || 'No se pudo marcar la etapa.');
+      btn.disabled = false; btn.textContent = 'Marcar como hecha';
+      return;
+    }
+    toast('¡Listo! Avisamos al equipo.');
+    await cargarEtapas();
+  });
+
+  // ── Arranque ──
+  sb.auth.getSession().then(({ data }) => {
+    if (data.session) iniciar(); else mostrar('login');
+  });
+  </script>
+</body>
+</html>

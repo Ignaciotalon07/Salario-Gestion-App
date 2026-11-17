@@ -2727,7 +2727,46 @@ function suscribirImplementacion() {
     .on('postgres_changes',
         { event: '*', schema: 'public', table: 'implementacion_tarea_archivos' },
         (payload) => handleImplArchivoChange(payload))
+    // Eventos de tareas: sirve para enterarnos cuando el CLIENTE completa una etapa desde el portal
+    .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'implementacion_tarea_eventos' },
+        (payload) => handleImplEventoChange(payload))
     .subscribe();
+}
+
+// ── Etapa completada por el cliente desde el portal ──
+// El portal solo cambia el estado (no recalcula fechas). Acá, cuando llega el evento,
+// el equipo recalcula el Gantt de ese cliente. Como todos los navegadores abiertos reciben
+// el aviso, cada uno espera un rato al azar y CANCELA el suyo si antes ve que otro ya
+// movió las fechas (así normalmente escribe uno solo y no los 6 a la vez).
+const IMPL_AUTOR_PORTAL = 'Cliente (portal)';
+let _implRecalcPendiente = {};   // { cliente_id: timeoutId }
+
+function handleImplEventoChange(payload) {
+  const ev = payload && payload.new;
+  if (!ev) return;
+
+  // Mantener al día el historial si esa tarea ya lo tenía cargado en pantalla
+  if (implEventos[ev.tarea_id] && !implEventos[ev.tarea_id].find(x => x.id === ev.id)) {
+    implEventos[ev.tarea_id].unshift(ev);
+  }
+
+  if (ev.autor_nombre !== IMPL_AUTOR_PORTAL) return;
+  const t = implTareas.find(x => x.id === ev.tarea_id);
+  if (!t) return;
+  const clienteId = t.cliente_id;
+  if (_implRecalcPendiente[clienteId]) return; // ya hay uno programado
+
+  const espera = 800 + Math.random() * 2700; // entre 0,8 y 3,5 s
+  _implRecalcPendiente[clienteId] = setTimeout(async () => {
+    delete _implRecalcPendiente[clienteId];
+    try {
+      await recalcularGanttCliente(clienteId);
+      if (typeof refreshAlertas === 'function') refreshAlertas();
+    } catch (e) {
+      console.warn('No se pudo recalcular el Gantt tras una etapa completada por el cliente', e);
+    }
+  }, espera);
 }
 
 function handleImplFaseClienteChange(payload) {
@@ -2762,6 +2801,14 @@ function handleImplChange(payload) {
   } else if (eventType === 'UPDATE') {
     const idx = implTareas.findIndex(t => t.id === newRow.id);
     if (idx !== -1) {
+      // Si otro navegador ya recalculó las fechas de este cliente, cancelamos nuestro recálculo
+      // pendiente (ver handleImplEventoChange) para no escribir todo dos veces.
+      const previa = implTareas[idx];
+      if (_implRecalcPendiente[newRow.cliente_id] &&
+          (previa.fecha_inicio_calc !== newRow.fecha_inicio_calc || previa.fecha_estimada !== newRow.fecha_estimada)) {
+        clearTimeout(_implRecalcPendiente[newRow.cliente_id]);
+        delete _implRecalcPendiente[newRow.cliente_id];
+      }
       implTareas[idx] = dbRowToImplTarea(newRow);
       renderImplementacion();
     }
