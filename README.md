@@ -39,18 +39,18 @@ Subir el repo a GitHub, activar Pages desde la rama `main` (carpeta raíz). El l
 
 ```
 .
-├── index.html          Estructura principal: sidebar + 8 secciones
-├── css/
-│   └── styles.css      Variables, layout, componentes, responsive
-└── js/
-    ├── data.js         Categorías y soluciones (datos hardcodeados)
-    ├── ui.js           Helpers compartidos (toast)
-    ├── nav.js          Navegación entre secciones
-    ├── clientes.js     Filtros y ordenamiento de fichas
-    ├── pendientes.js   Crear/cerrar pendientes + contador del sidebar
-    ├── consultas.js    Formulario de registrar consulta
-    ├── kb.js           Base de soluciones: render, búsqueda, filtros, detalle
-    └── charts.js       Inicialización de Chart.js + render inicial de KB
+├── index.html          Entrada de Salario Gestión (app del equipo)
+├── gestion/            App del equipo
+│   ├── css/styles.css  Variables, layout, componentes, responsive
+│   └── js/
+│       ├── data.js         Categorías y soluciones (datos hardcodeados)
+│       ├── ui.js           Helpers compartidos (toast)
+│       ├── nav.js          Navegación entre secciones
+│       ├── clientes.js     Filtros y ordenamiento de fichas
+│       ├── pendientes.js   Crear/cerrar pendientes + contador del sidebar
+│       ├── consultas.js    Formulario de registrar consulta
+│       ├── kb.js           Base de soluciones: render, búsqueda, filtros, detalle
+│       └── charts.js       Inicialización de Chart.js + render inicial de KB
 ```
 
 ## Secciones
@@ -72,7 +72,7 @@ Subir el repo a GitHub, activar Pages desde la rama `main` (carpeta raíz). El l
 
 ## Próximos pasos
 
-- [ ] Conectar a Google Sheets como fuente de datos real (reemplaza `js/data.js`).
+- [ ] Conectar a Google Sheets como fuente de datos real (reemplaza `gestion/js/data.js`).
 - [ ] Persistir pendientes y consultas (LocalStorage primero, luego Sheets).
 - [ ] Score de riesgo calculado dinámicamente desde los datos en lugar de hardcodeado.
 - [ ] Exportar reportes mensuales en PDF.

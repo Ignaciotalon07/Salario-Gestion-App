@@ -1,0 +1,108 @@
+-- 027_seed_clientes_reales.sql
+-- Limpia datos de prueba e inserta los 89 clientes reales.
+
+-- ── 1. Limpiar datos de prueba ────────────────────────────────
+DELETE FROM consultas;
+DELETE FROM pendiente_notas;
+DELETE FROM pendiente_eventos;
+DELETE FROM pendientes;
+DELETE FROM soluciones;
+DELETE FROM implementacion_tareas;
+DELETE FROM clientes;
+
+-- ── 2. Ajustar columnas ───────────────────────────────────────
+ALTER TABLE clientes ALTER COLUMN asesor DROP NOT NULL;
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS razon_social text;
+ALTER TABLE clientes ADD COLUMN IF NOT EXISTS cuit text;
+
+-- ── 3. Insertar clientes reales ───────────────────────────────
+INSERT INTO clientes (nombre, iniciales, razon_social, cuit, tipo, area, autonomia, adopcion, score) VALUES
+  ('Barujel Cambio S.R.L.', 'BC', 'Barujel Cambio S.R.L.', '30703338824', 'empresa', 'soporte', 'media', 0, 0),
+  ('Molinos Viada', 'MV', 'Molinos Viada', '30685344994', 'empresa', 'soporte', 'media', 0, 0),
+  ('Estudio Maineri', 'EM', 'Consultores Asociados SRL', '30712275827', 'estudio', 'soporte', 'media', 0, 0),
+  ('Howard Johnson - Cañada', 'HJ', 'AMDEST SA', '30710296002', 'empresa', 'soporte', 'media', 0, 0),
+  ('Fixman - Conectiva', 'FC', 'Fixman', '30714821667', 'empresa', 'soporte', 'media', 0, 0),
+  ('Estudio Fabrro', 'EF', 'BBL ESTUDIO CONTABLE S.A.S.', '30717920151', 'estudio', 'soporte', 'media', 0, 0),
+  ('Estudio Perez', 'EP', 'Estudio Perez', '23066991199', 'estudio', 'soporte', 'media', 0, 0),
+  ('Colegio Inmaculada', 'CI', 'Colegio Inmaculada', '30529225233', 'colegio', 'soporte', 'media', 0, 0),
+  ('Grupo Conforto', 'GC', 'Grupo Conforto', '20161574199', 'estudio', 'soporte', 'media', 0, 0),
+  ('Estudio Fissore', 'EF', 'Estudio Fissore', '20219020490', 'estudio', 'soporte', 'media', 0, 0),
+  ('Tecnus', 'TE', 'Tecnus', '30708414081', 'empresa', 'soporte', 'media', 0, 0),
+  ('Sistemas Ehlers', 'SE', 'Sistemas Ehlers', '30634715084', 'empresa', 'soporte', 'media', 0, 0),
+  ('Cauplas', 'CA', 'Cauplas', '34611871262', 'empresa', 'soporte', 'media', 0, 0),
+  ('Estudio Borrini', 'EB', 'Estudio Borrini', '27205431212', 'estudio', 'soporte', 'media', 0, 0),
+  ('Estudio Hadad', 'EH', 'Estudio Hadad', '27296876157', 'estudio', 'soporte', 'media', 0, 0),
+  ('Darsie', 'DA', 'Darsie', '30537926240', 'empresa', 'soporte', 'media', 0, 0),
+  ('NovaCor', 'NO', 'NovaCor', '30708236027', 'empresa', 'soporte', 'media', 0, 0),
+  ('Comuna Siquiman', 'CS', 'Comuna Siquiman', '30678675543', 'municipalidad', 'soporte', 'media', 0, 0),
+  ('Estudio Romero', 'ER', 'Estudio Romero', '20249915018', 'estudio', 'soporte', 'media', 0, 0),
+  ('Maglione', 'MA', 'Maglione', '30511764269', 'empresa', 'soporte', 'media', 0, 0),
+  ('BVC & Asociados', 'BA', 'BVC & Asociados', '27281162018', 'estudio', 'soporte', 'media', 0, 0),
+  ('Sudosilos', 'SU', 'Sudosilos', '30503586610', 'empresa', 'soporte', 'media', 0, 0),
+  ('Nina', 'NI', 'Nina', '30718047052', 'empresa', 'soporte', 'media', 0, 0),
+  ('Gesem', 'GE', 'Gesem', '30709022284', 'empresa', 'soporte', 'media', 0, 0),
+  ('Colegio Rosarito Vera', 'CR', 'Colegio Rosarito Vera', '30656844325', 'colegio', 'soporte', 'media', 0, 0),
+  ('Neverland', 'NE', 'Neverland', '30642908304', 'empresa', 'soporte', 'media', 0, 0),
+  ('Estudio LGB', 'EL', 'Estudio LGB', '20272477087', 'estudio', 'soporte', 'media', 0, 0),
+  ('Estudio Pilar', 'EP', 'Estudio Pilar', '27351082114', 'estudio', 'soporte', 'media', 0, 0),
+  ('Estudio MCA', 'EM', 'Mca CONSULTORES S.A.', '33595562959', 'estudio', 'soporte', 'media', 0, 0),
+  ('Estudio Castaño', 'EC', 'Estudio Castaño', '', 'estudio', 'soporte', 'media', 0, 0),
+  ('Corpal', 'CO', 'Corpal', '30714558303', 'estudio', 'soporte', 'media', 0, 0),
+  ('Club de la Milanesa', 'CD', 'BRAMOL SRL', '30711986797', 'empresa', 'soporte', 'media', 0, 0),
+  ('Bacar', 'BA', 'Bacar', '30668134978', 'empresa', 'soporte', 'media', 0, 0),
+  ('Montironi', 'MO', 'Montironi', '30543028556', 'empresa', 'soporte', 'media', 0, 0),
+  ('Colegio Ispova', 'CI', 'Colegio Ispova', '30518392154', 'colegio', 'soporte', 'media', 0, 0),
+  ('M3', 'M3', 'M3', '30716264285', 'empresa', 'soporte', 'media', 0, 0),
+  ('Indelma', 'IN', 'Indelma', '30707807780', 'empresa', 'soporte', 'media', 0, 0),
+  ('Pasquale', 'PA', 'Pasquale', '30504943565', 'empresa', 'soporte', 'media', 0, 0),
+  ('Colegio Pias Cordoba', 'CP', 'Colegio Pias Cordoba', '33609754309', 'colegio', 'soporte', 'media', 0, 0),
+  ('Colegio Pias Rio Cuarto', 'CP', 'Colegio Pias Rio Cuarto', '33609754309', 'colegio', 'soporte', 'media', 0, 0),
+  ('Estudio Altamirano', 'EA', 'Estudio Altamirano', '20180166549', 'estudio', 'soporte', 'media', 0, 0),
+  ('Estudio Ocampo', 'EO', 'Gustavo Alejandro Ocampo', '20165016530', 'estudio', 'soporte', 'media', 0, 0),
+  ('Estudio Alvarez', 'EA', 'Alvarez & Asociados S.A.S.', '30716310538', 'estudio', 'soporte', 'media', 0, 0),
+  ('Colegio Pio X', 'CP', 'Pio X', '30610494974', 'colegio', 'soporte', 'media', 0, 0),
+  ('Gieco SA', 'GS', 'Gieco SA', '30698868968', 'empresa', 'soporte', 'media', 0, 0),
+  ('Grupo Serin', 'GS', 'Grupo Serin', '30621160261', 'empresa', 'soporte', 'media', 0, 0),
+  ('Transporte Bonfigli', 'TB', 'Transporte Bonfigli', '33710211189', 'empresa', 'soporte', 'media', 0, 0),
+  ('Estudio Borrione', 'EB', 'Estudio Borrione', '30718495462', 'estudio', 'soporte', 'media', 0, 0),
+  ('Proximo', 'PR', 'Comunicación Multimedia', '30709645532', 'empresa', 'soporte', 'media', 0, 0),
+  ('Creciendo S.A.', 'CS', 'Creciendo S.A.', '33698873189', 'empresa', 'soporte', 'media', 0, 0),
+  ('Howard Johnson - Carlos Paz', 'HJ', 'Villa Howard SA.', '30712071083', 'empresa', 'soporte', 'media', 0, 0),
+  ('Colegio Republica de Italia', 'CR', 'Colegio Republica de Italia', '30631527201', 'colegio', 'soporte', 'media', 0, 0),
+  ('Estudio Laso Werbin', 'EL', 'Roberto Werbin', '20105453222', 'estudio', 'soporte', 'media', 0, 0),
+  ('Estudio Robles', 'ER', 'Estudio Robles', '30717881822', 'estudio', 'soporte', 'media', 0, 0),
+  ('Vimeco', 'VI', 'Vimeco', '30504245337', 'empresa', 'soporte', 'media', 0, 0),
+  ('Catering', 'CA', 'Catering', '30708105062', 'empresa', 'soporte', 'media', 0, 0),
+  ('Telemercado', 'TE', 'Telemercado', '30708655097', 'empresa', 'soporte', 'media', 0, 0),
+  ('Hiper Zingueria', 'HZ', 'Hiper Zingueria', '30710575521', 'empresa', 'soporte', 'media', 0, 0),
+  ('Don Emilio', 'DE', 'Don Emilio', '30707843248', 'empresa', 'soporte', 'media', 0, 0),
+  ('Colegio Juan 23', 'CJ', 'Colegio Juan 23', '30573276066', 'colegio', 'soporte', 'media', 0, 0),
+  ('Estudio Wainstein', 'EW', 'Estudio Wainstein', '20174284424', 'empresa', 'soporte', 'media', 0, 0),
+  ('Estudio Moyano', 'EM', 'Estudio Moyano', '30712269401', 'estudio', 'soporte', 'media', 0, 0),
+  ('Colegio Secundario San Jose', 'CS', 'Colegio Secundario San Jose', '30562828474', 'colegio', 'soporte', 'media', 0, 0),
+  ('Colegio Colegium', 'CC', 'Colegio Colegium', '30618252600', 'colegio', 'soporte', 'media', 0, 0),
+  ('Colegio Parroquial San Jose', 'CP', 'Colegio Parroquial San Jose', '30677610545', 'colegio', 'soporte', 'media', 0, 0),
+  ('Karikal', 'KA', 'Karikal', '30579007113', 'empresa', 'soporte', 'media', 0, 0),
+  ('Laboratorio de Análisis Dres. de Elías y Kiener S.R.L', 'LD', 'Laboratorio de Análisis Dres. de Elías y Kiener S.R.L', '30592891111', 'empresa', 'soporte', 'media', 0, 0),
+  ('Cedi Consulting', 'CC', 'Cedi Consulting', '30708050403', 'empresa', 'soporte', 'media', 0, 0),
+  ('Estudio Alfonso', 'EA', 'Estudio Alfonso', '20336997373', 'estudio', 'soporte', 'media', 0, 0),
+  ('Colegio Dante Alighieri', 'CD', 'Escuela Paritaria Dante Alighieri', '30538806931', 'colegio', 'soporte', 'media', 0, 0),
+  ('Estudio Auren', 'EA', 'Auren', '30715450190', 'estudio', 'soporte', 'media', 0, 0),
+  ('Glosyc', 'GL', 'Glosyc', '30712480943', 'empresa', 'soporte', 'media', 0, 0),
+  ('Colegio Taborin', 'CT', 'Colegio Taborin', '30608674698', 'colegio', 'soporte', 'media', 0, 0),
+  ('Tifec', 'TI', 'Tifec', '30503262971', 'empresa', 'soporte', 'media', 0, 0),
+  ('Flexxus SA', 'FS', 'Flexxus SA', '30709063002', 'empresa', 'soporte', 'media', 0, 0),
+  ('Estudio Marcelo Miguel', 'EM', 'Marcelo Miguel', '20171454671', 'estudio', 'soporte', 'media', 0, 0),
+  ('Estudio Solca', 'ES', 'Silvia Solka', '27136810281', 'estudio', 'soporte', 'media', 0, 0),
+  ('Estudio Bocco 1', 'EB', 'Estudio Bocco 1', '20266724935', 'estudio', 'soporte', 'media', 0, 0),
+  ('Estudio Barrera', 'EB', 'Estudio Barrera', '27402349358', 'estudio', 'soporte', 'media', 0, 0),
+  ('Estudio SLH', 'ES', 'SLH Sueldos', '20386485314', 'colegio', 'soporte', 'media', 0, 0),
+  ('Estudio Gimenez', 'EG', 'Estudio Gimenez', '27294732565', 'estudio', 'soporte', 'media', 0, 0),
+  ('Estudio FH', 'EF', 'Estudio FH', '30717453510', 'estudio', 'soporte', 'media', 0, 0),
+  ('Merlino', 'ME', 'Merlino', '30630507347', 'empresa', 'soporte', 'media', 0, 0),
+  ('Estudio Sartori', 'ES', 'Estudio Sartori', '20355268722', 'colegio', 'soporte', 'media', 0, 0),
+  ('MarkTwain', 'MA', 'MarkTwain', '30678711442', 'colegio', 'soporte', 'media', 0, 0),
+  ('Estin Argentina', 'EA', 'Estin Argentina', '30711414939', 'empresa', 'soporte', 'media', 0, 0),
+  ('Vespasiani', 'VE', 'Vespasiani Automotores sa', '30579489177', 'empresa', 'soporte', 'media', 0, 0),
+  ('Estudio Zarazaga', 'EZ', 'Estudio Zarazaga', '23136835289', 'estudio', 'soporte', 'media', 0, 0),
+  ('Estudio Bocco 2', 'EB', 'Estudio Bocco 2', '20256085446', 'colegio', 'soporte', 'media', 0, 0);

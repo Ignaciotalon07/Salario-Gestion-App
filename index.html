@@ -10,12 +10,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400&display=swap"
       rel="stylesheet"
     />
 
     <!-- Estilos -->
-    <link rel="stylesheet" href="css/styles.css?v=20261117b" />
+    <link rel="stylesheet" href="gestion/css/styles.css?v=20261130e" />
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -464,15 +464,18 @@
   ════════════════════════════════════ -->
         <nav class="sidebar">
           <div class="sidebar-logo">
-            <div style="display: flex; align-items: center; gap: 8px">
+            <div style="display: flex; align-items: center; gap: 9px">
               <img
                 src="assets/img/isologotipo.png"
                 alt="Logo"
                 style="width: 28px; height: 28px; object-fit: contain"
               />
-              <div class="brand">Salario Gestión</div>
+              <span class="logo-sep"></span>
+              <div>
+                <div class="brand">Salario <em>Gestión</em></div>
+                <div class="sub">Equipo</div>
+              </div>
             </div>
-            <div class="sub">Gestión de clientes</div>
           </div>
 
           <div id="user-chip" class="user-chip"></div>
@@ -636,6 +639,10 @@
                 ></path>
               </svg>
               <span>Configuración</span>
+            </button>
+            <button class="nav-item nav-salir" onclick="signOut()">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+              <span>Cerrar sesión</span>
             </button>
           </div>
         </nav>
@@ -1574,7 +1581,8 @@
            <div id="impl-detalle-view" style="display:none">
             <div class="impl-detalle-toolbar">
               <button class="btn-secondary detalle-back" onclick="cerrarClienteImpl()">← Volver a implementaciones</button>
-              <button type="button" class="cia-btn" style="margin-left:auto" onclick="clienteIaAbrir(window._implClienteAbierto, 'impl')" title="Preguntale a la IA cómo viene esta implementación">✨ Preguntale a la IA</button>
+              <button type="button" class="btn-secondary" style="margin-left:auto" onclick="accesoAbrir(window._implClienteAbierto)" title="Crear o administrar el acceso del cliente a Salario Clientes">🔑 Acceso del cliente</button>
+              <button type="button" class="cia-btn" onclick="clienteIaAbrir(window._implClienteAbierto, 'impl')" title="Preguntale a la IA cómo viene esta implementación">✨ Preguntale a la IA</button>
             </div>
 
             <!-- Filtros de tareas del cliente: viven acá escondidos y implementacion.js
@@ -2533,48 +2541,52 @@
      data.js define las constantes que usan los demás módulos.
      charts.js corre al final y dispara el render inicial.
 ════════════════════════════════════ -->
-    <script src="js/config.js"></script>
-    <script src="js/supabase-client.js?v=20261015a"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/data.js"></script>
-    <script src="js/storage.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/nav.js?v=20261020a"></script>
-    <script src="js/clientes.js?v=20261112a"></script>
-    <script src="js/archivos-vistos.js?v=20261029b"></script>
-    <script src="js/pendiente-archivos.js?v=20261029f"></script>
-    <script src="js/pendientes.js?v=20261104b"></script>
-    <script src="js/consultas.js?v=20261113a"></script>
-    <script src="js/kb.js"></script>
-    <script src="js/implementacion.js?v=20261117b"></script>
-    <script src="js/reporte-implementacion.js?v=20261026p"></script>
-    <script src="js/cliente-detalle.js?v=20261113c"></script>
-    <script src="js/cliente-ia.js?v=20261113c"></script>
-    <script src="js/salario-sync.js?v=20261104a"></script>
-    <script src="js/salario-historial.js?v=20261106e"></script>
-    <script src="js/salario-historico.js?v=20261106n"></script>
-    <script src="js/conexiones.js?v=20261013c"></script>
-    <script src="js/cliente-documentos.js?v=20261029h"></script>
-    <script src="js/portal-listas.js?v=1"></script>
-    <script src="js/cliente-info.js?v=20261117a"></script>
-    <script src="js/implementacion-disponibilidad.js?v=20261112b"></script>
-    <script src="js/disponibilidad-reporte.js?v=20261028b"></script>
-    <script src="js/proyectos.js?v=20261023a"></script>
-    <script src="js/proyecto-documentos.js?v=20261029h"></script>
-    <script src="js/equipo-ausencias.js?v=20261112a"></script>
-    <script src="js/asesor-detalle.js?v=20261112a"></script>
-    <script src="js/charts.js?v=20261112c"></script>
-    <script src="js/alertas.js?v=20261105a"></script>
-    <script src="js/consultas-page.js?v=20261021a"></script>
-    <script src="js/repositorio.js?v=20261015c"></script>
-    <script src="js/borradores.js?v=20261113a"></script>
-    <script src="js/repetida-burbuja.js?v=20261107b"></script>
-    <script src="js/registro-editar.js?v=20261112a"></script>
-    <script src="js/reportes.js?v=20261026b"></script>
-    <script src="js/consultas-reporte.js?v=20261026e"></script>
-    <script src="js/avisos.js?v=20261117a"></script>
-    <script src="js/saludo.js?v=20261117a"></script>
-    <script src="js/hitos.js"></script>
+    <script src="compartido/config.js"></script>
+    <script src="gestion/js/supabase-client.js?v=20261015a"></script>
+    <script src="gestion/js/auth.js"></script>
+    <script src="gestion/js/data.js"></script>
+    <script src="gestion/js/storage.js"></script>
+    <script src="gestion/js/ui.js"></script>
+    <script src="gestion/js/nav.js?v=20261020a"></script>
+    <script src="gestion/js/clientes.js?v=20261120b"></script>
+    <script src="gestion/js/archivos-vistos.js?v=20261029b"></script>
+    <script src="gestion/js/pendiente-archivos.js?v=20261029f"></script>
+    <script src="gestion/js/pendientes.js?v=20261104b"></script>
+    <script src="gestion/js/consultas.js?v=20261113a"></script>
+    <script src="gestion/js/kb.js"></script>
+    <script src="gestion/js/implementacion.js?v=20261120d"></script>
+    <script src="gestion/js/reporte-implementacion.js?v=20261026p"></script>
+    <script src="gestion/js/cliente-detalle.js?v=20261113c"></script>
+    <script src="gestion/js/cliente-ia.js?v=20261113c"></script>
+    <script src="gestion/js/salario-sync.js?v=20261104a"></script>
+    <script src="gestion/js/salario-historial.js?v=20261106e"></script>
+    <script src="gestion/js/salario-historico.js?v=20261106n"></script>
+    <script src="gestion/js/conexiones.js?v=20261013c"></script>
+    <script src="gestion/js/cliente-documentos.js?v=20261120a"></script>
+    <script src="compartido/portal-listas.js?v=1"></script>
+    <script src="gestion/js/cliente-info.js?v=20261129a"></script>
+    <script src="gestion/js/cliente-reunion.js?v=20261120c"></script>
+    <script src="gestion/js/cliente-acceso.js?v=20261120c"></script>
+    <script src="gestion/js/cliente-preparacion.js?v=20261120b"></script>
+    <script src="gestion/js/cliente-relevamiento.js?v=20261126a"></script>
+    <script src="gestion/js/implementacion-disponibilidad.js?v=20261120a"></script>
+    <script src="gestion/js/disponibilidad-reporte.js?v=20261028b"></script>
+    <script src="gestion/js/proyectos.js?v=20261023a"></script>
+    <script src="gestion/js/proyecto-documentos.js?v=20261029h"></script>
+    <script src="gestion/js/equipo-ausencias.js?v=20261112a"></script>
+    <script src="gestion/js/asesor-detalle.js?v=20261112a"></script>
+    <script src="gestion/js/charts.js?v=20261112c"></script>
+    <script src="gestion/js/alertas.js?v=20261120a"></script>
+    <script src="gestion/js/consultas-page.js?v=20261021a"></script>
+    <script src="gestion/js/repositorio.js?v=20261015c"></script>
+    <script src="gestion/js/borradores.js?v=20261113a"></script>
+    <script src="gestion/js/repetida-burbuja.js?v=20261107b"></script>
+    <script src="gestion/js/registro-editar.js?v=20261112a"></script>
+    <script src="gestion/js/reportes.js?v=20261026b"></script>
+    <script src="gestion/js/consultas-reporte.js?v=20261026e"></script>
+    <script src="gestion/js/avisos.js?v=20261120a"></script>
+    <script src="gestion/js/saludo.js?v=20261120a"></script>
+    <script src="gestion/js/hitos.js"></script>
 
     <!-- ════════════════════════════════════
        MODAL — Registrar consulta

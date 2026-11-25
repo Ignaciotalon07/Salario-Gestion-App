@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mockup — Portal de clientes</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  /* Mismos valores que Salario Gestión (css/styles.css), claro y oscuro */
+  :root{
+    --bg:#f5f4f0; --surface:#fff; --surface2:#f0efe9; --border:rgba(0,0,0,.08); --border2:rgba(0,0,0,.14);
+    --text:#1a1a18; --text2:#6b6b66; --text3:#9e9e99;
+    --accent:#2d2d8e; --accent-light:#eeedfb; --accent-text:#1e1e6e;
+    --red:#c0392b; --red-bg:#fdf0ef; --red-text:#8b1a12;
+    --amber:#b45309; --amber-bg:#fef8ee; --amber-text:#7c3a06;
+    --green:#2d6a2d; --green-bg:#eef7ee; --green-text:#1a4a1a;
+    --or:#f97316; --orh:#ea580c; --orb:#fff4ea; --orline:#fed7aa; --orttx:#9a3f06;
+    --radius:10px; --radius-lg:14px; --radius-xl:20px; --hover:rgba(0,0,0,.045);
+    --soft:#fcfcfa; --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  }
+  [data-theme="dark"]{
+    --bg:#15171c; --surface:#1e2128; --surface2:#262932; --border:rgba(255,255,255,.08); --border2:rgba(255,255,255,.16);
+    --text:#e8e8e6; --text2:#a8a8a3; --text3:#6e6e69;
+    --accent:#7575e8; --accent-light:rgba(117,117,232,.16); --accent-text:#b6b5f0;
+    --red:#e57373; --red-bg:rgba(229,115,115,.14); --red-text:#ff8a80;
+    --amber:#ffb74d; --amber-bg:rgba(255,183,77,.14); --amber-text:#ffcc80;
+    --green:#81c784; --green-bg:rgba(129,199,132,.14); --green-text:#a5d6a7;
+    --orb:rgba(249,115,22,.13); --orline:rgba(249,115,22,.35); --orttx:#fdba74;
+    --hover:rgba(255,255,255,.07); --soft:#1a1d23; --shadow:0 1px 3px rgba(0,0,0,.32);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh;transition:background .2s,color .2s}
+  button{font-family:inherit;cursor:pointer;color:inherit}
+  /* barra del mockup (no es parte del portal) */
+  .mk{background:#222;color:#fff;padding:8px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;position:sticky;top:0;z-index:300}
+  .mk button{background:#333;color:#fff;border:1px solid #555;border-radius:99px;padding:5px 12px;font-size:12px}
+  .mk button.on{background:var(--or);border-color:var(--or)}
+  /* Cabecera */
+  .top{background:var(--surface);border-bottom:1px solid var(--border)}
+  .top-in{max-width:1040px;margin:0 auto;padding:11px 22px;display:flex;align-items:center;gap:12px}
+  .logo{display:flex;align-items:center;gap:9px}.logo img{width:28px;height:28px;object-fit:contain}
+  .brand{font-size:16px;font-weight:600;letter-spacing:-.3px;line-height:1.1}.sub{font-size:11px;color:var(--text3)}
+  .top .sp{flex:1}
+  .bell{position:relative;background:var(--surface2);border:0;width:36px;height:36px;border-radius:50%;font-size:15px}
+  .bell em{position:absolute;top:-2px;right:-2px;background:var(--or);color:#fff;font-style:normal;font-size:10px;font-weight:700;border-radius:99px;padding:1px 5px}
+  .perfil{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--border2);border-radius:99px;padding:4px 12px 4px 4px;font-size:13px;font-weight:500;transition:.15s}
+  .perfil:hover{background:var(--surface2)}
+  .av{width:30px;height:30px;border-radius:50%;background:var(--orb);color:var(--orh);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex:none}
+  .perfil .ch{color:var(--text3);font-size:10px}
+  /* Saludo */
+  .hero{padding:26px 0 4px}
+  .hero-in{max-width:1040px;margin:0 auto;padding:0 22px;display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+  .hero h1{font-size:25px;font-weight:700;letter-spacing:-.01em}
+  .hero p{margin-top:3px;color:var(--text2)}.hero .sp{flex:1}
+  .ring{--p:0;width:68px;height:68px;border-radius:50%;background:conic-gradient(var(--or) calc(var(--p)*1%),var(--surface2) 0);display:flex;align-items:center;justify-content:center;position:relative;margin:0 auto}
+  .ring::before{content:'';position:absolute;inset:7px;border-radius:50%;background:var(--bg)}
+  .ring span{position:relative;font-weight:700;font-size:16px}
+  .ring-t{font-size:12px;color:var(--text3);margin-top:4px;text-align:center}
+  .wrap{max-width:1040px;margin:18px auto 60px;padding:0 22px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:16px}
+  .card-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+  h2{font-size:17px;font-weight:700;margin-bottom:3px}
+  .muted{color:var(--text2)}.sm{font-size:12.5px}
+  .btn{background:var(--or);color:#fff;border:1px solid var(--or);padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;transition:.15s;white-space:nowrap}
+  .btn:hover{background:var(--orh);border-color:var(--orh)}
+  .btn.sec{background:var(--surface);color:var(--text);border:1px solid var(--border2);font-weight:500}.btn.sec:hover{background:var(--surface2)}
+  .btn.sm{padding:5px 11px;font-size:12px}
+  .chip{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;white-space:nowrap}
+  .c-ok{background:var(--green-bg);color:var(--green-text)}.c-or{background:var(--orb);color:var(--orttx)}.c-az{background:var(--accent-light);color:var(--accent-text)}
+  .c-ko{background:var(--red-bg);color:var(--red-text)}.c-gr{background:var(--surface2);color:var(--text2)}.c-wa{background:var(--amber-bg);color:var(--amber-text)}
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+  .metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px}
+  .metric small{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+  .metric strong{display:block;font-size:26px;font-weight:700;margin:2px 0 8px}
+  .bar{height:6px;background:var(--surface2);border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;border-radius:99px}
+  .next{background:var(--orb);border:1px solid var(--orline);border-radius:var(--radius-lg);padding:14px 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .next small{display:block;text-transform:uppercase;letter-spacing:.08em;font-weight:700;color:var(--orh);font-size:10.5px}
+  .next strong{font-size:15px}.next .sp{flex:1}
+  .tl{position:relative}.tl::before{content:'';position:absolute;left:15px;top:18px;bottom:18px;width:2px;background:var(--border2)}
+  .st{display:flex;gap:14px;position:relative;padding-bottom:12px}
+  .num{width:32px;height:32px;flex:none;border-radius:50%;background:var(--surface);border:2px solid var(--border2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--text3);z-index:1}
+  .st.done .num{background:var(--green);border-color:var(--green);color:#fff}
+  .st.cur .num{background:var(--or);border-color:var(--or);color:#fff;box-shadow:0 0 0 4px rgba(249,115,22,.18)}
+  .st.rev .num{background:var(--accent);border-color:var(--accent);color:#fff}
+  .st-b{flex:1;min-width:0;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--surface);padding:12px 16px}
+  .st.cur .st-b{border-color:var(--orline)}.st.lock .st-b{background:var(--surface2);border-style:dashed}
+  .st-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.st-h h3{flex:1;min-width:140px;font-size:14px}
+  .st.lock h3{color:var(--text3)}
+  .st-d{margin-top:12px;border-top:1px solid var(--border);padding-top:12px}
+  .it{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--border)}.it:last-child{border:0}
+  .dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--border2);flex:none;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff}
+  .it.ok .dot{background:var(--green);border-color:var(--green)}
+  .it .t{flex:1}.it .t small{display:block;color:var(--text3);font-size:12px}
+  .fb{background:var(--amber-bg);border-radius:var(--radius);padding:9px 12px;margin-top:10px;font-size:12.5px;color:var(--amber-text)}
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start}
+  .resp{display:flex;gap:12px;align-items:center}.resp .av{width:40px;height:40px;font-size:14px}
+  .slot{display:flex;align-items:center;gap:9px;border:1px solid var(--border2);border-radius:var(--radius);padding:9px 12px;margin-top:8px;font-size:13px;cursor:pointer}
+  .slot.on{border-color:var(--or);background:var(--orb)}
+  .meet{background:var(--surface2);border-radius:var(--radius-lg);padding:16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .cal{background:var(--surface);border-radius:var(--radius);padding:8px 14px;text-align:center;line-height:1.1;border:1px solid var(--border)}.cal b{display:block;font-size:24px;color:var(--or)}.cal span{font-size:10px;text-transform:uppercase;color:var(--text3);font-weight:700}
+  .alerta{background:var(--red-bg);border:1px solid var(--red);border-color:rgba(192,57,43,.3);color:var(--red-text);border-radius:var(--radius-lg);padding:11px 16px;margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px}
+  .alerta .sp{flex:1}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin:-4px 0 14px;overflow-x:auto}
+  .tab{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;font-weight:600;color:var(--text2);font-size:13.5px;white-space:nowrap}.tab.on{color:var(--text);border-color:var(--or)}
+  .filt{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.filt button{border:1px solid var(--border2);background:var(--surface);border-radius:99px;padding:5px 13px;font-size:12.5px;font-weight:500;color:var(--text2)}.filt button.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+  .fase{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;font-weight:700;color:var(--text3);margin:16px 0 8px}
+  .tk{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px;overflow:hidden}
+  .tk.late{border-color:rgba(192,57,43,.35)}.tk.mine{border-left:4px solid var(--or)}.tk.theirs{border-left:4px solid var(--text2)}
+  .tk-h{display:flex;align-items:center;gap:12px;padding:11px 14px;cursor:pointer;flex-wrap:wrap}
+  .tk-h .t{flex:1;min-width:150px;font-weight:600}.tk-h .t small{display:block;font-weight:400;color:var(--text3);font-size:12px}
+  .tk-b{display:none;padding:2px 16px 14px;border-top:1px solid var(--border);background:var(--soft)}.tk.open .tk-b{display:block}
+  .msg{border-radius:var(--radius);padding:8px 12px;margin-top:9px;max-width:88%;font-size:13px}
+  .msg small{display:block;font-size:11px;opacity:.6;margin-bottom:2px}
+  .msg.yo{background:var(--orb);margin-left:auto}.msg.eq{background:var(--surface2)}
+  .caja{display:flex;gap:8px;margin-top:12px}.caja input{flex:1}
+  input,select{border:1px solid var(--border2);border-radius:var(--radius);padding:9px 12px;font:inherit;width:100%;background:var(--surface);color:var(--text)}
+  input:focus,select:focus{outline:2px solid var(--or);outline-offset:-1px;border-color:transparent}
+  label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin:10px 0 4px}
+  .stepper{display:flex;align-items:center;gap:10px;margin:2px 0 8px}.stepper button{width:32px;height:32px;border-radius:50%;border:1px solid var(--border2);background:var(--surface);font-size:17px}.stepper b{font-size:20px;min-width:26px;text-align:center}
+  .fila{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .aviso-ok{background:var(--green-bg);color:var(--green-text);border-radius:var(--radius);padding:9px 12px;margin-top:10px;font-size:12.5px;display:none}
+  .info{background:var(--accent-light);color:var(--accent-text);border-radius:var(--radius);padding:9px 12px;font-size:12.5px;margin-top:8px}
+  .campanita{position:relative}
+  .notis{position:absolute;right:0;top:44px;width:340px;max-width:90vw;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:0 12px 36px rgba(0,0,0,.2);display:none;z-index:350;overflow:hidden}
+  .notis.on{display:block}
+  .notis h4{font-size:13px;padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between}
+  .notis h4 a{font-weight:500;font-size:12px;color:var(--orh);cursor:pointer}
+  .nt{display:flex;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border);font-size:12.5px;cursor:pointer}.nt:hover{background:var(--surface2)}.nt:last-child{border:0}
+  .nt.nuevo{background:var(--orb)}.nt .i{font-size:16px}.nt small{display:block;color:var(--text3);font-size:11px}
+  .ip{display:none}.ip.on{display:block}
+  .hilo{border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px;background:var(--surface);overflow:hidden}
+  .hilo-h{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;flex-wrap:wrap}.hilo-h .t{flex:1;min-width:160px;font-weight:600}.hilo-h .t small{display:block;font-weight:400;color:var(--text3);font-size:12px}
+  .hilo-b{display:none;padding:2px 16px 14px;border-top:1px solid var(--border);background:var(--soft)}.hilo.open .hilo-b{display:block}
+  .nueva{display:none;border:1px solid var(--orline);background:var(--orb);border-radius:var(--radius-lg);padding:14px;margin-bottom:14px}.nueva.on{display:block}
+  .adj{display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--border2);border-radius:var(--radius);padding:7px 12px;font-size:12.5px;color:var(--text2);margin-top:8px}
+  .bloque{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px dashed var(--border);cursor:pointer}.bloque:last-child{border:0}
+  .bloque .n{width:26px;height:26px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text2);flex:none}
+  .bloque.ok .n{background:var(--green);color:#fff}.bloque .t{flex:1}.bloque .t small{display:block;color:var(--text3);font-size:12px}
+  .preg{margin:10px 0 0;padding:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--soft)}.preg b{font-size:13px}.preg small{display:block;color:var(--text3);font-size:12px;margin:2px 0 6px}
+  .tiempo{display:none;margin-top:10px;padding:12px;border:1px solid var(--orline);background:var(--orb);border-radius:var(--radius)}.tiempo.on{display:block}
+  .rl-sec{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:18px;overflow:hidden;scroll-margin-top:70px}
+  .rl-h,.rl-row{display:grid;grid-template-columns:150px minmax(0,1.25fr) minmax(0,1fr);gap:18px}
+  .rl-h{align-items:center;padding:12px 18px;background:var(--orb);border-bottom:1px solid var(--orline);border-left:4px solid var(--or)}
+  .rl-h h3{font-size:13.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--orttx)}
+  .rl-h span{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3)}
+  .rl-nota{padding:10px 18px;font-size:12.5px;background:var(--accent-light);color:var(--accent-text)}
+  .rl-row{padding:14px 18px;border-bottom:1px dashed var(--border);align-items:start}
+  .rl-row:last-child{border:0}
+  .rl-t{font-weight:700;font-size:13.5px}
+  .rl-q p{font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:6px}.rl-q p:last-child{margin:0}.rl-q b{color:var(--text)}
+  .rl-sin{color:var(--text3)!important}
+  .rl-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}.rl-cols span{display:block;font-size:10.5px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+  textarea{width:100%;border:1px solid var(--border2);border-radius:var(--radius);padding:9px 12px;font:inherit;background:var(--surface);color:var(--text);resize:vertical;min-height:56px}
+  textarea:focus{outline:2px solid var(--or);outline-offset:-1px;border-color:transparent}
+  .sn{display:flex;gap:8px;margin-bottom:8px}
+  .sn button{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border:1px solid var(--border2);border-radius:99px;background:var(--surface);font-size:13px;font-weight:600;color:var(--text2);transition:.15s}
+  .sn button:hover{background:var(--surface2)}
+  .sn button.on[data-v="si"]{background:var(--green-bg);border-color:var(--green);color:var(--green-text)}
+  .sn button.on[data-v="no"]{background:var(--red-bg);border-color:var(--red);color:var(--red-text)}
+  .rl-a textarea[rows="1"]{min-height:38px}
+  .rl-ayuda{padding:2px 18px 10px;font-size:12.5px;color:var(--text2)}
+  .rl-emp-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}.rl-emp-h b{margin:0!important}
+  .rl-emp-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+  .rl-emp-g span{display:block;font-size:10.5px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+  .rl-emp-g small{display:block;font-size:11.5px;color:var(--text3);margin-top:4px}
+  .mq-p{display:none;margin-top:8px}.mq-p.on{display:block}
+  .om{margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px}
+  .om-b{background:none;border:0;color:var(--text3);text-decoration:underline;font-size:12px;padding:2px 0}.om-b:hover{color:var(--text)}
+  .om .op{border:1px solid var(--border2);background:var(--surface);border-radius:99px;padding:4px 12px;font-size:12px;font-weight:500}.om .op:hover{background:var(--surface2)}
+  .rl-row.omitida .rl-t,.rl-row.omitida .rl-q{opacity:.5}
+  .rl-row.omitida .rl-a>:not(.om){display:none}
+  .rl-row.omitida .rl-a{padding-top:2px}
+  .om .oc{background:var(--amber-bg);color:var(--amber-text);border-radius:99px;padding:3px 11px;font-size:12px;font-weight:600}
+  .chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2)}.chk input{width:auto}
+  .rl-nav{display:flex;flex-direction:column;position:relative}
+  .rl-nav a{display:flex;align-items:flex-start;gap:12px;padding:7px 4px;font-size:13px;color:var(--text3);cursor:pointer;position:relative;line-height:1.3}
+  .rl-nav a:hover span{color:var(--text)}
+  .rl-nav a .pt{flex:none;width:18px;height:18px;border-radius:50%;border:2px solid var(--border2);background:var(--surface);position:relative;z-index:1;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-style:normal;transition:.2s}
+  .rl-nav a:not(:last-child)::before{content:'';position:absolute;left:12px;top:28px;bottom:-9px;width:2px;background:var(--border2);transition:.2s}
+  .rl-nav a.done .pt{background:var(--green);border-color:var(--green)}
+  .rl-nav a.done .pt::after{content:'✓'}
+  .rl-nav a.done:not(:last-child)::before{background:var(--green)}
+  .rl-nav a.done span{color:var(--text2)}
+  .rl-nav a.cur .pt{border-color:var(--or);box-shadow:0 0 0 4px rgba(249,115,22,.18)}
+  .rl-nav a.cur span{color:var(--text);font-weight:600}
+  .rl-info{border-color:rgba(45,45,142,.28)}
+  [data-theme="dark"] .rl-info{border-color:rgba(117,117,232,.35)}
+  .rl-h-info{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;background:var(--accent-light);border-bottom:1px solid var(--border)}
+  .rl-h-info .ic{font-size:22px;line-height:1}
+  .rl-h-info>div{flex:1;min-width:0}
+  .rl-h-info h3{font-size:13.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent-text)}
+  .rl-h-info p{font-size:12.5px;color:var(--text2);margin-top:3px}
+  .rl-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;padding:16px 18px 18px}
+  .rl-card{margin:0!important;font-weight:400!important;font-size:13px!important;color:var(--text)!important;display:flex;flex-direction:column;gap:10px;border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;background:var(--surface);cursor:pointer;transition:.15s;position:relative}
+  .rl-card:hover{border-color:var(--border2)}
+  .rl-caps{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px 18px;margin-top:10px;padding:0}
+  .rl-caps li{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--text2);line-height:1.45}
+  .rl-caps li::before{content:'';flex:none;width:6px;height:6px;border-radius:50%;background:var(--or);margin-top:7px}
+  .rl-card--ancho{grid-column:1/-1}
+  .rl-card .ic{font-size:22px}
+  .rl-card .tx b{display:block;font-size:13.5px;font-weight:700;margin-bottom:4px}
+  .rl-card .ok em{font-style:normal}
+  .rl-card .tx p{font-size:12.5px;color:var(--text2);line-height:1.5}
+  .rl-card .ok{margin-top:auto;align-self:flex-end;display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--text2);padding-top:4px}
+  .rl-card .ok input{width:18px;height:18px;accent-color:var(--green)}
+  .rl-card.hecho{background:var(--green-bg);border-color:var(--green)}.rl-card.hecho .ok{color:var(--green-text)}
+  .rl-back{display:none;align-items:center;gap:6px;background:none;border:0;color:var(--text2);font-size:13px;font-weight:500;padding:2px 0 10px}
+  .rl-back.on{display:inline-flex}.rl-back:hover{color:var(--text)}
+  .rl-row.falta{background:var(--red-bg);box-shadow:inset 4px 0 0 var(--red)}
+  .rl-card.falta,.rl-emp.falta{background:var(--red-bg)!important;border-color:var(--red)!important}
+  .rl-err{padding:14px 18px;background:var(--red-bg);color:var(--red-text);border-top:1px solid var(--red);font-size:13px}
+  .rl-err ul{margin:6px 0 6px 18px}.rl-err li span{opacity:.8}.rl-err p{font-size:12px;opacity:.9}
+  .up-emp{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;background:var(--surface)}
+  .up-emp summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;font-size:13.5px;font-weight:600}
+  .up-emp summary::-webkit-details-marker{display:none}
+  .up-emp summary::before{content:'›';color:var(--text3);margin-right:8px;transition:transform .15s;display:inline-block}
+  .up-emp[open] summary::before{transform:rotate(90deg)}
+  .up-emp summary .nm{flex:1}.up-emp .cnt{font-size:11.5px;font-weight:600;color:var(--text3)}.up-emp .cnt.ok{color:var(--green)}
+  .up{display:flex;align-items:center;gap:12px;padding:10px 14px;border-top:1px dashed var(--border);flex-wrap:wrap}
+  .up-i{flex:1;min-width:150px}.up-i b{font-size:13px;display:block}.up-i small{font-size:12px;color:var(--text3)}
+  .up-f{flex:2;min-width:160px}
+  .fl{display:flex;align-items:center;gap:8px;font-size:12.5px;flex-wrap:wrap}
+  .fl i{font-style:normal;width:18px;height:18px;border-radius:50%;background:var(--green);color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center;flex:none}
+  .fl b{font-weight:600}.fl em{font-style:normal;color:var(--text3)}
+  .fl a{color:var(--accent);cursor:pointer;font-weight:600}.fl a.q{color:var(--red)}
+  .up-add{background:none;border:1px dashed var(--or);color:var(--orh);border-radius:var(--radius);padding:7px 14px;font-size:12.5px;font-weight:600;margin-top:4px}
+  .rv{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+  .rv div{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--soft)}
+  .rv b{flex:1;min-width:120px;color:var(--text)}.rv a{color:var(--accent);font-weight:600;cursor:pointer;font-size:12px}
+  body:not(.etapa-impl) .despues{display:none}
+  body.etapa-impl .antes{display:none}
+  .up-solo{padding:0}
+  .inicio{background:linear-gradient(135deg,var(--orb),var(--surface));border:1px solid var(--orline);border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:14px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  .inicio .ti{font-size:16px;font-weight:700;width:100%}.inicio .tx{flex:1;min-width:240px;font-size:13px;color:var(--text2);margin-top:-8px}.inicio .bt{display:flex;gap:8px}
+  .tip{margin:10px 0 2px;padding:9px 12px;border-left:3px solid var(--orline);background:var(--soft);border-radius:0 var(--radius) var(--radius) 0;font-size:12.5px;color:var(--text2);line-height:1.5}
+  .tip b{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--orh);margin-bottom:2px}
+  .tip i{font-style:normal;font-weight:600;color:var(--text)}
+  .st.done .tip{display:none}
+  #nx-m{margin:3px 0 0;font-size:13px;color:var(--text2)}
+  .st.lock .st-b>*:not(.st-h){display:none!important}
+  .st.lock .st-h .chip:not(.lk){display:none}
+  .st:not(.lock) .lk{display:none}
+  .ap-f{display:none;margin-top:12px}.ap-f.on{display:block}
+  .ap-ok{display:none;margin-top:12px;padding:10px 12px;border-radius:var(--radius);background:var(--green-bg);color:var(--green-text);font-size:12.5px}
+  .rl-side{position:sticky;top:60px;align-self:start}
+  .rl-sec{display:none}.rl-sec.act{display:block}
+  .rl-pie{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 18px;border-top:1px solid var(--border);background:var(--surface2)}
+  .rl-pie .pi{font-size:12.5px;color:var(--text2)}.rl-pie .pi b{color:var(--text)}
+  .rl-pie .bt{display:flex;gap:8px}
+  .rl-fin{display:none;padding:12px 18px;font-size:13px;background:var(--amber-bg);color:var(--amber-text);border-top:1px solid var(--border)}
+  .rl-fin.on{display:block}
+  .rl-sub{padding:12px 18px 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);border-top:1px solid var(--border)}
+  .rl-emp{padding:10px 18px 14px;border-bottom:1px dashed var(--border)}.rl-emp b{display:block;font-size:13.5px;margin-bottom:8px}
+  .rl-nav{display:flex;flex-direction:column;gap:2px}.rl-nav a{padding:6px 8px;border-radius:8px;font-size:12.5px;color:var(--text2);text-decoration:none}.rl-nav a:hover{background:var(--surface2);color:var(--text)}
+  @media(max-width:900px){.rl-side{position:static}.rl-h span{display:none}.rl-h,.rl-row{grid-template-columns:1fr;gap:8px}.rl-t{font-size:14px}}
+  .ep{display:none}.ep.on{display:block}
+  .volver{background:none;border:0;color:var(--text2);font-size:13px;margin-bottom:6px;padding:0}.volver:hover{color:var(--text)}
+  .datos{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px 20px;margin-top:6px}
+  .datos div{font-size:13.5px}.datos span{display:block;font-size:10.5px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+  .emp{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px dashed var(--border);flex-wrap:wrap}.emp:last-child{border:0}
+  .emp .av{width:38px;height:38px;border-radius:10px}.emp .t{flex:1;min-width:150px}.emp .t small{display:block;color:var(--text3);font-size:12px}
+  details.faq{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;background:var(--surface)}
+  details.faq summary{padding:11px 14px;cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:10px}
+  details.faq summary::-webkit-details-marker{display:none}details.faq summary::after{content:'+';color:var(--text3)}details.faq[open] summary::after{content:'–'}
+  details.faq p{padding:0 14px 12px;color:var(--text2);font-size:13px}
+  .view{display:none}.view.on{display:block}
+  .center{max-width:560px;margin:0 auto}
+  /* Panel lateral derecho (perfil) */
+  .velo{position:fixed;inset:0;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .25s;z-index:400}
+  .velo.on{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:340px;max-width:92vw;background:var(--surface);border-left:1px solid var(--border);box-shadow:-12px 0 40px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .28s cubic-bezier(.4,0,.2,1);z-index:401;display:flex;flex-direction:column}
+  .drawer.on{transform:none}
+  .d-head{padding:22px 20px 16px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;position:relative}
+  .d-head .av{width:48px;height:48px;font-size:17px}
+  .d-head b{display:block;font-size:15px}.d-head small{color:var(--text3);font-size:12px}
+  .d-x{position:absolute;top:12px;right:12px;background:none;border:0;font-size:16px;color:var(--text3);width:30px;height:30px;border-radius:8px}.d-x:hover{background:var(--hover)}
+  .d-body{padding:12px;flex:1;overflow-y:auto}
+  .d-it{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border:0;background:none;border-radius:var(--radius);font-size:13.5px;text-align:left;transition:.15s}
+  .d-it:hover{background:var(--surface2)}.d-it .ic{width:20px;text-align:center}.d-it .fl{margin-left:auto;color:var(--text3);transition:transform .2s}
+  .d-it.open .fl{transform:rotate(90deg)}
+  .d-sub{display:none;margin:2px 0 8px 12px;padding:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--soft)}
+  .d-sub.on{display:block}
+  .d-sub .lb{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px}
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--surface2);padding:4px;border-radius:11px}
+  .seg button{border:0;background:none;padding:8px;border-radius:8px;font-size:13px;font-weight:500;color:var(--text2)}
+  .seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow);font-weight:600}
+  .d-foot{padding:12px;border-top:1px solid var(--border)}
+  .d-out{color:var(--red-text)}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.fila{grid-template-columns:1fr}.perfil span.nm{display:none}.perfil{padding:4px 8px 4px 4px}}
+</style>
+</head>
+<body>
+
+<div class="mk"><b style="opacity:.7">MOCKUP — ver etapa:</b>
+  <button data-v="bienvenida" class="on">1 · Bienvenida</button>
+  <button data-v="prep">2 · Preparación</button>
+  <button data-v="reunion">3 · Reunión</button>
+  <button data-v="impl">4 · Implementación</button>
+  <button id="demo-todo" type="button" title="Solo para la demo">⏩ Completar pasos 3 a 7</button>
+</div>
+
+<header class="top"><div class="top-in">
+  <div class="logo"><img src="../assets/img/isologotipo.png" alt="" onerror="this.style.display='none'" /><div><div class="brand">Salario Gestión</div><div class="sub">Portal de implementación</div></div></div>
+  <div class="sp"></div>
+  <div class="campanita"><button class="bell" title="Novedades" onclick="document.getElementById('notis').classList.toggle('on')">🔔<em>4</em></button>
+    <div class="notis" id="notis"><h4>Novedades <a>Marcar como leídas</a></h4>
+      <div class="nt nuevo"><span class="i">🚀</span><div><b>¡Arrancó tu implementación!</b> Ya tenés tus tareas listas para revisar y empezar<small>Hace 2 min</small></div></div>
+      <div class="nt nuevo"><span class="i">💬</span><div><b>Ignacio respondió tu duda</b> sobre el orden de conceptos<small>Hace 12 min</small></div></div>
+      <div class="nt nuevo"><span class="i">📝</span><div><b>Salario dejó un comentario</b> en “Empresas, logo y firma”<small>Hace 1 hora</small></div></div>
+      <div class="nt nuevo"><span class="i">✅</span><div><b>Revisamos tu información requerida</b><small>Ayer</small></div></div>
+      <div class="nt"><span class="i">⏰</span><div><b>Tarea por vencer:</b> Cargar planilla de empleados<small>Hace 3 días</small></div></div>
+      <div class="nt"><span class="i">📅</span><div><b>Reunión confirmada</b> · martes 24/11 a las 10:00<small>Hace 5 días</small></div></div></div></div>
+  <button class="perfil" onclick="abrir(true)"><span class="av">PP</span><span class="nm">Prueba Portal</span><span class="ch">▾</span></button>
+</div></header>
+
+<div class="velo" id="velo" onclick="abrir(false)"></div>
+<aside class="drawer" id="drawer">
+  <div class="d-head"><div class="av">PP</div><div><b>Prueba Portal</b><small>prueba.portal@empresa.com</small></div><button class="d-x" onclick="abrir(false)">✕</button></div>
+  <div class="d-body">
+    <button class="d-it" onclick="irA('empresa')"><span class="ic">🏢</span>Mi empresa<span class="fl">›</span></button>
+    <button class="d-it" onclick="irA('ayuda')"><span class="ic">📚</span>Ayuda y contacto<span class="fl">›</span></button>
+    <button class="d-it" id="d-conf" onclick="this.classList.toggle('open');document.getElementById('d-confb').classList.toggle('on')"><span class="ic">⚙️</span>Configuración<span class="fl">›</span></button>
+    <div class="d-sub" id="d-confb"><div class="lb">Tema</div>
+      <div class="seg"><button id="t-claro" class="on" onclick="tema('claro')">☀️ Claro</button><button id="t-oscuro" onclick="tema('oscuro')">🌙 Oscuro</button></div></div>
+  </div>
+  <div class="d-foot"><button class="d-it d-out"><span class="ic">↩</span>Cerrar sesión</button></div>
+</aside>
+
+<div>
+
+<!-- ───────────── 1. BIENVENIDA ───────────── -->
+<section class="view on" id="v-bienvenida">
+  <div class="hero"><div class="hero-in"><div><h1>¡Bienvenido a Salario! 👋</h1><p>Vamos a acompañarte paso a paso durante toda tu implementación.</p></div></div></div>
+  <div class="wrap"><div class="card center">
+    <span class="chip c-or">Paso inicial · 2 minutos</span>
+    <h2 style="margin-top:10px">Contanos sobre tu empresa</h2>
+    <p class="muted sm">Con estos datos armamos tu perfil. Después te mostramos el camino completo.</p>
+    <label>Razón social *</label><input value="Pruebaportal SA" />
+    <div class="fila"><div><label>CUIT</label><input value="30-70745731-3" /></div><div><label>Cantidad de legajos</label><input value="50" /></div></div>
+    <label>Domicilio</label><input placeholder="Calle y número" />
+    <label>Tipo de empleador</label><select><option>Seleccioná una opción</option></select>
+    <p class="muted sm" style="margin:10px 0 14px">Obra social, ART, actividad y convenios los completás en el siguiente paso.</p>
+    <button class="btn" style="width:100%;padding:10px" onclick="go('prep')">Guardar y ver mi camino →</button>
+  </div></div>
+</section>
+
+<!-- ───────────── 2. PREPARACIÓN ───────────── -->
+<section class="view" id="v-prep">
+  <div class="hero"><div class="hero-in"><div><h1>Hola, Prueba Portal</h1><p>Estás en la etapa <b>Preparación</b>. Completá los pasos y pedí tu reunión de inicio.</p></div><div class="sp"></div><div><div class="ring" style="--p:25"><span>2/8</span></div><div class="ring-t">pasos listos</div></div></div></div>
+  <div class="wrap"><div class="grid"><div>
+    <div class="next"><div><small>Tu próximo paso</small><strong id="nx-t">Indicanos quiénes van a usar Salario</strong><p id="nx-m"></p></div><div class="sp"></div><button class="btn" id="nx-b" type="button">Continuar →</button></div>
+    <div class="card"><div class="card-title">Tu camino de preparación</div>
+      <div class="tl">
+        <div class="st done"><div class="num">✓</div><div class="st-b"><div class="st-h"><h3>Datos de tu empresa</h3><span class="chip c-ok">Revisado por Salario</span></div></div></div>
+        <div class="st rev" id="st2"><div class="num">✓</div><div class="st-b"><div class="st-h tog" onclick="document.getElementById('st2d').classList.toggle('on')" style="cursor:pointer"><h3>Información requerida</h3><span class="chip c-az">En revisión</span><span class="muted sm">Ver / editar ▾</span></div>
+          <p class="muted sm" style="margin-top:4px">Obra social, ART, actividad principal y convenios.</p>
+          <div class="ep" id="st2d"><div class="st-d" style="border:0;padding-top:6px">
+            <div class="fila"><div><label style="margin-top:0">Obra social</label><input list="dl-os" value="902108 - SANCOR SALUD" placeholder="Buscá por código o nombre"/></div><div><label style="margin-top:0">ART</label><input list="dl-art" value="1 - ASOCIART" placeholder="Buscá por código o nombre"/></div></div>
+            <label>Actividad principal</label><input list="dl-act" value="477130 - VENTA AL POR MENOR DE INDUMENTARIA PARA BEBÉS Y NIÑOS" placeholder="Buscá por código o descripción"/>
+            <label>Convenios</label><input list="dl-conv" value="130/75 - Empleados de Comercio" placeholder="Buscá el convenio. Si no está, escribilo"/>
+            <p class="muted sm" style="margin-top:8px">Si no encontrás alguno en la lista, escribilo igual y lo agregamos. Podés editar estos datos hasta la reunión.</p>
+            <button class="btn sm" type="button" style="margin-top:8px" onclick="this.nextElementSibling.style.display='block'">Guardar cambios</button><div class="aviso-ok">✓ Guardado. Nuestro equipo lo revisa.</div>
+            <datalist id="dl-os"><option value="902108 - SANCOR SALUD"><option value="101208 - OSDE"><option value="400003 - OSECAC"></datalist>
+            <datalist id="dl-art"><option value="1 - ASOCIART"><option value="2 - BERKLEY"><option value="6 - GALENO"><option value="10 - LA CAJA"></datalist>
+            <datalist id="dl-act"><option value="477130 - VENTA AL POR MENOR DE INDUMENTARIA PARA BEBÉS Y NIÑOS"><option value="561011 - SERVICIOS DE RESTAURANTES Y CANTINAS"></datalist>
+          </div></div></div></div>
+        <div class="st cur" data-n="3"><div class="num">3</div><div class="st-b">
+          <div class="st-h"><h3>Usuarios de Salario</h3><span class="chip c-or">Te toca a vos</span></div>
+          <p class="muted sm" style="margin-top:4px">¿Cuántas personas van a usar Salario en tu empresa? Les armamos su acceso y las capacitamos.</p>
+          <div class="st-d"><div class="tip"><b>Para tener en cuenta</b>Anotá a cada persona que va a liquidar o consultar en Salario. Con cada nombre armamos un <i>acceso personal</i>, así queda registrado quién hizo cada cambio. Si más adelante se suma alguien, avisanos.</div>
+            <label style="margin-top:0">Cantidad de personas</label>
+            <div class="stepper"><button id="n-menos">−</button><b id="n-cant">3</b><button id="n-mas">+</button></div>
+            <div id="n-lista"></div>
+            <button class="btn sm" style="margin-top:12px" onclick="guardarUsuarios()">Guardar usuarios</button>
+            <div class="aviso-ok" id="ok-usr"></div>
+          </div>
+        </div></div>
+        <div class="st" id="st4" data-n="4"><div class="num">4</div><div class="st-b"><div class="st-h"><h3>Logo y firma</h3><span class="chip c-gr" id="chip4">Pendiente</span></div>
+          <p class="muted sm" style="margin-top:4px">Cargá el logo y la firma de tu empresa para los recibos. Nuestro equipo los ve al instante.</p>
+          <div class="fb"><b>Salario te dejó un comentario:</b> “La firma se ve cortada, ¿podés subirla de nuevo?”</div>
+          <div class="st-d" style="border:0;padding-top:6px"><div class="tip"><b>Antes de subir el logo y la firma</b><i>Logo:</i> lo ideal es un PNG sin fondo (transparente). Un JPG no admite transparencia, así que si tiene fondo de color va a salir como un recuadro en el recibo. Si solo tenés JPG, que el fondo sea blanco y liso. <i>Firma:</i> escaneala o fotografiala sobre papel blanco, bien recortada y sin sombras. Evitá PDF, Word o capturas de pantalla: se pierde calidad al agrandarlas.</div><div class="up-emp up-solo" data-emp="Pruebaportal SA"><div class="up" data-k="logo"><div class="up-i"><b>Logo</b><small>Imagen PNG o JPG</small></div><div class="up-f"></div><button type="button" class="btn sec sm" data-up="logo-empresa.png">Subir</button></div><div class="up" data-k="firma"><div class="up-i"><b>Firma</b><small>Imagen PNG o JPG de la firma del empleador</small></div><div class="up-f"></div><button type="button" class="btn sec sm" data-up="firma-empresa.png">Subir</button></div></div></div></div></div>
+        <div class="st" id="st5" data-n="5"><div class="num">5</div><div class="st-b"><div class="st-h"><h3>Liquidación y Excel de control</h3><span class="chip c-gr" id="chip5">Pendiente</span></div>
+          <p class="muted sm" style="margin-top:4px">Dos PDF de liquidaciones y tu Excel con fórmulas (si tenés).</p>
+          <div class="st-d" style="border:0;padding-top:6px"><div class="tip"><b>Antes de subir las liquidaciones</b>Subí dos liquidaciones <i>de meses distintos</i>, en el PDF original que genera tu sistema actual (no fotos ni escaneos torcidos). Con ellas configuramos tus conceptos y después comparamos que Salario dé el mismo resultado. Si tenés Excel de control, subilo <i>con las fórmulas</i>, no pegado como valores. Los archivos son privados: solo los ve nuestro equipo.</div><div class="up-emp up-solo"><div class="up" data-k="liq1"><div class="up-i"><b>Liquidación 1</b><small>PDF de una liquidación de sueldos reciente</small></div><div class="up-f"></div><button type="button" class="btn sec sm" data-up="liquidacion-1.pdf">Subir</button></div><div class="up" data-k="liq2"><div class="up-i"><b>Liquidación 2</b><small>PDF de otra liquidación, de otro mes</small></div><div class="up-f"></div><button type="button" class="btn sec sm" data-up="liquidacion-2.pdf">Subir</button></div><div class="up" data-k="ctl"><div class="up-i"><b>Excel de control</b><small>El Excel con fórmulas que usan hoy (si tienen)</small></div><div class="up-f"></div><button type="button" class="btn sec sm" data-up="excel-de-control.xlsx">Subir</button></div></div></div></div></div>
+        <div class="st" data-n="6"><div class="num">6</div><div class="st-b"><div class="st-h"><h3>Cantidad de empresas</h3><span class="chip c-or">Te toca a vos</span></div>
+          <p class="muted sm" style="margin-top:4px">¿Cuántas empresas vas a liquidar en Salario? Es solo un número: más adelante, cuando arranque la implementación, las cargás una por una con todos sus datos.</p>
+          <div class="st-d" style="border:0;padding-top:4px"><div class="tip"><b>Para tener en cuenta</b>Contá solo las empresas (CUIT distintos) que vas a liquidar en Salario. Si no estás seguro, poné una cantidad estimada: la podés corregir después.</div><div class="stepper"><button type="button" id="e-menos">−</button><b id="e-cant">3</b><button type="button" id="e-mas">+</button></div>
+            <button class="btn sm" type="button" onclick="guardarEmpresas()">Guardar</button><div class="aviso-ok" id="ok-emp"></div></div></div></div>
+        <div class="st" data-n="7"><div class="num">7</div><div class="st-b"><div class="st-h"><h3>Relevamiento inicial</h3><span class="chip c-gr">Pendiente · 3 de 10 bloques</span></div>
+          <p class="muted sm" style="margin-top:4px">Cómo liquidan hoy: nómina, acreditaciones, asientos, reportes y más. Es la base de la reunión de inicio.</p>
+          <div class="tip"><b>Antes de empezar</b>Son 10 partes cortas y podés dejarlo a medias para seguir otro día. Si una pregunta no aplica a tu empresa, usá <i>Omitir</i> y contanos por qué. Cuanto más completo llegue, más corta y útil resulta la reunión.</div><div style="margin-top:10px"><button class="btn sm" onclick="irA('relev')">Completar relevamiento</button></div></div></div>
+        <div class="st" data-n="8"><div class="num">8</div><div class="st-b"><div class="st-h"><h3>Solicitar reunión de inicio</h3><span class="chip c-gr" id="chip8">Pendiente</span></div><p class="muted sm" style="margin-top:4px">Elegí los horarios que te quedan bien y coordinamos la reunión por Meet.</p><div class="tip"><b>Para tener en cuenta</b>Podés proponer hasta 3 horarios. Te confirmamos uno y te llega el link de Meet. Conviene que estén en la reunión las personas que van a usar Salario.</div><div style="margin-top:8px"><button class="btn sm" type="button" onclick="go('reunion')">Solicitar reunión</button></div></div></div>
+      </div></div>
+  </div>
+  <div>
+    <div class="card"><div class="card-title">Tu equipo</div><div class="resp"><div class="a">IT</div><div><b>Ignacio Talón</b><div class="muted sm">Responsable de tu implementación</div></div></div><button class="btn sec sm" style="width:100%;margin-top:12px">💬 Escribirle por WhatsApp</button></div>
+    <div class="card"><div class="card-title">Antes de la reunión</div><p class="muted sm">En la reunión repasamos juntos todo lo que cargaste. Podés modificarlo cuando quieras hasta ese día.</p></div>
+  </div></div></div>
+</section>
+
+<!-- ───────────── 3. REUNIÓN ───────────── -->
+<section class="view" id="v-reunion">
+  <div class="hero"><div class="hero-in"><div><h1>¡Preparación completa! 🎉</h1><p>Ya tenemos tu información. Solo falta coordinar la reunión de inicio.</p></div><div class="sp"></div><div><div class="ring" style="--p:100"><span>8/8</span></div><div class="ring-t">pasos listos</div></div></div></div>
+  <div class="wrap"><div class="grid"><div>
+    <div class="card" id="rq">
+      <span class="chip c-or">Paso 8</span><h2 style="margin-top:8px">Solicitá tu reunión de inicio por Meet</h2>
+      <p class="muted sm">Dura aprox. 60 minutos. Revisamos juntos tus datos y te explicamos cómo sigue la implementación.</p><div class="tip"><b>Para elegir los horarios</b>Proponé hasta 3 opciones para que podamos coordinar. Conviene que estén las personas que van a usar Salario y quien tome las decisiones. Los horarios son de lunes a viernes.</div>
+      <div class="slot on" style="cursor:default">📅 Elegí los horarios que te vienen bien (hasta 3)</div>
+      <div class="slot on">Martes 24/11 · 10:00 a 11:00</div><div class="slot">Miércoles 25/11 · 15:00 a 16:00</div><div class="slot on">Jueves 26/11 · 10:00 a 11:00</div>
+      <label>Algo que quieras contarnos antes (opcional)</label><input placeholder="Ej.: somos 3 personas en administración" />
+      <button class="btn" style="margin-top:14px" onclick="rq.style.display='none';rp.style.display='block';completarPaso(8,'Solicitada')">Solicitar reunión</button>
+    </div>
+    <div class="card" id="rp" style="display:none">
+      <span class="chip c-wa">⏳ Pendiente de confirmación</span>
+      <h2 style="margin-top:8px">Recibimos tu solicitud de reunión</h2>
+      <p class="muted sm">Estamos revisando los horarios. Apenas la confirmemos, acá te aparece el link de Meet.</p>
+      <div class="slot on" style="cursor:default">Martes 24/11 · 10:00 a 11:00</div><div class="slot on" style="cursor:default">Jueves 26/11 · 10:00 a 11:00</div>
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><button class="btn sec sm">Cambiar horarios</button><button class="btn sec sm">Cancelar solicitud</button></div>
+      <p class="muted sm" style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border2)">🧪 <i>Solo en este mockup:</i> <button class="btn sm" onclick="rp.style.display='none';rs.style.display='block'">Simular que Salario confirma</button></p>
+    </div>
+    <div class="card" id="rs" style="display:none">
+      <div class="meet"><div class="cal"><span>Martes</span><b>24</b><span>nov · 10:00</span></div>
+        <div style="flex:1;min-width:180px"><span class="chip c-ok">✓ Reunión confirmada</span><h2 style="margin-top:6px;font-size:15px">Reunión de inicio con Ignacio</h2><div class="muted sm">Google Meet · 60 min</div></div>
+        <button class="btn">Unirme al Meet</button></div>
+      <div class="tip"><b>Para llegar preparado</b>Tené a mano el relevamiento y una liquidación reciente. Probá el link de Meet unos minutos antes. Si surge algo y no podés asistir, avisanos con tiempo y reprogramamos.</div><p class="muted sm" style="margin-top:14px">Mientras tanto podés revisar o corregir tus datos. Después de la reunión arranca tu implementación con todas las tareas.</p>
+    </div>
+  </div>
+  <div><div class="card"><div class="card-title">¿Qué sigue?</div>
+    <div class="it ok"><div class="dot">✓</div><div class="t">Preparación<small>Hecho</small></div></div>
+    <div class="it"><div class="dot" style="background:var(--or);border-color:var(--or)"></div><div class="t"><b>Reunión de inicio</b><small>Estás acá</small></div></div>
+    <div class="it"><div class="dot"></div><div class="t">Confirmación de Salario<small>Te mandamos el link de Meet</small></div></div>
+    <div class="it"><div class="dot"></div><div class="t">Implementación<small>26 tareas, nuestras y tuyas</small></div></div>
+  </div></div></div></div>
+</section>
+
+<!-- ───────────── 4. IMPLEMENTACIÓN ───────────── -->
+<section class="view" id="v-impl">
+  <div class="hero"><div class="hero-in"><div><h1>Tu implementación en marcha</h1><p>Fin estimado: <b>12 de febrero de 2027</b> · Responsable: Ignacio Talón</p></div><div class="sp"></div><div><div class="ring" style="--p:58"><span>58%</span></div><div class="ring-t">avance total</div></div></div></div>
+  <div class="wrap">
+  <div class="inicio" id="inicio-b"><div class="ti">¡Arrancó tu implementación!</div><div class="tx">Salario ya armó tu plan de trabajo: tenés <b>26 tareas</b> listas para revisar y empezar. Las tuyas están marcadas en naranja y las nuestras en gris. Fin estimado: 12 de febrero de 2027.</div>
+    <div class="bt"><button class="btn" type="button" onclick="document.getElementById('inicio-b').style.display='none'">Ver mis tareas</button><button class="btn sec" type="button" onclick="document.getElementById('inicio-b').style.display='none'">Cerrar</button></div></div>
+  <div class="metrics">
+    <div class="metric"><small>Avance general</small><strong>58%</strong><div class="bar"><i style="width:58%;background:var(--or)"></i></div></div>
+    <div class="metric"><small>Tu parte</small><strong>40%</strong><div class="bar"><i style="width:40%;background:var(--text2)"></i></div></div>
+    <div class="metric"><small>Nuestra parte</small><strong>70%</strong><div class="bar"><i style="width:70%;background:var(--green)"></i></div></div>
+  </div>
+  <div class="alerta">⚠️ <div class="sp"><b>Tenés 1 tarea atrasada:</b> “Cargar planilla de empleados” venció hace 3 días. ¿Necesitás ayuda? Escribinos.</div><button class="btn sm">Ver tarea</button></div>
+  <div class="tip" style="margin:0 0 14px;padding:11px 16px"><b>Tu asistente · qué hacer hoy</b>Lo más importante ahora es la <i>planilla de empleados</i>: de ella depende que nosotros podamos cargar tus legajos y seguir con las pruebas. Si no llegás, pedí más tiempo desde la tarea: es mejor avisar que dejar que se atrase el resto del plan. Mientras tanto, nosotros avanzamos con la configuración de conceptos y fórmulas.</div>
+  <div class="card" style="padding-top:6px"><div class="tabs"><button class="tab on" data-i="tareas">📋 Tareas</button><button class="tab" data-i="dudas">💬 Dudas y notas <span class="chip c-or">1</span></button><button class="tab" onclick="irA('ayuda')">📚 Ayuda</button></div>
+  <div class="ip on" id="i-tareas"><div class="filt" id="filt"><button class="on" data-f="todas">Todas</button><button data-f="mine">Te toca a vos</button><button data-f="theirs">Nos toca a nosotros</button></div>
+  <div class="fase">Fase 3 · Configuración</div>
+  <div class="tk mine late" data-o="mine"><div class="tk-h"><div class="t">Cargar planilla de empleados<small>Te toca a vos · venció el 14/11</small></div><span class="chip c-ko">Atrasada · 3 días</span><span class="muted sm">▾</span></div>
+    <div class="tk-b"><div class="tip"><b>Antes de subirla</b>Descargá la plantilla desde <i>Ayuda</i> y completala sin cambiar los encabezados ni el orden de las columnas. Revisá que los CUIL tengan 11 dígitos y los CBU 22, sin espacios ni guiones, y que no queden filas vacías en el medio. La revisamos antes de cargarla en Salario y, si hay algo para corregir, te avisamos acá con el detalle.</div><p class="muted sm" style="margin-top:8px">Subí la planilla de alta de empleados completa. La revisamos antes de cargarla en Salario.</p><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button class="btn sm">Subir planilla</button><button class="btn sec sm" onclick="document.getElementById('t-mas').classList.toggle('on')">⏳ Necesito más tiempo</button></div>
+      <div class="tiempo" id="t-mas"><div class="tip" style="margin:0 0 6px"><b>Cómo funciona</b>Proponé una fecha realista. Nosotros la revisamos y te confirmamos la nueva fecha. Si cambia el fin estimado de la implementación, te lo mostramos acá.</div><label style="margin-top:0">¿Hasta cuándo necesitás?</label><input type="date" value="2026-11-24"/>
+        <label>Motivo (opcional)</label><input placeholder="Ej.: estamos cerrando la liquidación del mes"/>
+        <button class="btn sm" style="margin-top:10px" onclick="document.getElementById('t-ok').style.display='block'">Enviar propuesta</button>
+        <div class="aviso-ok" id="t-ok" style="background:var(--amber-bg);color:var(--amber-text)">⏳ Propuesta enviada. Salario la revisa y te confirma la nueva fecha.</div></div>
+      <div class="msg eq"><small>Ignacio · hace 2 días</small>Si tenés dudas con alguna columna avisame y lo vemos.</div>
+      <div class="caja"><input placeholder="Escribí una duda o nota sobre esta tarea…" /><button class="btn sm">Enviar</button></div></div></div>
+  <div class="tk theirs" data-o="theirs"><div class="tk-h"><div class="t">Configuración de conceptos y fórmulas<small>Nos toca a nosotros · vence 02/12</small></div><span class="chip c-az">En curso</span><span class="muted sm">▾</span></div>
+    <div class="tk-b"><p class="muted sm" style="margin-top:8px">Estamos configurando tus conceptos según el Excel de control que nos pasaste.</p><div class="tip"><b>Por ahora no tenés que hacer nada</b>Esta tarea es nuestra. Cuando termine te avisamos y, si hace falta tu validación, te aparece una tarea nueva. Si querés consultarnos algo, escribí abajo.</div>
+      <div class="msg yo"><small>Vos · ayer</small>¿Van a respetar el orden de conceptos de nuestros recibos actuales?</div>
+      <div class="msg eq"><small>Ignacio · hoy</small>Sí, lo vemos en la capacitación. Te lo dejo confirmado en esta tarea.</div>
+      <div class="caja"><input placeholder="Escribí una duda o nota sobre esta tarea…" /><button class="btn sm">Enviar</button></div></div></div>
+  <div class="tk mine" data-o="mine"><div class="tk-h"><div class="t">Validar liquidación de prueba<small>Te toca a vos · desde 05/12</small></div><span class="chip c-gr">Todavía no arrancó</span><span class="muted sm">▾</span></div>
+    <div class="tk-b"><p class="muted sm" style="margin-top:8px">Cuando terminemos la configuración te pedimos revisar una liquidación de prueba.</p><div class="tip"><b>Qué vas a revisar</b>Vas a comparar el neto de cada empleado contra tu sistema actual. Si hay diferencias, anotá el nombre y el concepto que no coincide; con eso las resolvemos mucho más rápido.</div></div></div>
+  <div class="fase">Fase 2 · Análisis</div>
+  <div class="tk theirs" data-o="theirs"><div class="tk-h"><div class="t">Análisis de convenios<small>Nos toca a nosotros</small></div><span class="chip c-ok">✓ Completa</span><span class="muted sm">▾</span></div><div class="tk-b"><p class="muted sm" style="margin-top:8px">Terminada el 10/11.</p></div></div>
+  <div class="tk mine" data-o="mine"><div class="tk-h"><div class="t">Confirmar datos del relevamiento<small>Te toca a vos</small></div><span class="chip c-ok">✓ Completa</span><span class="muted sm">▾</span></div><div class="tk-b"><p class="muted sm" style="margin-top:8px">Completada el 06/11.</p></div></div>
+  </div>
+  <div class="ip" id="i-dudas">
+    <div class="tip" style="margin:0 0 12px"><b>Para que te respondamos más rápido</b>Elegí a qué tarea o tema se refiere tu duda, contá qué esperabas y qué pasó, y sumá una captura si podés. Te avisamos acá cuando respondamos.</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap"><div class="filt" style="margin:0"><button class="on">Todas</button><button>Abiertas</button><button>Respondidas</button><button>Cerradas</button></div><button class="btn sm" onclick="document.getElementById('d-nueva').classList.toggle('on')">+ Nueva duda</button></div>
+    <div class="nueva" id="d-nueva">
+      <label style="margin-top:0">¿Sobre qué tarea o tema?</label><select><option>Consulta general</option><option>Cargar planilla de empleados</option><option>Configuración de conceptos y fórmulas</option><option>Validar liquidación de prueba</option></select>
+      <label>Asunto</label><input placeholder="Resumen corto de tu duda"/>
+      <label>Contanos</label><input placeholder="Escribí tu duda con el detalle que puedas…"/>
+      <div class="adj">📎 Adjuntar captura o archivo</div>
+      <div style="margin-top:12px"><button class="btn sm" onclick="document.getElementById('d-ok').style.display='block'">Enviar duda</button></div>
+      <div class="aviso-ok" id="d-ok">✓ Enviada. Te avisamos en cuanto la respondamos.</div>
+    </div>
+    <div class="hilo open"><div class="hilo-h"><div class="t">Orden de conceptos en los recibos<small>Configuración de conceptos y fórmulas · hoy</small></div><span class="chip c-ok">Respondida</span><span class="muted sm">▾</span></div>
+      <div class="hilo-b"><div class="msg yo"><small>Vos · ayer</small>¿Van a respetar el orden de conceptos de nuestros recibos actuales?</div>
+        <div class="msg eq"><small>Ignacio · hoy</small>Sí, lo vemos en la capacitación. Te lo dejo confirmado en esta tarea.</div>
+        <div class="caja"><input placeholder="Responder…"/><button class="btn sm">Enviar</button></div>
+        <div style="margin-top:10px"><button class="btn sec sm">Marcar como resuelta</button></div></div></div>
+    <div class="hilo"><div class="hilo-h"><div class="t">¿Pueden cargar los legajos ustedes?<small>Consulta general · hace 3 días</small></div><span class="chip c-wa">Abierta</span><span class="muted sm">▾</span></div>
+      <div class="hilo-b"><div class="msg yo"><small>Vos · hace 3 días</small>¿Pueden cargar los legajos ustedes si les paso la planilla?</div>
+        <div class="caja"><input placeholder="Agregar un mensaje…"/><button class="btn sm">Enviar</button></div></div></div>
+    <div class="hilo"><div class="hilo-h"><div class="t">Formato del logo<small>Empresas, logo y firma · hace 1 semana</small></div><span class="chip c-gr">Cerrada</span><span class="muted sm">▾</span></div>
+      <div class="hilo-b"><div class="msg yo"><small>Vos</small>¿El logo puede ser PNG?</div><div class="msg eq"><small>Ignacio</small>Sí, PNG o JPG está perfecto.</div></div></div>
+  </div>
+  </div></div>
+</section>
+
+<!-- ───────────── RELEVAMIENTO INICIAL ───────────── -->
+<section class="view" id="v-relev">
+  <div class="wrap" style="margin-top:22px">
+    <button class="volver" onclick="volver()">← Volver</button>
+    <h1 style="font-size:23px;margin-bottom:4px">Relevamiento inicial</h1>
+    <p class="muted" style="margin-bottom:16px">Completá cada parte. Es la base de la reunión de inicio. Se guarda solo y podés seguir después.</p>
+    <div class="grid" style="grid-template-columns:minmax(0,1fr) 250px">
+      <div><div class="rl-sec" id="s1"><div class="rl-h"><h3>Equipo de Nómina</h3><span>Consulta</span><span>Tu respuesta</span></div><div class="rl-nota">💡 Ya cargaste a tus liquidadores en el paso 3; podés nombrarlos acá.</div><div class="rl-row"><div class="rl-t">Liquidadores</div><div class="rl-q"><p>¿Todas las personas van a hacer el proceso completo de liquidación o van a dividirse las tareas?</p><p>¿Cuentan con un papel de trabajo o planilla de control? Si no, ¿conocen las fórmulas de cálculo?</p><p>¿Prevén altas o bajas de liquidadores durante la implementación?</p></div><div class="rl-a"><textarea rows="2" placeholder="Tu respuesta…"></textarea></div></div><div class="rl-row"><div class="rl-t">Referente de la implementación (Key User)</div><div class="rl-q"><p>Indicá quién va a ser el referente. Es la única persona que valida los cambios en las fórmulas y aprueba el relevamiento y las fórmulas propuestas, antes de que empecemos a programarlas.</p></div><div class="rl-a"><textarea rows="2" placeholder="Tu respuesta…"></textarea></div></div><div class="rl-row"><div class="rl-t">Responsable de pruebas</div><div class="rl-q"><p>¿Quién va a realizar las pruebas? Puede ser el mismo referente u otra persona. Las pruebas que definamos en el cronograma deben completarse dentro de las fechas estimadas.</p></div><div class="rl-a"><textarea rows="2" placeholder="Tu respuesta…"></textarea></div></div><div class="rl-row"><div class="rl-t">Conocimiento de LSD</div><div class="rl-q"><p>¿Quién presenta el F.931 (Libro de Sueldos Digital): ustedes o un estudio contable?</p><p>En cualquier caso, quien liquida debería poder controlar el borrador del F.931, detectar diferencias cruzando por CUIL con el Excel de ARCA (ex AFIP) e interpretar los errores comunes de la web para pedir su corrección. ¿Cuentan con esa experiencia?</p></div><div class="rl-a"><textarea rows="2" placeholder="Tu respuesta…"></textarea><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Conocimiento de Ganancias</div><div class="rl-q"><p>¿Tienen un Excel de control del cálculo de Ganancias y conocen el proceso, incluida la presentación de SICORE y F.1359?</p><p>Tené en cuenta que Ganancias se calcula por fecha de pago y no por mes liquidado.</p></div><div class="rl-a"><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div>
+<div class="rl-sec" id="s2"><div class="rl-h"><h3>Paralelos</h3><span>Consulta</span><span>Tu respuesta</span></div><div class="rl-row"><div class="rl-t">Último mes liquidado</div><div class="rl-q"><p>Vamos a usar el PDF de tu última liquidación para listar los conceptos y definir juntos las fórmulas y bases.</p><p>¿En ese mes se forzaron conceptos a mano (fuera de retroactivos y casos particulares)? Si es así, indicanos un mes anterior con la menor cantidad posible de ajustes manuales.</p></div><div class="rl-a"><textarea rows="2" placeholder="Tu respuesta…"></textarea><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Importes netos</div><div class="rl-q"><p>Además del PDF, necesitamos el neto de cada empleado de ese mes. ¿Podés pasarnos un Excel con los netos, o preferís que los tomemos del PDF?</p></div><div class="rl-a"><textarea rows="2" placeholder="Tu respuesta…"></textarea></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div>
+<div class="rl-sec" id="s3"><div class="rl-h"><h3>Empresas</h3><span>Consulta</span><span>Tu respuesta</span></div><div class="rl-row"><div class="rl-t">Particularidades de convenios</div><div class="rl-q"><p>¿Hay convenios institucionales o liquidaciones con reglas propias, abiertas para casos particulares? Los revisamos en las reuniones de seguimiento.</p></div><div class="rl-a"><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Personal mensual y quincenal</div><div class="rl-q"><p>¿Qué porcentaje aproximado del personal cobra por mes y qué porcentaje por quincena?</p></div><div class="rl-a"><textarea rows="2" placeholder="Tu respuesta…"></textarea><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Personal con Ganancias</div><div class="rl-q"><p>¿Cuántas personas tributan Impuesto a las Ganancias?</p><p>Si la implementación empieza con el año en curso, hay que cargar lo acumulado a la fecha (ingresos, deducciones y descuentos). ¿Cómo lo tienen hoy? ¿Podrían prepararlo en un Excel para importarlo?</p></div><div class="rl-a"><textarea rows="2" placeholder="Tu respuesta…"></textarea><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Datos laborales</div><div class="rl-q"><p>¿Qué datos laborales necesitan registrar por empleado (centros de costos, áreas, secciones u otros)? ¿Existe alguna jerarquía entre ellos? Tené en cuenta que cada tabla se arma por empresa.</p></div><div class="rl-a"><textarea rows="2" placeholder="Tu respuesta…"></textarea><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Migración de empleados</div><div class="rl-q"><p>Los datos de los empleados se cargan desde un Excel que incluya los datos del F.931 y el CBU. ¿Cuentan con esa información? ¿En qué formato la tienen hoy?</p></div><div class="rl-a"><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Logos y firmas</div><div class="rl-q"><p>Estos son los logos y firmas que cargaste en el paso 4. Revisá que estén bien antes de seguir.</p><div class="rv" id="rv-logos"></div></div><div class="rl-a"><label class="chk"><input type="checkbox"/> Revisé que estén correctos</label></div></div><div class="rl-sub">Detalle de tu empresa</div><div class="rl-ayuda">Completá estos datos para tu empresa. Las demás empresas las cargás más adelante, cuando arranque la implementación.</div><div class="rl-emp"><div class="rl-emp-h"><b>Pruebaportal SA (principal)</b><span class="chip c-ok">✓ Datos ya cargados · confirmá o corregí</span></div>
+      <div class="rl-emp-g">
+        <div><span>Cantidad de empleados</span><input type="number" min="0" placeholder="Ej.: 42" value="50"/></div>
+        <div><span>¿Cómo cobra el personal?</span><select class="mq"><option value="">Seleccioná una opción</option><option>Todos mensuales</option><option>Todos quincenales</option><option value="mixto">Mixto (mensuales y quincenales)</option></select>
+          <div class="mq-p"><input type="number" min="0" max="100" placeholder="% quincenal, ej.: 30"/></div></div>
+      </div></div><datalist id="dl-conv"><option value="130/75 - Empleados de Comercio"><option value="122/75 - Sanidad"><option value="108/75 - Gastronómicos"><option value="76/75 - Construcción (UOCRA)"><option value="260/75 - Metalúrgicos (UOM)"><option value="Fuera de convenio"></datalist></div>
+<div class="rl-sec" id="s4"><div class="rl-h"><h3>Nómina</h3><span>Consulta</span><span>Tu respuesta</span></div><div class="rl-row"><div class="rl-t">Sueldos y jornales</div><div class="rl-q"><p><b>Mensuales:</b> ¿Se liquida con días teóricos por defecto? ¿Cómo se informan las altas y bajas con días reales?</p><p><b>Jornales:</b> ¿Cómo se informan las horas trabajadas (reloj, planilla)? ¿Se fijan horas teóricas por empleado y se cargan horas distintas por novedad en un período determinado?</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><textarea rows="2"></textarea></div><div><span>Jornales</span><textarea rows="2"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Jornada parcial</div><div class="rl-q"><p>¿Tienen personal con jornada parcial? Contanos las particularidades. Por defecto, las remuneraciones 04 y 08 se presentan como parcial en el F.931.</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div><div><span>Jornales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Adicionales o configuraciones individuales</div><div class="rl-q"><p>¿Algún empleado requiere una configuración especial o datos extra (campos adicionales de Datos Laborales o de Extensión)?</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div><div><span>Jornales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Nocturnidad</div><div class="rl-q"><p>¿Tienen personal con horario nocturno? ¿Cómo se liquida?</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div><div><span>Jornales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Feriados</div><div class="rl-q"><p>¿El feriado se paga discriminado en el recibo o solo cuando se trabaja?</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><textarea rows="2"></textarea></div><div><span>Jornales</span><textarea rows="2"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Licencias</div><div class="rl-q"><p>¿Cómo se pagan las licencias y cómo se muestran en el recibo?</p><p>¿El valor del día incluye antigüedad, presentismo y similares, o esos conceptos se calculan aparte?</p><p>Para mensuales: ¿se toman 30 o 25 días como base (en algunos casos o en todos)?</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><textarea rows="2"></textarea></div><div><span>Jornales</span><textarea rows="2"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Descuentos por ausencias y licencias sin goce</div><div class="rl-q"><p>En ausencias injustificadas, licencias sin goce, maternidad u otros casos que se descuentan: ¿cómo se calcula el descuento? ¿Afectan los días trabajados para el SAC y SICOSS?</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><textarea rows="2"></textarea></div><div><span>Jornales</span><textarea rows="2"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Horas extras</div><div class="rl-q"><p>¿Qué recargos de horas extras aplican (50 %, 100 % u otros)?</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><textarea rows="2"></textarea></div><div><span>Jornales</span><textarea rows="2"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Vacaciones</div><div class="rl-q"><p>¿Se pagan todos los días de vacaciones al salir o solo los del mes más un adelanto? ¿Cómo se distribuyen para el SAC?</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><textarea rows="2"></textarea></div><div><span>Jornales</span><textarea rows="2"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Prestación dineraria (ILT)</div><div class="rl-q"><p>¿Los días de prestación dineraria reducen los días trabajados para el SAC y SICOSS? ¿Se paga SAC sobre la ILT?</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><textarea rows="2"></textarea></div><div><span>Jornales</span><textarea rows="2"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">SAC</div><div class="rl-q"><p>¿Cómo se calcula el SAC si hay conceptos no remunerativos? ¿El SAC proporcional se paga en las liquidaciones finales (excepto junio y diciembre)?</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><textarea rows="2"></textarea></div><div><span>Jornales</span><textarea rows="2"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Indemnizaciones</div><div class="rl-q"><p>¿Hay particularidades en las liquidaciones finales (indemnizaciones, preaviso, etc.)?</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div><div><span>Jornales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Asignaciones familiares</div><div class="rl-q"><p>¿Pagan asignaciones familiares? ¿Aplican las nacionales o las provinciales?</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div><div><span>Jornales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Embargos y cuotas alimentarias</div><div class="rl-q"><p>¿Tienen empleados con embargos o cuotas alimentarias? ¿Cuántos aproximadamente?</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div><div><span>Jornales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Anticipos, adelantos y préstamos</div><div class="rl-q"><p>¿Otorgan anticipos, adelantos o préstamos? ¿En qué tipo de liquidación se descuentan (en blanco o no)?</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div><div><span>Jornales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Pasantes y directores</div><div class="rl-q"><p>¿Tienen pasantes o directores? Para ellos se arma un esquema de liquidación particular, con o sin descuentos según corresponda. Contanos cómo se liquidan hoy.</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div><div><span>Jornales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Liquidaciones históricas</div><div class="rl-q"><p>¿Tienen archivos de liquidaciones anteriores para migrar? ¿Desde qué fecha quieren migrar?</p></div><div class="rl-a"><div class="rl-cols"><div><span>Mensuales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div><div><span>Jornales</span><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div></div></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div>
+<div class="rl-sec" id="s5"><div class="rl-h"><h3>Acreditaciones</h3><span>Consulta</span><span>Tu respuesta</span></div><div class="rl-row"><div class="rl-t">Interfaces bancarias</div><div class="rl-q"><p>¿Con qué bancos acreditan los sueldos, o solo le pasan a Tesorería un listado de CBU y monto?</p><p>Si presentan un archivo TXT al banco, ¿quién lo genera: el liquidador o el referente? Lo necesitamos porque las pruebas se hacen cargando el archivo real, no solo mirando el formato.</p></div><div class="rl-a"><textarea rows="2" placeholder="Tu respuesta…"></textarea></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div>
+<div class="rl-sec" id="s6"><div class="rl-h"><h3>Asientos contables</h3><span>Consulta</span><span>Tu respuesta</span></div><div class="rl-row"><div class="rl-t">Plan de cuentas</div><div class="rl-q"><p>¿Usan un único plan de cuentas o uno distinto por empresa?</p><p>Necesitamos un Excel solo con las cuentas de la liquidación de sueldos (código y nombre), separadas en Debe y Haber. No envíes el plan contable completo del área de Contabilidad.</p></div><div class="rl-a"><textarea rows="2" placeholder="Tu respuesta…"></textarea><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Configuración del asiento</div><div class="rl-q"><p>Indicanos cómo se arma el asiento: qué totales o conceptos van a cada cuenta, en el Debe y en el Haber, y si hace falta abrirlo por centros de costos.</p></div><div class="rl-a"><textarea rows="2" placeholder="Tu respuesta…"></textarea><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Formato de importación</div><div class="rl-q"><p>¿El software contable que usan requiere un formato específico para importar el asiento? ¿Cuál?</p></div><div class="rl-a"><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div>
+<div class="rl-sec" id="s7"><div class="rl-h"><h3>Sindicales</h3><span>Consulta</span><span>Tu respuesta</span></div><div class="rl-row"><div class="rl-t">Archivos para presentaciones</div><div class="rl-q"><p>¿Qué sindicatos requieren archivos para presentar sus declaraciones juradas?</p></div><div class="rl-a"><textarea rows="2" placeholder="Tu respuesta…"></textarea><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Reportes</div><div class="rl-q"><p>¿Qué sindicatos piden un reporte específico?</p></div><div class="rl-a"><textarea rows="2" placeholder="Tu respuesta…"></textarea></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div>
+<div class="rl-sec" id="s8"><div class="rl-h"><h3>LSD · F.931</h3><span>Consulta</span><span>Tu respuesta</span></div><div class="rl-row"><div class="rl-t">Particularidades en LSD</div><div class="rl-q"><p>¿Hay alguna particularidad en el Libro de Sueldos Digital (temas gremiales, de presentación, correcciones manuales u otras que requieran una configuración especial)?</p><p>Si el F.931 lo presenta un estudio contable, ¿quién hace el cruce de aportes y contribuciones?</p></div><div class="rl-a"><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">Libro de Sueldos del Ministerio de Trabajo</div><div class="rl-q"><p>¿Necesitan emitir el Libro de Sueldos del Ministerio de Trabajo? ¿Hay algún formato particular?</p></div><div class="rl-a"><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div><div class="rl-row"><div class="rl-t">SIJCOR</div><div class="rl-q"><p>¿Presentan SIJCOR?</p></div><div class="rl-a"><div class="sn"><button type="button" data-v="si">✓ Sí</button><button type="button" data-v="no">✕ No</button></div><textarea rows="1" placeholder="Detalle (opcional)"></textarea></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div>
+<div class="rl-sec" id="s9"><div class="rl-h"><h3>Reportes de gestión</h3><span>Consulta</span><span>Tu respuesta</span></div><div class="rl-row"><div class="rl-t">Lista de reportes</div><div class="rl-q"><p>¿Qué reportes necesitan para la gestión? Los revisamos para ver si alcanzan los reportes estándar o si hacen falta informes especiales.</p></div><div class="rl-a"><textarea rows="2" placeholder="Tu respuesta…"></textarea></div><div class="om"><button type="button" class="om-b">Omitir esta pregunta</button></div></div></div>
+<div class="rl-sec rl-info" id="s10"><div class="rl-h-info"><span class="ic">ℹ️</span><div><h3>Comentarios de implementación</h3><p>No son preguntas: son acuerdos y recomendaciones para que la implementación salga bien. Leelos y marcá “Entendido” en cada uno.</p></div><button type="button" class="btn sec sm" id="rl-todos">Marcar todos</button></div><div class="rl-cards"><label class="rl-card rl-card--ancho"><span class="ic">🧭</span><div class="tx"><b>Cómo vas a usar este portal</b><p>Es tu espacio para acompañar toda la implementación. Desde acá vas a poder:</p>
+<ul class="rl-caps">
+<li>Seguir el paso a paso y el avance de las tareas, las nuestras y las tuyas</li>
+<li>Cargar tu información, tus archivos y este relevamiento</li>
+<li>Pedir las reuniones por Meet y ver cuándo son</li>
+<li>Dejar dudas y notas en cada tarea, y escribirle por WhatsApp a tu responsable</li>
+<li>Recibir avisos de novedades y de tareas por vencer</li>
+<li>Consultar la ayuda y descargar material</li>
+</ul></div><span class="ok"><input type="checkbox"/><em>Entendido</em></span></label><label class="rl-card"><span class="ic">📄</span><div class="tx"><b>Documentos y DDJJ</b><p>Salario genera los formatos de las presentaciones y declaraciones juradas, pero la presentación se hace en plataformas web externas (ARCA, sindicatos, etc.). Si esas plataformas devuelven errores o mensajes, es responsabilidad de ustedes interpretarlos e informarnos el motivo.</p></div><span class="ok"><input type="checkbox"/><em>Entendido</em></span></label><label class="rl-card"><span class="ic">🧮</span><div class="tx"><b>Papel de trabajo</b><p>Las personas que liquidan deben conocer todos los cálculos y poder controlarlos con un papel de trabajo.</p></div><span class="ok"><input type="checkbox"/><em>Entendido</em></span></label><label class="rl-card"><span class="ic">🧩</span><div class="tx"><b>Programación de conceptos y fórmulas</b><p>Durante la programación y el primer paralelo, nuestro equipo programa las fórmulas que revisamos juntos en las reuniones. Después, en soporte, probamos las fórmulas nuevas con una muestra chica y luego ustedes repiten las pruebas en condiciones más exigentes (licencias, bajas, jornadas reducidas, etc.).</p></div><span class="ok"><input type="checkbox"/><em>Entendido</em></span></label><label class="rl-card"><span class="ic">📅</span><div class="tx"><b>Gestión del tiempo</b><p>Llevamos un cronograma (Gantt) con el inicio, el avance y el fin de cada tarea, tanto nuestras como tuyas. Cualquier demora se actualiza ahí para informar cuánto se corre el proyecto y cómo recuperarlo.</p></div><span class="ok"><input type="checkbox"/><em>Entendido</em></span></label><label class="rl-card"><span class="ic">✅</span><div class="tx"><b>Validación de datos</b><p>Con la aprobación de este relevamiento y de la planilla de conceptos (estándar y no estándar, con sus fórmulas) damos por validados los datos para implementar.</p></div><span class="ok"><input type="checkbox"/><em>Entendido</em></span></label></div></div></div>
+      <div class="rl-side"><div class="card"><div class="card-title">Partes · <span id="rl-n">3</span> de 10</div><div class="rl-nav" id="rl-nav"><a data-s="s1"><i class="pt"></i><span>Equipo de Nómina</span></a><a data-s="s2"><i class="pt"></i><span>Paralelos</span></a><a data-s="s3"><i class="pt"></i><span>Empresas</span></a><a data-s="s4"><i class="pt"></i><span>Nómina</span></a><a data-s="s5"><i class="pt"></i><span>Acreditaciones</span></a><a data-s="s6"><i class="pt"></i><span>Asientos contables</span></a><a data-s="s7"><i class="pt"></i><span>Sindicales</span></a><a data-s="s8"><i class="pt"></i><span>LSD · F.931</span></a><a data-s="s9"><i class="pt"></i><span>Reportes de gestión</span></a><a data-s="s10"><i class="pt"></i><span>Comentarios de implementación</span></a></div></div>
+        <div class="card"><div class="card-title">Aprobación</div>
+          <p class="muted sm">Al terminar, el responsable (Key User) aprueba el relevamiento. Queda registrado quién y cuándo.</p>
+          <button class="btn" id="rl-ap" style="width:100%;margin-top:12px;opacity:.5;cursor:not-allowed">Aprobar relevamiento</button>
+          <div class="ap-f" id="ap-form"><label style="margin-top:0">¿Quién aprueba? (nombre y apellido)</label><input id="ap-nom" placeholder="Ej.: María Gómez"/><button class="btn" id="ap-ok-b" type="button" style="width:100%;margin-top:8px">Confirmar aprobación</button></div>
+          <div class="ap-ok" id="ap-ok"></div>
+          <p class="muted sm" style="margin-top:8px">Se habilita al completar las 10 partes.</p>
+          <div class="info" style="margin-top:12px;background:var(--amber-bg);color:var(--amber-text)">⏭ <b id="om-cnt">0</b> preguntas omitidas. Las repasamos juntos en la reunión.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────── MI EMPRESA ───────────── -->
+<section class="view" id="v-empresa">
+  <div class="wrap" style="margin-top:22px">
+    <button class="volver" onclick="volver()">← Volver</button>
+    <h1 style="font-size:23px;margin-bottom:14px">Mi empresa</h1>
+    <div class="card" style="padding-top:6px">
+      <div class="tabs"><button class="tab on" data-e="datos">Datos</button><button class="tab" data-e="empresas">Empresas</button><button class="tab" data-e="usuarios">Usuarios de Salario</button><button class="tab" data-e="archivos">Archivos</button></div>
+
+      <div class="ep on" id="e-datos">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div class="card-title" style="margin:0">Datos del cliente</div><button class="btn sec sm">✏️ Editar</button></div>
+        <div class="datos" style="margin-top:14px">
+          <div style="grid-column:1/-1"><span>Razón social</span>Pruebaportal SA</div>
+          <div><span>CUIT</span>30-70745731-3</div><div><span>Cant. de legajos</span>50</div>
+          <div style="grid-column:1/-1"><span>Domicilio</span>Marinero Paredes 6579</div>
+          <div><span>Tipo de empleador</span>1 - Decreto 814/1 Art.2 Inc.B</div><div><span>Obra social</span>902108 - SANCOR SALUD</div><div><span>ART</span>1 - ASOCIART</div>
+          <div style="grid-column:1/-1"><span>Actividad principal</span>477130 - VENTA AL POR MENOR DE INDUMENTARIA PARA BEBÉS Y NIÑOS</div>
+          <div style="grid-column:1/-1"><span>Convenios</span>Comercio</div>
+        </div>
+      </div>
+
+      <div class="ep" id="e-empresas">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap"><div class="card-title" style="margin:0">Empresas · 1 de 3 cargadas</div>
+          <span class="despues"><button class="btn sm">+ Agregar empresa</button></span></div>
+        <div class="emp"><div class="av">PS</div><div class="t"><b>Pruebaportal SA</b><small>Empresa del cliente · 30-70745731-3</small></div><span class="chip c-ok">Datos completos</span><button class="btn sec sm">Editar</button></div>
+        <div class="antes" style="margin-top:10px;padding:12px 14px;border:1px dashed var(--border2);border-radius:var(--radius);background:var(--surface2)">
+          <b style="font-size:13.5px">Indicaste que vas a liquidar 3 empresas.</b>
+          <p class="muted sm" style="margin-top:3px">Las otras 2 las vas a poder cargar con todos sus datos (razón social, CUIT, obra social, ART, convenios, logo y firma) cuando arranque la implementación, así ahora no demoramos el comienzo.</p></div>
+        <div class="despues" style="margin-top:10px">
+          <div class="emp"><div class="av">AS</div><div class="t"><b>Agua SRL</b><small>30-42783412-3</small></div><span class="chip c-wa">Faltan datos</span><button class="btn sec sm">Completar</button></div>
+          <div class="emp"><div class="av">+</div><div class="t"><b>Falta cargar 1 empresa más</b><small>Declaraste 3 empresas</small></div><button class="btn sm">Cargar empresa</button></div></div>
+      </div>
+
+      <div class="ep" id="e-usuarios">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px"><div class="card-title" style="margin:0">Personas con acceso a Salario · 3</div><button class="btn sm" onclick="document.getElementById('u-nuevo').classList.toggle('on')">+ Pedir un usuario nuevo</button></div>
+        <div class="emp"><div class="av">MG</div><div class="t"><b>María Gómez</b><small>Usuario de Salario</small></div><span class="chip c-ok">Acceso creado</span></div>
+        <div class="emp"><div class="av">CP</div><div class="t"><b>Carlos Pérez</b><small>Usuario de Salario</small></div><span class="chip c-ok">Acceso creado</span></div>
+        <div class="emp"><div class="av">LR</div><div class="t"><b>Lucía Romero</b><small>Usuario de Salario</small></div><span class="chip c-wa">⏳ Acceso pendiente</span></div>
+        <div class="ep" id="u-nuevo" style="margin-top:10px;padding:12px;border:1px solid var(--orline);background:var(--orb);border-radius:var(--radius)">
+          <label style="margin-top:0">Nombre y apellido</label><input placeholder="Nombre y apellido"/>
+          <button class="btn sm" style="margin-top:10px" onclick="document.getElementById('u-ok').style.display='block'">Enviar pedido</button>
+          <div class="aviso-ok" id="u-ok">✓ Listo. Avisamos a nuestro equipo de programación para que cree el usuario y la clave.</div>
+        </div>
+      </div>
+
+      <div class="ep" id="e-archivos">
+        <div class="card-title">Archivos que subiste · 3</div>
+        <details class="up-emp" open><summary><span class="nm">Pruebaportal SA</span><span class="cnt">3 archivos</span></summary>
+          <div class="up"><div class="up-i"><b>Logo</b></div><div class="up-f"><span class="fl"><i>✓</i><b>logo-pruebaportal.png</b><em>84 KB · 12/11</em><a>Ver</a><a class="q">Quitar</a></span></div></div>
+          <div class="up"><div class="up-i"><b>Firma</b></div><div class="up-f"><span class="fl"><i>✓</i><b>firma-pruebaportal.png</b><em>41 KB · 12/11</em><a>Ver</a><a class="q">Quitar</a></span></div></div>
+          <div class="up"><div class="up-i"><b>Liquidación 1</b></div><div class="up-f"><span class="fl"><i>✓</i><b>liquidacion-oct.pdf</b><em>212 KB · 13/11</em><a>Ver</a><a class="q">Quitar</a></span></div></div></details>
+        <details class="up-emp"><summary><span class="nm">Documentos de Salario para vos</span><span class="cnt">2 archivos</span></summary>
+          <div class="up"><div class="up-i"><b>Plantilla de alta de empleados</b><small>Compartido por tu equipo</small></div><div class="up-f"><button class="btn sec sm">Descargar</button></div></div>
+          <div class="up"><div class="up-i"><b>Guía del relevamiento inicial</b><small>Compartido por tu equipo</small></div><div class="up-f"><button class="btn sec sm">Descargar</button></div></div></details>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────── AYUDA Y CONTACTO ───────────── -->
+<section class="view" id="v-ayuda">
+  <div class="wrap" style="margin-top:22px">
+    <button class="volver" onclick="volver()">← Volver</button>
+    <h1 style="font-size:23px;margin-bottom:14px">Ayuda y contacto</h1>
+    <div class="grid"><div>
+      <div class="tip" style="margin:0 0 14px"><b>¿Trabado con algo?</b>Mirá primero las preguntas frecuentes. Si no está tu duda, escribinos desde “Dudas y notas” (queda registrada junto a tu tarea) o por WhatsApp si es urgente.</div>
+      <div class="card"><div class="card-title">Preguntas frecuentes</div>
+        <details class="faq"><summary>¿Cuánto dura la implementación?</summary><p>Depende del tamaño de tu empresa. Al arrancar te mostramos la fecha estimada de fin y la vamos actualizando en cada tarea.</p></details>
+        <details class="faq"><summary>¿Qué datos necesito tener a mano?</summary><p>Los datos de tus empresas, un PDF de liquidación reciente y, si tenés, tu Excel de control.</p></details>
+        <details class="faq"><summary>¿Qué hago si no sé responder algo del relevamiento?</summary><p>Usá “Omitir” y contanos el motivo (por ejemplo, “lo tiene que confirmar el estudio contable”). Lo vemos juntos en la reunión de inicio.</p></details>
+        <details class="faq"><summary>¿Puedo cambiar algo después de enviarlo?</summary><p>Sí, hasta la reunión de inicio podés corregir tus datos. Después, avisanos desde Dudas y notas para que lo actualicemos.</p></details>
+        <details class="faq"><summary>¿Cómo se crean los accesos de mi equipo?</summary><p>Con los nombres que cargás, nuestro equipo de programación crea cada usuario con su clave y te avisamos.</p></details>
+      </div>
+      <div class="card"><div class="card-title">Material descargable</div>
+        <div class="emp"><div class="av">📄</div><div class="t"><b>Plantilla de alta de empleados</b><small>Excel · se completa en la tarea de empleados</small></div><button class="btn sec sm">Descargar</button></div>
+        <div class="emp"><div class="av">🎬</div><div class="t"><b>Cómo preparar el Excel de control</b><small>Video · 4 min</small></div><button class="btn sec sm">Ver</button></div>
+      </div></div>
+    <div><div class="card"><div class="card-title">Tu responsable</div><div class="resp"><div class="av">IT</div><div><b>Ignacio Talón</b><div class="muted sm">Responsable de tu implementación</div></div></div>
+      <button class="btn" style="width:100%;margin-top:14px">💬 Escribir por WhatsApp</button><p class="muted sm" style="margin-top:10px">Respondemos de lunes a viernes en horario laboral.</p></div></div></div>
+  </div>
+</section>
+</div>
+
+<script>
+  const $=id=>document.getElementById(id);
+  function go(v){
+    document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
+    document.querySelectorAll('.mk button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+    document.body.classList.toggle('etapa-impl',v==='impl');
+    window.scrollTo(0,0);
+  }
+  let _prev='prep';
+  function irA(v){const act=document.querySelector('.view.on');if(act&&act.id!=='v-empresa'&&act.id!=='v-ayuda'&&act.id!=='v-relev')_prev=act.id.slice(2);abrir(false);
+    document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));window.scrollTo(0,0)}
+  function volver(){go(_prev)}
+  document.querySelectorAll('[data-e]').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('[data-e]').forEach(x=>x.classList.toggle('on',x===b));
+    ['datos','empresas','usuarios','archivos'].forEach(n=>$('e-'+n).classList.toggle('on',n===b.dataset.e))});
+  document.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('[data-i]').forEach(x=>x.classList.toggle('on',x===b));
+    ['tareas','dudas'].forEach(n=>$('i-'+n).classList.toggle('on',n===b.dataset.i))});
+  document.querySelectorAll('.sn button').forEach(b=>b.onclick=()=>{const was=b.classList.contains('on');b.parentElement.querySelectorAll('button').forEach(x=>x.classList.remove('on'));if(!was)b.classList.add('on')});
+  // Omitir pregunta: "No aplica" o "No sé qué responder"; se repasan juntos en la reunión
+  function contarOmitidas(){const n=document.querySelectorAll('.rl-row.omitida').length;const e=$('om-cnt');if(e)e.textContent=n}
+  document.addEventListener('click',ev=>{
+    const row=ev.target.closest('.rl-row'); if(!row) return; const om=row.querySelector('.om'); if(!om) return;
+    if(ev.target.matches('[data-x],[data-u]')){row.classList.remove('omitida');om.innerHTML='<button type="button" class="om-b">Omitir esta pregunta</button>';contarOmitidas()}
+    else if(ev.target.matches('.om-b')){om.innerHTML='<span class="muted">Omitir porque:</span><button type="button" class="op" data-m="No aplica a mi empresa">No aplica a mi empresa</button><button type="button" class="op" data-m="No sé qué responder">No sé qué responder</button><button type="button" class="om-b" data-x="1">Cancelar</button>'}
+    else if(ev.target.matches('.op')){row.classList.add('omitida');om.innerHTML='<span class="oc">⏭ Omitida · '+ev.target.dataset.m+'</span><button type="button" class="om-b" data-u="1">Deshacer</button>';contarOmitidas()}
+  });
+  document.querySelectorAll('select.mq').forEach(sel=>sel.onchange=()=>sel.parentElement.querySelector('.mq-p').classList.toggle('on',sel.value==='mixto'));
+  // Línea de avance del relevamiento: cada punto se pinta de verde cuando su parte está completa
+  // Qué está pendiente en una parte: cada pregunta debe estar respondida u omitida,
+  // y cada comentario de implementación debe estar marcado como "Entendido".
+  function pendientes(sec){
+    const items=[];
+    sec.querySelectorAll('.rl-row').forEach(r=>{
+      if(r.classList.contains('omitida')){items.push({el:r,ok:true});return}
+      const tema=r.querySelector('.rl-t').textContent.trim();
+      const grupos=[...r.querySelectorAll('.sn')];
+      let ok;
+      const chk=r.querySelector('.chk input');
+      if(chk) ok=chk.checked;
+      else if(grupos.length) ok=grupos.every(g=>g.querySelector('button.on'));
+      else ok=[...r.querySelectorAll('textarea,input')].some(x=>x.value.trim());
+      items.push({el:r,ok,nombre:tema,motivo:chk?'sin marcar “Leído y entendido”':'sin responder ni omitir'});
+    });
+    sec.querySelectorAll('.rl-emp').forEach(e=>{
+      const nom=e.querySelector('b').textContent.trim();
+      const num=e.querySelector('input[type=number]').value.trim();
+      const sel=e.querySelector('select'), pct=e.querySelector('.mq-p input').value.trim();
+      const ok=!!num&&!!sel.value&&(sel.value!=='mixto'||!!pct);
+      items.push({el:e,ok,nombre:'Detalle de '+nom,motivo:'faltan datos'});
+    });
+    sec.querySelectorAll('.rl-card').forEach(c=>{
+      items.push({el:c,ok:c.querySelector('input').checked,nombre:c.querySelector('b').textContent.trim(),motivo:'sin marcar “Entendido”'});
+    });
+    return items;
+  }
+  function parteCompleta(sec){return pendientes(sec).every(i=>i.ok)}
+  function actualizarNav(){
+    let n=0;
+    document.querySelectorAll('#rl-nav a').forEach(a=>{const ok=parteCompleta($(a.dataset.s));a.classList.toggle('done',ok);if(ok)n++});
+    $('rl-n').textContent=n;
+    const ap=$('rl-ap'),todo=n===10;ap.style.opacity=todo?1:.5;ap.style.cursor=todo?'pointer':'not-allowed';
+  }
+  document.querySelectorAll('.rl-sec').forEach(sec=>['input','change','click'].forEach(ev=>sec.addEventListener(ev,()=>{setTimeout(()=>{actualizarNav();actualizarPies();if(sec.querySelector('.rl-err'))validarParte(sec,false)},0)})));
+  // ── Pasos en cualquier orden (se sugiere el orden numérico) ──
+  const TIT={3:'Indicanos quiénes van a usar Salario',4:'Subí el logo y la firma de tu empresa',5:'Subí tus liquidaciones y el Excel de control',6:'Indicanos cuántas empresas vas a liquidar',7:'Completá el relevamiento inicial',8:'Solicitá tu reunión de inicio'};
+  let MSG_OK='';
+  function actualizarProgreso(){
+    const pasos=[...document.querySelectorAll('#v-prep .st[data-n]')];
+    const n=document.querySelectorAll('#v-prep .st.done,#v-prep .st.rev').length;
+    const r=document.querySelector('#v-prep .ring');r.style.setProperty('--p',Math.round(n/8*100));r.querySelector('span').textContent=n+'/8';
+    // Los pasos se pueden completar en cualquier orden; el sugerido es el primero pendiente
+    const sug=pasos.find(p=>!p.classList.contains('done'));
+    pasos.forEach(p=>{
+      const ch=p.querySelector('.st-h .chip'); if(!ch||p.classList.contains('done'))return;
+      if(ch.dataset.orig===undefined) ch.dataset.orig=ch.textContent.trim()==='Te toca a vos'?'Pendiente':ch.textContent;
+      p.classList.toggle('cur',p===sug);
+      if(p===sug){ch.className='chip c-or';ch.textContent='Te toca a vos'}
+      else{ch.className='chip c-gr';ch.textContent=ch.dataset.orig}
+    });
+    if(sug){$('nx-t').textContent=TIT[+sug.dataset.n]}
+    // Mensaje del asistente según el avance
+    const falta=8-n;
+    let m;
+    if(!sug) m='¡Listo, completaste todo! Ahora nuestro equipo prepara tu implementación y te avisamos acá cuando arranque.';
+    else if(n<=2) m='Te acompaño paso a paso. Podés hacerlos en el orden que quieras, pero te sugiero este primero.';
+    else if(falta===1) m='¡Último paso! Con esto terminás la preparación.';
+    else m=(MSG_OK||'')+'Ya llevás '+n+' de 8. Te sugiero seguir con este.';
+    $('nx-m').textContent=m;
+    $('nx-b').onclick=()=>{const c=document.querySelector('#v-prep .st.cur');if(c)c.scrollIntoView({behavior:'smooth',block:'center'})};
+  }
+  function completarPaso(n,texto){
+    const st=document.querySelector('.st[data-n="'+n+'"]'); if(!st||st.classList.contains('done')) return;
+    st.classList.remove('cur');st.classList.add('done');st.querySelector('.num').textContent='✓';
+    MSG_OK='¡Muy bien! ';
+    const ch=st.querySelector('.st-h .chip'); if(ch){ch.className='chip c-ok';ch.textContent=texto||'Completo'}
+    actualizarProgreso();
+  }
+  actualizarProgreso();
+  // Aprobación del relevamiento: se registra el nombre de quien aprueba
+  $('rl-ap').onclick=()=>{
+    if(document.querySelectorAll('#rl-nav a.done').length<10){alert('Completá las 10 partes para poder aprobar.');return}
+    $('ap-form').classList.add('on');$('ap-nom').focus();
+  };
+  $('ap-ok-b').onclick=()=>{
+    const nom=$('ap-nom').value.trim(); if(!nom){$('ap-nom').focus();$('ap-nom').style.borderColor='var(--red)';return}
+    const f=new Date().toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    $('ap-form').classList.remove('on');$('rl-ap').style.display='none';
+    const o=$('ap-ok');o.style.display='block';o.innerHTML='✓ <b>Relevamiento aprobado</b> por '+nom.replace(/</g,'&lt;')+' el '+f+'.';
+    completarPaso(7,'Aprobado');
+  };
+  $('demo-todo').onclick=()=>{[3,4,5,6,7].forEach(n=>completarPaso(n))};
+  // ── Pasos 4 y 5: subir y ver archivos (simulado) ──
+  function actualizarArchivos(){
+    document.querySelectorAll('.up-emp').forEach(d=>{
+      const c=d.querySelector('.cnt'); if(!c) return;
+      const ups=[...d.querySelectorAll('.up')],ok=ups.filter(u=>u.classList.contains('ok')).length;
+      c.textContent=ok+' de '+ups.length+' cargados';c.classList.toggle('ok',ok===ups.length)});
+    [['st4','chip4'],['st5','chip5']].forEach(([st,ch])=>{
+      const ups=[...$(st).querySelectorAll('.up')],ok=ups.filter(u=>u.classList.contains('ok')).length,chip=$(ch);
+      chip.className='chip '+(ok===ups.length?'c-ok':ok?'c-or':'c-gr');
+      chip.textContent=ok===ups.length?'Completo':ok?ok+' de '+ups.length+' archivos':'Pendiente'});
+    const ok=(st,k)=>{const u=document.querySelector('#'+st+' .up[data-k="'+k+'"]');return u&&u.classList.contains('ok')};
+    if(ok('st4','logo')&&ok('st4','firma')) completarPaso(4);
+    if(ok('st5','liq1')&&ok('st5','liq2')) completarPaso(5);
+    const rv=$('rv-logos'); if(rv) rv.innerHTML=[...document.querySelectorAll('#st4 .up-emp')].map(d=>{
+      const g=k=>d.querySelector('.up[data-k="'+k+'"]').classList.contains('ok');
+      const chip=(n,ok)=>'<span class="chip '+(ok?'c-ok':'c-ko')+'">'+n+(ok?' · cargado':' · falta')+'</span>';
+      return '<div><b>'+d.dataset.emp+'</b>'+chip('Logo',g('logo'))+chip('Firma',g('firma'))+'</div>'}).join('')+'<a onclick="irAPaso4()">Cambiar en el paso 4 →</a>';
+  }
+  function irAPaso4(){go('prep');setTimeout(()=>$('st4').scrollIntoView({behavior:'smooth'}),50)}
+  document.addEventListener('click',ev=>{
+    const b=ev.target.closest('button[data-up]');
+    if(b){const u=b.closest('.up');u.querySelector('.up-f').innerHTML='<span class="fl"><i>✓</i><b>'+b.dataset.up+'</b><em>'+(40+Math.floor(Math.random()*200))+' KB</em><a>Ver</a><a class="q">Quitar</a></span>';u.classList.add('ok');b.style.display='none';actualizarArchivos();return}
+    const q=ev.target.closest('.fl a.q');
+    if(q){const u=q.closest('.up');u.querySelector('.up-f').innerHTML='';u.classList.remove('ok');u.querySelector('button[data-up]').style.display='';actualizarArchivos()}
+  });
+  function guardarEmpresas(){const n=+$('e-cant').textContent;const e=$('ok-emp');e.textContent='✓ Listo. Anotamos '+(n===1?'1 empresa':n+' empresas')+'. Las cargás con todos sus datos cuando arranque la implementación.';e.style.display='block';completarPaso(6)}
+  $('e-mas').onclick=()=>{$('e-cant').textContent=Math.min(99,+$('e-cant').textContent+1)};
+  $('e-menos').onclick=()=>{$('e-cant').textContent=Math.max(1,+$('e-cant').textContent-1)};
+  function guardarUsuarios(){const n=+$('n-cant').textContent;const e=$('ok-usr');e.textContent='✓ Listo. Avisamos a nuestro equipo de programación para que cree '+(n===1?'1 acceso':n+' accesos')+'.';e.style.display='block';completarPaso(3)}
+  // ── Relevamiento por pasos: se ve una parte por vez; "Continuar" pasa a la siguiente ──
+  const SECS=[...document.querySelectorAll('.rl-sec')];
+  let pasoActual=0;
+  function respondidas(sec){
+    const it=pendientes(sec);
+    return [it.filter(i=>i.ok).length,it.length,sec.querySelector('.rl-card')?'entendidos':'respondidas'];
+  }
+  function actualizarPies(){
+    SECS.forEach((sec,i)=>{const p=sec.querySelector('.rl-pie .pi');if(!p)return;
+      const [ok,t,txt]=respondidas(sec);p.innerHTML='Parte <b>'+(i+1)+'</b> de 10 · '+ok+' de '+t+' '+txt})}
+  // Botón "volver" arriba de cada parte, para corregir sin tener que bajar hasta el final
+  const volverArriba=document.createElement('button');volverArriba.type='button';volverArriba.className='rl-back';
+  SECS[0].parentNode.insertBefore(volverArriba,SECS[0]);
+  volverArriba.onclick=()=>irPaso(pasoActual-1);
+  function irPaso(i){
+    pasoActual=Math.max(0,Math.min(SECS.length-1,i));
+    volverArriba.classList.toggle('on',pasoActual>0);
+    if(pasoActual>0) volverArriba.textContent='← Volver a '+SECS[pasoActual-1].querySelector('h3').textContent.trim();
+    SECS.forEach((x,k)=>x.classList.toggle('act',k===pasoActual));
+    document.querySelectorAll('#rl-nav a').forEach(a=>a.classList.toggle('cur',a.dataset.s===SECS[pasoActual].id));
+    const top=document.getElementById('v-relev').getBoundingClientRect().top+window.scrollY;
+    if(window.scrollY>top) window.scrollTo({top:Math.max(0,top-10),behavior:'smooth'});
+  }
+  // Muestra qué falta y lo resalta en rojo; si todo está bien, quita el aviso
+  function validarParte(sec,mover){
+    const falta=pendientes(sec).filter(i=>!i.ok);
+    sec.querySelectorAll('.falta').forEach(x=>x.classList.remove('falta'));
+    let err=sec.querySelector('.rl-err');
+    if(!falta.length){if(err)err.remove();return true}
+    falta.forEach(i=>i.el.classList.add('falta'));
+    if(!err){err=document.createElement('div');err.className='rl-err';sec.insertBefore(err,sec.querySelector('.rl-pie'))}
+    err.innerHTML='<b>Antes de continuar te falta completar '+falta.length+(falta.length===1?' punto':' puntos')+':</b><ul>'+falta.map(i=>'<li>'+i.nombre+' <span>· '+i.motivo+'</span></li>').join('')+'</ul><p>Respondé cada pregunta, o usá “Omitir esta pregunta” si no aplica o no sabés qué responder.</p>';
+    if(mover) falta[0].el.scrollIntoView({behavior:'smooth',block:'center'});
+    return false;
+  }
+  SECS.forEach((sec,i)=>{
+    const ult=i===SECS.length-1;
+    const pie=document.createElement('div');pie.className='rl-pie';
+    pie.innerHTML='<span class="pi"></span><span class="bt">'+(i>0?'<button type="button" class="btn sec" data-ant>← Anterior</button>':'')+'<button type="button" class="btn" data-sig>'+(ult?'Finalizar':'Continuar →')+'</button></span>';
+    sec.appendChild(pie);
+    const fin=document.createElement('div');fin.className='rl-fin';sec.appendChild(fin);
+    pie.querySelector('[data-sig]').onclick=()=>{
+      if(!validarParte(sec,true)) return;
+      if(!ult){irPaso(i+1);return}
+      const pend=SECS.map((x,k)=>parteCompleta(x)?null:(k+1)+'. '+x.querySelector('h3').textContent.trim()).filter(Boolean);
+      fin.classList.add('on');
+      fin.innerHTML=pend.length?'Todavía quedan partes sin completar: <b>'+pend.join(' · ')+'</b>. Podés volver a cualquiera desde la línea de avance.':'✓ ¡Listo! Completaste las 10 partes. Ya podés aprobar el relevamiento.';
+    };
+    const ant=pie.querySelector('[data-ant]');if(ant)ant.onclick=()=>irPaso(i-1);
+  });
+  document.querySelectorAll('#rl-nav a').forEach((a,i)=>a.onclick=()=>irPaso(i));
+  actualizarNav();actualizarPies();actualizarArchivos();irPaso(0);actualizarProgreso();
+  document.querySelectorAll('.rl-card input').forEach(c=>c.addEventListener('change',()=>c.closest('.rl-card').classList.toggle('hecho',c.checked)));
+  $('rl-todos').onclick=()=>{document.querySelectorAll('.rl-card input').forEach(c=>{c.checked=true;c.closest('.rl-card').classList.add('hecho')});actualizarNav();actualizarPies();if($('s10').querySelector('.rl-err'))validarParte($('s10'),false)};
+  document.querySelectorAll('.hilo-h').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('open'));
+  document.addEventListener('click',e=>{if(!e.target.closest('.campanita'))$('notis').classList.remove('on')});
+  function abrir(x){$('velo').classList.toggle('on',x);$('drawer').classList.toggle('on',x)}
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')abrir(false)});
+  function tema(t){
+    document.documentElement.dataset.theme = t==='oscuro'?'dark':'';
+    $('t-claro').classList.toggle('on',t==='claro'); $('t-oscuro').classList.toggle('on',t==='oscuro');
+    try{localStorage.setItem('portal_tema',t)}catch(e){}
+  }
+  try{const g=localStorage.getItem('portal_tema'); if(g) tema(g)}catch(e){}
+  document.querySelectorAll('.mk button[data-v]').forEach(b=>b.onclick=()=>go(b.dataset.v));
+  document.querySelectorAll('.tk-h').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('open'));
+  document.querySelectorAll('#filt button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#filt button').forEach(x=>x.classList.toggle('on',x===b));
+    document.querySelectorAll('.tk').forEach(t=>t.style.display=(b.dataset.f==='todas'||t.dataset.o===b.dataset.f)?'':'none');
+  });
+  document.querySelectorAll('.slot').forEach((s,i)=>{if(i>0)s.onclick=()=>s.classList.toggle('on')});
+  // Usuarios de Salario
+  (function(){let n=3;const dat=[['María Gómez','maria@empresa.com'],['Carlos Pérez','carlos@empresa.com'],['','']];
+    function dib(){$('n-cant').textContent=n;
+      $('n-lista').innerHTML=Array.from({length:n},(_,i)=>`<label>Persona ${i+1} · Nombre y apellido</label><input value="${(dat[i]||[])[0]||''}" placeholder="Nombre y apellido"/>`).join('')}
+    $('n-mas').onclick=()=>{if(n<30){n++;dib()}};$('n-menos').onclick=()=>{if(n>1){n--;dib()}};dib()})();
+</script>
+</body>
+</html>

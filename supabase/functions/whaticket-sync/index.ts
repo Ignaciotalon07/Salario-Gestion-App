@@ -144,7 +144,7 @@ function detalleSugerido(ms: Msg[]): string {
   return texto;
 }
 
-// ── Catálogo de categorías y subtemas (mantener igual a CATS de js/data.js) ──
+// ── Catálogo de categorías y subtemas (mantener igual a CATS de gestion/js/data.js) ──
 const CATALOGO: Record<string, { label: string; sub: string[] }> = {
   liquidacion: { label: "Liquidación de sueldos", sub: ["Vacaciones", "Horas extras", "Feriados", "SAC / Aguinaldo", "Licencias", "Descuentos", "Embargos", "Sueldo basico y bruto", "Liquidacion final"] },
   errores: { label: "Errores del sistema", sub: ["Recibos / PDF", "Importacion de datos", "AFIP / Presentaciones", "Calculo incorrecto", "Pantalla bloqueada", "Error al guardar", "Impresion"] },

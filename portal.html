@@ -4,711 +4,463 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Portal de clientes — Salario</title>
+  <title>Salario Gestión - Clientes</title>
   <link rel="icon" type="image/png" href="assets/img/isologotipo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <style>
-    /* Portal de clientes — estilo minimalista: azul de base, naranja de acción */
-    :root {
-      --bg: #f5f4f0; --surface: #fff; --surface2: #f0efe9;
-      --border: rgba(0,0,0,.08); --border2: rgba(0,0,0,.14);
-      --text: #1a1a18; --text2: #6b6b66; --text3: #9e9e99;
-      --azul: #2d2d8e; --azul-oscuro: #1e1e6e; --azul-claro: #eeedfb;
-      --naranja: #f97316; --naranja-hover: #ea580c; --naranja-bg: #fff4ea;
-      --verde: #2d6a2d; --verde-bg: #eef7ee;
-      --rojo: #c0392b; --rojo-bg: #fdf0ef;
-      --radius: 10px; --radius-lg: 14px;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: 'DM Sans', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.45; }
-    [hidden] { display: none !important; }
-    button { font-family: inherit; cursor: pointer; }
-
-    /* ── Login ── */
-    #vista-login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-    .login-card { width: 100%; max-width: 380px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 32px 28px; box-shadow: 0 8px 30px rgba(30,30,110,.08); }
-    .login-logo { display: block; height: 44px; margin: 0 auto 14px; }
-    .login-card h1 { font-size: 20px; margin: 0 0 4px; text-align: center; color: var(--azul-oscuro); }
-    .login-card p.sub { text-align: center; color: var(--text2); margin: 0 0 22px; }
-    label.campo { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin: 0 0 5px; }
-    input.campo, select.campo, textarea.campo { width: 100%; padding: 10px 12px; border: 1px solid var(--border2); border-radius: var(--radius); font: inherit; background: var(--surface); color: var(--text); margin-bottom: 14px; }
-    input.campo:focus, select.campo:focus, textarea.campo:focus { outline: 2px solid var(--naranja); outline-offset: -1px; border-color: transparent; }
-    .btn { border: 1px solid transparent; border-radius: var(--radius); padding: 10px 16px; font-weight: 600; font-size: 14px; transition: background .15s; }
-    .btn-naranja { background: var(--naranja); color: #fff; width: 100%; }
-    .btn-naranja:hover { background: var(--naranja-hover); }
-    .btn[disabled] { opacity: .6; cursor: default; }
-    .msg-error { background: var(--rojo-bg); color: var(--rojo); border-radius: var(--radius); padding: 9px 12px; font-size: 13px; margin-bottom: 14px; }
-
-    /* ── Portal ── */
-    .topbar { background: var(--azul-oscuro); color: #fff; }
-    .topbar-in { max-width: 860px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
-    .topbar img { height: 30px; }
-    .topbar .quien { flex: 1; min-width: 0; }
-    .topbar .quien small { display: block; opacity: .7; font-size: 11.5px; }
-    .topbar .quien strong { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-    .btn-salir { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.35); padding: 6px 12px; font-size: 12.5px; border-radius: 8px; }
-    .btn-salir:hover { background: rgba(255,255,255,.12); }
-
-    main { max-width: 860px; margin: 0 auto; padding: 22px 20px 60px; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 16px; }
-
-    .avance-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-    .avance-top h2 { margin: 0; font-size: 16px; color: var(--azul-oscuro); }
-    .avance-pct { font-size: 26px; font-weight: 700; color: var(--naranja); }
-    .barra { height: 10px; background: var(--surface2); border-radius: 99px; overflow: hidden; margin: 10px 0 8px; }
-    .barra > span { display: block; height: 100%; background: var(--naranja); border-radius: 99px; transition: width .4s; }
-    .avance-sub { color: var(--text2); font-size: 12.5px; }
-
-    .aviso-toca { background: var(--naranja-bg); border: 1px solid #fed7aa; color: #7c3a06; border-radius: var(--radius); padding: 10px 14px; margin-top: 12px; font-size: 13px; }
-
-    .fase { margin-bottom: 16px; }
-    .fase-head { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
-    .fase-head h3 { margin: 0; font-size: 14px; color: var(--azul-oscuro); }
-    .fase-head .cuenta { color: var(--text3); font-size: 12px; margin-left: auto; }
-    .etapa { display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 6px; }
-    .etapa.toca { border-color: var(--naranja); background: var(--naranja-bg); }
-    .etapa.hecha .etapa-nombre { color: var(--text2); }
-    .punto { width: 22px; height: 22px; flex: 0 0 22px; border-radius: 50%; border: 2px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; }
-    .etapa.hecha .punto { background: var(--verde); border-color: var(--verde); }
-    .etapa.curso .punto { border-color: var(--azul); background: var(--azul-claro); }
-    .etapa.toca:not(.hecha) .punto { border-color: var(--naranja); }
-    .etapa-cuerpo { flex: 1; min-width: 0; }
-    .etapa-nombre { font-weight: 500; }
-    .etapa-meta { font-size: 12px; color: var(--text3); margin-top: 1px; }
-    .chip { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; margin-left: 6px; vertical-align: 1px; }
-    .chip-toca { background: var(--naranja); color: #fff; }
-    .chip-equipo { background: var(--azul-claro); color: var(--azul); }
-    .chip-ambos { background: #f1ebfb; color: #5b3a9e; }
-    .btn-hecha { background: var(--naranja); color: #fff; padding: 7px 12px; font-size: 12.5px; white-space: nowrap; border-radius: 8px; }
-    .btn-hecha:hover { background: var(--naranja-hover); }
-    .espera { font-size: 12px; color: var(--text3); white-space: nowrap; }
-
-    /* ── Pestañas ── */
-    .tabs { background: var(--surface); border-bottom: 1px solid var(--border); }
-    .tabs-in { max-width: 860px; margin: 0 auto; padding: 0 20px; display: flex; gap: 4px; }
-    .tab { background: none; border: none; border-bottom: 3px solid transparent; padding: 13px 14px 10px; font-size: 14px; font-weight: 600; color: var(--text2); }
-    .tab:hover { color: var(--azul-oscuro); }
-    .tab.on { color: var(--azul-oscuro); border-bottom-color: var(--naranja); }
-
-    /* ── Información requerida ── */
-    .sec-titulo { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 22px 0 10px; }
-    .sec-titulo:first-child { margin-top: 0; }
-    .sec-titulo h2 { margin: 0; font-size: 16px; color: var(--azul-oscuro); }
-    .sec-ayuda { color: var(--text2); font-size: 13px; margin: -4px 0 12px; }
-    .btn-sec { background: var(--surface); color: var(--azul); border: 1px solid var(--border2); padding: 7px 13px; font-size: 13px; border-radius: 8px; font-weight: 600; }
-    .btn-sec:hover { background: var(--azul-claro); }
-    .btn-peq { padding: 5px 10px; font-size: 12px; }
-    .btn-peligro { color: var(--rojo); }
-    .btn-peligro:hover { background: var(--rojo-bg); }
-    .emp { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 18px; margin-bottom: 10px; }
-    .emp-top { display: flex; align-items: flex-start; gap: 10px; }
-    .emp-top .emp-nombre { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; word-break: break-word; }
-    .emp-top .emp-nombre small { display: block; font-weight: 400; color: var(--text3); font-size: 12px; margin-top: 2px; }
-    .estado-chip { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
-    .estado-ok { background: var(--verde-bg); color: var(--verde); }
-    .estado-falta { background: var(--naranja-bg); color: #9a3f06; }
-    .emp-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px 18px; margin-top: 12px; }
-    .emp-datos div { font-size: 13px; min-width: 0; word-break: break-word; }
-    .emp-datos span { display: block; font-size: 11px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
-    .emp-datos .vacio-dato { color: var(--text3); font-style: italic; }
-    .emp-acciones { display: flex; gap: 8px; margin-top: 14px; }
-
-    /* ── Ventana de edición ── */
-    .modal-fondo { position: fixed; inset: 0; background: rgba(20,20,60,.45); display: flex; align-items: flex-start; justify-content: center; padding: 30px 16px; overflow-y: auto; z-index: 50; }
-    .modal { background: var(--surface); border-radius: 16px; width: 100%; max-width: 560px; padding: 22px 24px; box-shadow: 0 20px 60px rgba(0,0,0,.25); }
-    .modal h3 { margin: 0 0 4px; font-size: 17px; color: var(--azul-oscuro); }
-    .modal .sub { color: var(--text2); font-size: 13px; margin: 0 0 16px; }
-    .modal .nota { font-size: 12px; color: var(--text2); margin: -8px 0 14px; }
-    .fila-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
-    .modal-acciones { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
-    .modal-acciones .btn { width: auto; }
-    .btn-gris { background: var(--surface2); color: var(--text); }
-    .btn-gris:hover { background: #e6e5de; }
-    textarea.campo { resize: vertical; min-height: 60px; }
-
-    /* ── Buscador con lista (obra social, actividad) ── */
-    .cb { position: relative; }
-    .cb-lista { position: absolute; left: 0; right: 0; top: calc(100% - 12px); z-index: 20; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius); box-shadow: 0 10px 28px rgba(0,0,0,.15); max-height: 260px; overflow-y: auto; }
-    .cb-op { padding: 9px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px solid var(--border); }
-    .cb-op:last-child { border-bottom: none; }
-    .cb-op b { color: var(--azul); margin-right: 4px; }
-    .cb-op.sel, .cb-op:hover { background: var(--azul-claro); }
-    .cb-vacio { padding: 10px 12px; font-size: 13px; color: var(--text2); }
-    .cb-mas { color: #9a3f06; font-weight: 600; background: var(--naranja-bg); }
-    .cb-mas:hover, .cb-mas.sel { background: #ffe8d1; }
-    .cb-nuevo { padding: 12px; background: var(--naranja-bg); }
-    .cb-nuevo p { margin: 0 0 8px; font-size: 12.5px; color: #7c3a06; }
-    .cb-nuevo input { width: 100%; padding: 8px 10px; border: 1px solid var(--border2); border-radius: 8px; font: inherit; margin-bottom: 8px; background: var(--surface); }
-    .cb-nuevo .cb-nuevo-bot { display: flex; gap: 8px; justify-content: flex-end; }
-    .cb-nuevo .btn { padding: 6px 12px; font-size: 12.5px; width: auto; }
-    @media (max-width: 560px) { .fila-2 { grid-template-columns: 1fr; } }
-
-    .vacio { text-align: center; color: var(--text2); padding: 40px 20px; }
-    #toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--azul-oscuro); color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 90vw; }
-    #toast.on { opacity: 1; }
-    @media (max-width: 560px) { .etapa { flex-wrap: wrap; } .btn-hecha, .espera { margin-left: 34px; } }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="portal/css/portal.css?v=20261130o" />
+  <script>
+    // Tema guardado (se aplica antes de dibujar para que no parpadee)
+    try { if (localStorage.getItem('portal-tema') === 'oscuro') document.documentElement.setAttribute('data-theme', 'dark'); } catch (e) {}
+  </script>
 </head>
 <body>
 
-  <!-- Login -->
-  <section id="vista-login" hidden>
-    <form class="login-card" id="form-login" autocomplete="on">
-      <img class="login-logo" src="assets/img/isologotipo.png" alt="Salario" />
-      <h1>Portal de clientes</h1>
-      <p class="sub">Ingresá con el email y la clave que te enviamos.</p>
-      <div id="login-error" class="msg-error" hidden></div>
-      <label class="campo" for="l-email">Email</label>
-      <input class="campo" id="l-email" type="email" required autocomplete="username" />
-      <label class="campo" for="l-clave">Clave</label>
-      <input class="campo" id="l-clave" type="password" required autocomplete="current-password" />
-      <button class="btn btn-naranja" id="l-btn" type="submit">Ingresar</button>
-    </form>
-  </section>
+<!-- ───────────── Portal ───────────── -->
+<div id="vista-portal" hidden>
 
-  <!-- Portal -->
-  <section id="vista-portal" hidden>
-    <header class="topbar">
-      <div class="topbar-in">
-        <img src="assets/img/isologotipo.png" alt="Salario" />
-        <div class="quien"><small>Tu implementación</small><strong id="p-cliente"></strong></div>
-        <button class="btn-salir" id="btn-salir" type="button">Salir</button>
-      </div>
-    </header>
-    <nav class="tabs"><div class="tabs-in">
-      <button class="tab on" id="tab-b-impl" type="button" data-tab="impl">Mi implementación</button>
-      <button class="tab" id="tab-b-info" type="button" data-tab="info">Información requerida</button>
+<header class="top"><div class="top-in">
+  <div class="logo"><img src="assets/img/isologotipo.png" alt="" /><div><span class="logo-sep"></span><div class="brand">Salario <em>Gestión</em></div></div></div>
+  <div class="top-prog" id="top-prog"><span class="tp-t">Preparación de tu implementación</span><div class="tp-bar"><i id="tp-fill"></i></div><b id="tp-n">0/8</b></div>
+  <div class="nav-pill">
+    <nav class="snav" id="snav" hidden><div class="snav-in">
+      <button class="snav-b" id="sn-inicio" type="button" data-ir="inicio"><span class="si">🏠</span>Inicio</button>
+      <button class="snav-b on" id="sn-impl" type="button"><span class="si">📋</span>Implementación<span class="sn-ch">▾</span></button>
+      <button class="snav-b" id="sn-cons" type="button" data-ir="consultas"><span class="si">💬</span>Mis registros</button>
     </div></nav>
-    <main>
-      <div id="tab-impl">
-        <div class="card" id="p-avance"></div>
-        <div id="p-fases"></div>
-      </div>
-      <div id="tab-info" hidden>
-        <div class="sec-titulo"><h2>Datos de tu empresa</h2></div>
-        <p class="sec-ayuda">Completá estos datos para que podamos configurar Salario a tu medida. Podés editarlos cuando quieras.</p>
-        <div id="i-principal"></div>
+    <nav class="snav snav-sec" id="snav2" hidden><div class="snav-in">
+      <button class="snav-b" id="sn-ayuda" type="button" data-ir="ayuda"><span class="si">📚</span>Ayuda</button>
+      <button class="snav-b" id="sn-config" type="button" data-ir="config"><span class="si">⚙️</span>Configuración</button>
+    </div></nav>
+  </div>
+  <div class="sp"></div>
+  <div class="top-r">
+    <div class="campanita"><button class="bell" id="bell" type="button" title="Novedades">🔔<em id="bell-n" hidden>0</em></button>
+</div>
+    <button class="perfil" id="btn-perfil" type="button" data-ir="empresa" title="Ver mi perfil y mis datos"><span class="av" id="p-av">··</span><span class="nm" id="p-nombre"></span></button>
+    <button class="salir" id="btn-salir" type="button"><span class="sl">Cerrar sesión</span><svg class="si-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg></button>
+  </div>
+</div>
+</header>
+<aside class="notis" id="notis" aria-label="Novedades">
+  <div class="nd-h"><div><h4>Novedades</h4><span id="nd-sub"></span></div>
+    <button class="nd-x" id="notis-x" type="button" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="nd-a"><a id="notis-leer">Marcar todas como leídas</a></div>
+  <div class="nd-l" id="notis-lista"></div>
+</aside>
+<div id="notis-fondo"></div>
 
-        <div class="sec-titulo">
-          <h2>Otras empresas</h2>
-          <button class="btn btn-sec" id="i-agregar" type="button">+ Agregar empresa</button>
+<div class="snav-sub" id="snav-sub"><div class="snav-sub-in">
+  <button class="snav-s on" type="button" data-itab="inicio" title="Inicio de la implementación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 9.5V21h14V9.5"/></svg><span>Inicio</span></button>
+  <button class="snav-s" type="button" data-itab="empresas" title="Empresas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V7l8-4v18M21 21V11l-10-3M7 9h2M7 13h2M7 17h2M15 14h2M15 18h2"/></svg><span>Empresas</span></button>
+  <button class="snav-s" type="button" data-itab="docs" title="Documentos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg><span>Documentos</span></button>
+</div></div>
+
+
+
+
+<!-- ───────────── INICIO ───────────── -->
+<section class="view" id="v-inicio">
+  <div class="hm-wrap"><div id="inicio-cont"></div></div>
+</section>
+
+<!-- ───────────── 1. BIENVENIDA ───────────── -->
+<section class="view" id="v-bienvenida">
+  <div class="bv2">
+    <div class="bv2-glow bv2-glow--a"></div><div class="bv2-glow bv2-glow--b"></div>
+    <div class="bv2-in">
+      <div class="bv2-izq">
+        <img class="bv2-logo" src="assets/img/isologotipo.png" alt="" />
+        <span class="chip c-or">Bienvenida</span>
+        <p class="bv2-hola" id="bv-nombre"></p>
+        <h1>Te damos la bienvenida a <span>Consultora Ferro</span></h1>
+        <p class="bv2-t">Nos alegra mucho que hayas elegido trabajar con nosotros. Para dejar Salario listo para tu empresa, completá tu <b>preparación</b> en <b id="bv-n8">8</b> pasos cortos, a tu ritmo.</p>
+        <div class="bv2-pr">
+          <span><i>🧭</i> Simple y guiado</span>
+          <span><i>🗂️</i> Todo en un solo lugar</span>
+          <span><i>💬</i> Nuestro equipo, a un mensaje</span>
         </div>
-        <p class="sec-ayuda">Si gestionás las liquidaciones de más de una empresa (por ejemplo, si sos un estudio contable), sumalas acá con sus propios datos.</p>
-        <div id="i-otras"></div>
+        <button class="btn bv2-b" id="bv-comenzar" type="button">Comenzar <b>→</b></button>
+        <p class="muted sm bv2-n" id="bv-nota"></p>
       </div>
-    </main>
-  </section>
-
-  <!-- Ventana para cargar / editar una empresa -->
-  <div class="modal-fondo" id="m-fondo" hidden>
-    <form class="modal" id="m-form" autocomplete="off" novalidate>
-      <h3 id="m-titulo">Datos de la empresa</h3>
-      <p class="sub" id="m-sub"></p>
-      <div id="m-error" class="msg-error" hidden></div>
-
-      <label class="campo" for="f-razon">Razón social *</label>
-      <input class="campo" id="f-razon" maxlength="200" />
-
-      <div class="fila-2">
-        <div>
-          <label class="campo" for="f-cuit">CUIT</label>
-          <input class="campo" id="f-cuit" inputmode="numeric" placeholder="20-12345678-9" maxlength="13" />
-        </div>
-        <div>
-          <label class="campo" for="f-legajos">Cantidad de legajos</label>
-          <input class="campo" id="f-legajos" type="number" min="0" step="1" inputmode="numeric" />
+      <div class="bv2-der">
+        <div class="bv2-card bv3-card">
+          <div class="bv2-tit">Tus pasos para arrancar</div>
+          <div class="bv3" id="bv-pasos"></div>
         </div>
       </div>
+    </div>
+  </div>
+</section>
 
-      <label class="campo" for="f-domicilio">Domicilio (para el encabezado de los recibos)</label>
-      <input class="campo" id="f-domicilio" maxlength="250" />
+<!-- ───────────── 2. PREPARACIÓN ───────────── -->
+<section class="view" id="v-prep">
+  <div class="hero"><div class="hero-in"><div><h1 id="prep-hola">Hola</h1><p>Estás en la etapa <b>Preparación</b>. Completá los pasos y pedí tu reunión de inicio.</p></div><div class="sp"></div><div><div class="ring" id="ring"><span id="ring-n">0/8</span></div><div class="ring-t">pasos listos</div></div></div></div>
+  <div class="hs-card"><div class="hs-tit"><span class="chip c-or">Preparación de tu implementación</span><h1>Armemos juntos tu punto de partida</h1><p>Completá estos <span id="hs-n">8</span> pasos de a uno. Podés volver a cualquiera para corregirlo.</p></div><div class="hstep" id="hstep"></div></div>
+  <div class="wrap"><div class="grid"><div>
+    <div class="next"><div><small>Tu próximo paso</small><strong id="nx-t"></strong><p id="nx-m"></p></div><div class="sp"></div><button class="btn" id="nx-b" type="button">Continuar →</button></div>
+    <div class="card" style="padding-top:8px">
+      <div class="tl wz" id="tl">
 
-      <label class="campo" for="f-tipo">Tipo de empleador</label>
-      <select class="campo" id="f-tipo"></select>
-      <p class="nota">Para colegios e institutos corresponde generalmente el código 7 — Enseñanzas Privadas. Confirmalo con tu contador.</p>
+        <div class="st" data-n="1"><div class="num">1</div><div class="st-b">
+          <div class="st-h"><h3>Datos de tu empresa</h3><span class="chip c-gr" data-chip></span></div>
+          <div class="fb" data-fb hidden></div>
+          <p class="muted sm" style="margin-top:4px">Completá la razón social y el CUIT. Al tocar Siguiente se guardan solos, y podés volver para corregirlos.</p>
+          <div class="st-d" style="border:0;padding-top:6px">
+            <p class="muted sm" id="s1-meta" style="margin:0 0 4px"></p>
+            <label>Razón social *</label><input id="s1-razon" maxlength="200" autocomplete="off" placeholder="Ej: Consultores Asociados SRL" />
+            <label>CUIT *</label><input id="s1-cuit" inputmode="numeric" maxlength="13" autocomplete="off" placeholder="20-12345678-9" />
+            <p class="msg-error" id="s1-err" hidden></p>
+          </div>
+        </div></div>
 
-      <label class="campo" for="f-os">Obra social general</label>
-      <div class="cb" id="cb-os"><input class="campo" id="f-os" maxlength="300" autocomplete="off" placeholder="Buscá por código o nombre" /></div>
+        <div class="st" data-n="2"><div class="num">2</div><div class="st-b">
+          <div class="st-h st-toggle" id="st2-h"><h3>Información adicional</h3><span class="chip c-gr" data-chip></span><span class="muted sm" id="st2-t" hidden></span></div>
+          <div class="fb" data-fb hidden></div>
+          <p class="muted sm" style="margin-top:4px">Domicilio, tipo de empleador, legajos, obra social, ART, actividad principal y convenios.</p>
+          <div class="ep" id="st2d"><div class="st-d" style="border:0;padding-top:6px">
+            <label style="margin-top:0">Domicilio (para el encabezado de los recibos)</label><input id="f-domicilio2" maxlength="250" />
+            <label>Tipo de empleador</label><select id="f-tipo2"></select>
+            <label>Cantidad de legajos</label><input id="f-legajos2" type="number" min="0" step="1" inputmode="numeric" />
+            <label>Obra social</label><div class="cb" id="cb-os2"><input id="f-os2" maxlength="300" autocomplete="off" placeholder="Buscá por código o nombre" /></div>
+            <label>ART</label><div class="cb" id="cb-art2"><input id="f-art2" maxlength="300" autocomplete="off" placeholder="Buscá por código o nombre" /></div>
+            <label>Actividad principal (código CLAE de ARCA)</label><div class="cb" id="cb-act2"><input id="f-act2" maxlength="300" autocomplete="off" placeholder="Buscá por código o descripción" /></div>
+            <label>Convenios</label><input id="f-conv2" maxlength="1000" placeholder="Ej.: 130/75 - Empleados de Comercio. Si hay más de uno, separalos con coma" />
+            <p class="muted sm" style="margin-top:8px">Si no encontrás alguno en la lista, elegí “No la encuentro” y cargalo igual. Podés editar estos datos hasta la reunión.</p>
+            <button class="btn sm" type="button" id="st2-guardar" style="margin-top:8px">Guardar</button>
+          </div></div>
+        </div></div>
 
-      <label class="campo" for="f-art">ART</label>
-      <div class="cb" id="cb-art"><input class="campo" id="f-art" maxlength="300" autocomplete="off" placeholder="Buscá por código o nombre" /></div>
+        <div class="st" data-n="3"><div class="num">3</div><div class="st-b">
+          <div class="st-h"><h3>Usuarios de Salario</h3><span class="chip c-gr" data-chip></span></div>
+          <p class="muted sm" style="margin-top:4px">¿Cuántas personas van a usar Salario en tu empresa? Les armamos su acceso y las capacitamos.</p>
+          <div class="st-d">
+            <div class="tip"><b>Para tener en cuenta</b>Anotá a cada persona que va a liquidar o consultar en Salario. Con cada nombre armamos un <i>acceso personal</i>, así queda registrado quién hizo cada cambio. Si más adelante se suma alguien, avisanos.</div>
+            <label style="margin-top:10px">Cantidad de personas</label>
+            <div class="stepper"><button type="button" id="n-menos">−</button><b id="n-cant">1</b><button type="button" id="n-mas">+</button></div>
+            <div id="n-lista"></div>
+            <button class="btn sm" type="button" id="n-guardar" style="margin-top:12px">Guardar usuarios</button>
+          </div>
+        </div></div>
 
-      <label class="campo" for="f-act">Actividad principal (código CLAE de ARCA)</label>
-      <div class="cb" id="cb-act"><input class="campo" id="f-act" maxlength="300" autocomplete="off" placeholder="Buscá por código o descripción" /></div>
+        <div class="st" data-n="4"><div class="num">4</div><div class="st-b">
+          <div class="st-h"><h3>Logo y firma</h3><span class="chip c-gr" data-chip></span></div>
+          <p class="muted sm" style="margin-top:4px">Cargá el logo y la firma de tu empresa para los recibos. Nuestro equipo los ve al instante.</p>
+          <div class="fb" data-fb hidden></div>
+          <div class="st-d" style="border:0;padding-top:6px">
+            <div class="tip"><b>Antes de subir el logo y la firma</b><i>Logo:</i> lo ideal es un PNG sin fondo (transparente). Un JPG no admite transparencia, así que si tiene fondo de color va a salir como un recuadro en el recibo. Si solo tenés JPG, que el fondo sea blanco y liso. <i>Firma:</i> escaneala o fotografiala sobre papel blanco, bien recortada y sin sombras. Evitá PDF, Word o capturas de pantalla: se pierde calidad al agrandarlas.</div>
+            <div class="up-emp up-solo" id="up4"></div>
+          </div>
+        </div></div>
 
-      <label class="campo" for="f-conv">Convenios (separados por coma)</label>
-      <textarea class="campo" id="f-conv" maxlength="1000"></textarea>
+        <div class="st" data-n="5"><div class="num">5</div><div class="st-b">
+          <div class="st-h"><h3>Liquidación y Excel de control</h3><span class="chip c-gr" data-chip></span></div>
+          <p class="muted sm" style="margin-top:4px">Dos PDF de liquidaciones y tu Excel con fórmulas (si tenés).</p>
+          <div class="fb" data-fb hidden></div>
+          <div class="st-d" style="border:0;padding-top:6px">
+            <div class="tip"><b>Antes de subir las liquidaciones</b>Subí dos liquidaciones <i>de meses distintos</i>, en el PDF original que genera tu sistema actual (no fotos ni escaneos torcidos). Con ellas configuramos tus conceptos y después comparamos que Salario dé el mismo resultado. Si tenés Excel de control, subilo <i>con las fórmulas</i>, no pegado como valores. Los archivos son privados: solo los ve nuestro equipo.</div>
+            <div class="up-emp up-solo" id="up5"></div>
+          </div>
+        </div></div>
 
-      <div class="modal-acciones">
-        <button class="btn btn-gris" id="m-cancelar" type="button">Cancelar</button>
-        <button class="btn btn-naranja" id="m-guardar" type="submit">Guardar</button>
+        <div class="st" data-n="6"><div class="num">6</div><div class="st-b">
+          <div class="st-h"><h3>Cantidad de empresas</h3><span class="chip c-gr" data-chip></span></div>
+          <p class="muted sm" style="margin-top:4px">¿Cuántas empresas vas a liquidar en Salario? Es solo un número: más adelante, cuando arranque la implementación, las cargás una por una con todos sus datos.</p>
+          <div class="st-d" style="border:0;padding-top:4px">
+            <div class="tip"><b>Para tener en cuenta</b>Contá solo las empresas (CUIT distintos) que vas a liquidar en Salario. Si no estás seguro, poné una cantidad estimada: la podés corregir después.</div>
+            <div class="stepper" style="margin-top:10px"><button type="button" id="e-menos">−</button><b id="e-cant">1</b><button type="button" id="e-mas">+</button></div>
+            <button class="btn sm" type="button" id="e-guardar">Guardar</button>
+          </div>
+        </div></div>
+
+        <div class="st" data-n="7"><div class="num">7</div><div class="st-b">
+          <div class="st-h"><h3>Relevamiento inicial</h3><span class="chip c-gr" data-chip></span></div>
+          <p class="muted sm" style="margin-top:4px">Cómo liquidan hoy: nómina, acreditaciones, asientos, reportes y más. Es la base de la reunión de inicio.</p>
+          <div class="dgrid" id="st7-datos" hidden></div>
+          <div class="tip" id="st7-tip"><b>Antes de empezar</b>Son 10 partes cortas y podés dejarlo a medias para seguir otro día. Si una pregunta no aplica a tu empresa, usá <i>Omitir</i> y contanos por qué. Cuanto más completo llegue, más corta y útil resulta la reunión.</div>
+          <div style="margin-top:10px"><button class="btn sm" type="button" id="st7-ir">Completar relevamiento</button></div>
+        </div></div>
+
+        <div class="st" data-n="8"><div class="num">8</div><div class="st-b">
+          <div class="st-h"><h3>Solicitar reunión de inicio</h3><span class="chip c-gr" data-chip></span></div>
+          <p class="muted sm" style="margin-top:4px">Elegí los horarios que te quedan bien y coordinamos la reunión por Meet.</p>
+          <div class="dgrid" id="st8-datos" hidden></div>
+          <div class="tip" id="st8-tip"><b>Para tener en cuenta</b>Podés proponer hasta 3 horarios. Te confirmamos uno y te llega el link de Meet. Conviene que estén en la reunión las personas que van a usar Salario.</div>
+          <div style="margin-top:8px"><button class="btn sm" type="button" id="st8-ir">Solicitar reunión</button></div>
+        </div></div>
+
       </div>
-    </form>
+      <div class="wz-nav"><button class="btn sec" type="button" id="wz-ant">← Anterior</button><span class="sp"></span><button class="btn sec" type="button" id="wz-sig">Siguiente →</button><button class="btn" type="button" id="wz-fin" hidden>Listo, ir al inicio →</button></div></div>
+  </div>
+  <div>
+    <div class="card"><div class="card-title">Tu equipo</div><div class="resp"><div class="av">SG</div><div><b>Equipo de implementación</b><div class="muted sm">Salario Gestión</div></div></div><p class="muted sm" style="margin-top:12px">Si tenés una duda, escribinos desde “Dudas y notas” cuando arranque la implementación, o por tu canal habitual.</p></div>
+    <div class="card"><div class="card-title">Antes de la reunión</div><p class="muted sm">En la reunión repasamos juntos todo lo que cargaste. Podés modificarlo cuando quieras hasta ese día.</p></div>
+  </div></div></div>
+</section>
+
+<!-- ───────────── Etapas siguientes (se arman en los próximos pasos) ───────────── -->
+<section class="view" id="v-relev">
+  <div class="wrap" style="margin-top:22px"><button class="volver" data-volver type="button">← Volver</button>
+    <h1 style="font-size:23px;margin-bottom:4px">Relevamiento inicial</h1>
+    <p class="muted" style="margin-bottom:16px">Completá cada parte. Es la base de la reunión de inicio. Se guarda solo y podés seguir después.</p>
+    <div id="relev-cont"></div></div>
+</section>
+<section class="view" id="v-reunion">
+  <div class="rq-wrap">
+    <button class="volver" data-volver type="button">← Volver</button>
+    <div class="rq-hero">
+      <div class="rq-hero__t"><span class="chip c-or">Último paso</span><h1>Reunión de <em>inicio</em></h1><p>Coordinamos juntos el arranque de tu implementación.</p></div>
+      <div class="rq-pills"><span><i class="rq-i">⏱</i>45 minutos</span><span><i class="rq-i">🎥</i>Google Meet</span><span><i class="rq-i">📅</i>Lunes a viernes, 9 a 12 y 14 a 16 h</span></div>
+      <div class="ring" id="reu-ring" hidden><span id="reu-ring-n"></span></div>
+    </div>
+    <div class="rq-grid">
+      <div id="reunion-cont"></div>
+      <aside class="rq-side">
+        <div class="rq-next"><div class="rq-next__t">¿Qué sigue?</div>
+          <div class="rq-st ok"><span class="rq-st__n">✓</span><div><b>Preparación</b><small>Tus datos y archivos</small></div></div>
+          <div class="rq-st" id="reu-sig-conf"><span class="rq-st__n">2</span><div><b>Confirmación de Salario</b><small>Te mandamos el link de Meet</small></div></div>
+          <div class="rq-st"><span class="rq-st__n">3</span><div><b>Arranca la implementación</b><small>Con todas tus tareas y fechas</small></div></div>
+        </div>
+        <div class="rq-ver"><div class="rq-next__t">En la reunión vemos</div>
+          <ul><li>El repaso de tus datos y de tu relevamiento</li><li>Cómo se arma tu cronograma de implementación</li><li>Cómo vas a trabajar con nuestro equipo</li><li>Todas tus dudas sobre Salario</li></ul>
+        </div>
+        <div class="rq-eq"><b>Tu equipo</b><p>Si tenés una duda antes de la reunión, escribinos y te respondemos a la brevedad.</p><button class="btn rq-chat" id="rq-chat" type="button">Chatear con nosotros</button></div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────── 4. IMPLEMENTACIÓN ───────────── -->
+<section class="view" id="v-impl">
+  <div class="itab-p on" id="itp-inicio">
+  <!-- Antes de que el equipo confirme el inicio: etapa actual + línea de tiempo de lo que fue completando -->
+  <div id="impl-pre" hidden>
+    <div class="rq-wrap">
+      <div class="rq-hero">
+        <div class="rq-hero__t"><span class="chip c-or">Preparación completa</span><h1>Tu <em>implementación</em></h1><p>Completaste tu parte. Estamos preparando todo para arrancar.</p></div>
+        <div class="rq-pills"><span><i class="rq-i">✓</i><b id="pre-ring-n">5/5</b>&nbsp;pasos listos</span></div>
+      </div>
+      <div class="pi-aviso"><span class="pi-aviso__i">i</span><p>Tus tareas, con su avance y sus fechas, van a aparecer en esta pantalla apenas el equipo de Salario confirme el inicio de tu implementación.</p></div>
+      <div id="pre-track"></div>
+      <div class="pi-cols">
+        <div id="pre-centro"></div>
+        <div class="rq-next" id="pre-prog"></div>
+        <div class="rq-next" id="pre-tl"></div>
+      </div>
+    </div>
+  </div>
+  <div id="impl-run">
+  <div class="hero"><div class="hero-in"><div><h1>Tu implementación <em>en marcha</em></h1><p id="impl-sub"></p></div><div class="sp"></div><div><div class="ring" id="impl-ring"><span id="impl-pct">0%</span></div><div class="ring-t">avance total</div></div></div></div>
+  <div class="wrap">
+    <div class="inicio" id="inicio-b" hidden><div class="ti">¡Arrancó tu implementación!</div><div class="tx" id="inicio-tx"></div>
+      <div class="bt"><button class="btn" type="button" id="inicio-ver">Ver mis tareas</button><button class="btn sec" type="button" id="inicio-x">Cerrar</button></div></div>
+    <div class="metrics" id="impl-metrics"></div>
+    <div class="prox-grid" id="impl-prox"></div>
+    <div class="card recorrido" id="impl-fases"></div>
+    <div id="impl-alerta"></div>
+    <div class="card tcard" style="padding-top:6px">
+      <div class="ip on" id="i-tareas">
+        <div class="impl-cols"><div class="impl-main"><div id="impl-tareas"></div></div><aside class="act-eq" id="impl-act"></aside></div>
+      </div>
+    </div>
+  </div>
+  </div><!-- /impl-run -->
+  </div><!-- /itp-inicio -->
+
+  <div class="itab-p" id="itp-empresas">
+    <div class="pg-wrap">
+      <div class="pg-head"><div><span class="eye">Implementación</span><h1>Tus <em>empresas</em></h1><p>Elegí una empresa de la lista para ver y completar sus datos.</p></div>
+        <button class="btn" type="button" data-emp="nueva">+ Agregar empresa</button></div>
+      <div class="md" id="e-empresas"></div>
+    </div>
   </div>
 
-  <div id="toast"></div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js"></script>
-  <script src="js/portal-listas.js?v=1"></script>
-  <script>
-  // ───────────────────────── Portal de clientes ─────────────────────────
-  // Misma base de Supabase que la plataforma del equipo, pero con OTRA clave de
-  // sesión: abrir el portal en tu navegador no pisa la sesión del equipo.
-  // La seguridad está en la base (RLS + vistas portal_*), no en este archivo.
-  const sb = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.publishableKey, {
-    auth: { storageKey: 'sb-portal-auth', persistSession: true, autoRefreshToken: true }
-  });
-
-  const FASES = [
-    { key: 'relevamiento',  nombre: 'Relevamiento',  icono: '🔍' },
-    { key: 'analisis',      nombre: 'Análisis',      icono: '📊' },
-    { key: 'configuracion', nombre: 'Configuración', icono: '⚙️' },
-    { key: 'pruebas',       nombre: 'Pruebas',       icono: '✅' },
-    { key: 'golive',        nombre: 'Go-live',       icono: '🚀' }
-  ];
-
-  const $ = id => document.getElementById(id);
-  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-  function toast(txt) {
-    const t = $('toast'); t.textContent = txt; t.classList.add('on');
-    clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 3500);
-  }
-  function fmtFecha(f) {
-    if (!f) return '';
-    const d = new Date(String(f).slice(0, 10) + 'T00:00:00');
-    return isNaN(d) ? '' : d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
-  }
-  function mostrar(vista) {
-    $('vista-login').hidden  = vista !== 'login';
-    $('vista-portal').hidden = vista !== 'portal';
-  }
-  function loginError(txt) {
-    const e = $('login-error'); e.textContent = txt || ''; e.hidden = !txt;
-  }
-
-  // ── Login ──
-  $('form-login').addEventListener('submit', async ev => {
-    ev.preventDefault();
-    loginError('');
-    const btn = $('l-btn'); btn.disabled = true; btn.textContent = 'Ingresando…';
-    const { error } = await sb.auth.signInWithPassword({
-      email: $('l-email').value.trim(), password: $('l-clave').value
-    });
-    btn.disabled = false; btn.textContent = 'Ingresar';
-    if (error) { loginError('Email o clave incorrectos.'); return; }
-    $('l-clave').value = '';
-    await iniciar();
-  });
-
-  $('btn-salir').addEventListener('click', async () => {
-    await sb.auth.signOut();
-    mostrar('login');
-  });
-
-  // ── Carga de datos (solo las vistas seguras portal_*) ──
-  let etapas = [];
-  let miCliente = null;   // fila de portal_mi_cliente (id, nombre, razón social, CUIT…)
-
-  async function iniciar() {
-    const { data: ses } = await sb.auth.getSession();
-    if (!ses.session) { mostrar('login'); return; }
-
-    const { data: cli, error } = await sb.from('portal_mi_cliente').select('*').maybeSingle();
-    if (error || !cli) {
-      // Usuario válido pero sin cliente vinculado (o acceso desactivado)
-      await sb.auth.signOut();
-      mostrar('login');
-      loginError('Tu acceso al portal no está habilitado. Escribinos y lo revisamos.');
-      return;
-    }
-    miCliente = cli;
-    $('p-cliente').textContent = cli.nombre;
-    mostrar('portal');
-    await cargarEtapas();
-  }
-
-  async function cargarEtapas(silencioso) {
-    const { data, error } = await sb.from('portal_etapas').select('*').order('orden');
-    if (error) {
-      if (!silencioso) toast('No se pudieron cargar las etapas. Probá recargar la página.');
-      return;
-    }
-    // En las actualizaciones automáticas solo se vuelve a dibujar si algo cambió
-    const nuevo = data || [];
-    if (silencioso && JSON.stringify(nuevo) === JSON.stringify(etapas)) return;
-    etapas = nuevo;
-    render();
-  }
-
-  // ── Actualización automática ──
-  // Cada 30 s (si la pestaña está a la vista) y apenas el cliente vuelve a ella.
-  // No usamos realtime: el cliente solo puede leer la vista, no la tabla de etapas.
-  async function refrescarSiCorresponde() {
-    if (document.hidden || $('vista-portal').hidden) return;
-    const { data } = await sb.auth.getSession();
-    if (!data.session) { mostrar('login'); return; }
-    cargarEtapas(true);
-  }
-  setInterval(refrescarSiCorresponde, 30000);
-  document.addEventListener('visibilitychange', refrescarSiCorresponde);
-  window.addEventListener('focus', refrescarSiCorresponde);
-
-  // ── Dibujo ──
-  function render() {
-    const total = etapas.length;
-    if (!total) {
-      $('p-avance').innerHTML = '';
-      $('p-fases').innerHTML = '<div class="card vacio">Todavía no hay etapas cargadas para tu implementación. Pronto vas a verlas acá.</div>';
-      return;
-    }
-    const hechas = etapas.filter(e => e.estado === 'completada').length;
-    const pct = Math.round(hechas / total * 100);
-    const tocan = etapas.filter(e => e.le_toca_cliente && e.estado !== 'completada' && !e.bloqueada);
-
-    $('p-avance').innerHTML = `
-      <div class="avance-top"><h2>Avance de tu implementación</h2><div class="avance-pct">${pct}%</div></div>
-      <div class="barra"><span style="width:${pct}%"></span></div>
-      <div class="avance-sub">${hechas} de ${total} etapas completadas</div>
-      ${tocan.length ? `<div class="aviso-toca"><strong>Te toca a vos:</strong> ${tocan.length === 1 ? 'tenés 1 etapa pendiente de tu parte' : 'tenés ' + tocan.length + ' etapas pendientes de tu parte'} (marcadas en naranja).</div>` : ''}`;
-
-    // Agrupa por fase: primero las 5 base y después cualquier otra que haya
-    const keys = FASES.map(f => f.key);
-    etapas.forEach(e => { const k = e.fase || 'relevamiento'; if (!keys.includes(k)) keys.push(k); });
-    $('p-fases').innerHTML = keys.map(k => {
-      const lista = etapas.filter(e => (e.fase || 'relevamiento') === k);
-      if (!lista.length) return '';
-      const base = FASES.find(f => f.key === k);
-      const nombre = base ? base.nombre : k.charAt(0).toUpperCase() + k.slice(1);
-      const icono = base ? base.icono : '📌';
-      const ok = lista.filter(e => e.estado === 'completada').length;
-      return `<div class="fase">
-        <div class="fase-head"><span>${icono}</span><h3>${esc(nombre)}</h3><span class="cuenta">${ok}/${lista.length}</span></div>
-        ${lista.map(htmlEtapa).join('')}
-      </div>`;
-    }).join('');
-  }
-
-  function htmlEtapa(e) {
-    const hecha = e.estado === 'completada';
-    const cls = ['etapa', hecha ? 'hecha' : '', e.estado === 'en_progreso' ? 'curso' : '', e.le_toca_cliente && !hecha ? 'toca' : ''].join(' ');
-    const chip = e.le_toca_cliente
-      ? '<span class="chip chip-toca">Te toca a vos</span>'
-      : (e.responsable_tipo === 'ambos' ? '<span class="chip chip-ambos">Entre ambos</span>' : '<span class="chip chip-equipo">Equipo Salario</span>');
-    let meta = '';
-    if (hecha && e.fecha_completada) meta = 'Completada el ' + fmtFecha(e.fecha_completada);
-    else if (e.fecha_inicio || e.fecha_fin) meta = 'Previsto: ' + fmtFecha(e.fecha_inicio) + (e.fecha_fin ? ' al ' + fmtFecha(e.fecha_fin) : '');
-    else if (e.estado === 'en_progreso') meta = 'En curso';
-    else if (e.estado === 'demorada') meta = 'Demorada';
-
-    let accion = '';
-    if (e.le_toca_cliente && !hecha) {
-      accion = e.bloqueada
-        ? '<span class="espera">Esperando una etapa anterior</span>'
-        : `<button class="btn btn-hecha" data-id="${esc(e.id)}" type="button">Marcar como hecha</button>`;
-    }
-    return `<div class="${cls}">
-      <div class="punto">${hecha ? '✓' : ''}</div>
-      <div class="etapa-cuerpo"><div class="etapa-nombre">${esc(e.tarea)}${chip}</div>${meta ? `<div class="etapa-meta">${esc(meta)}</div>` : ''}</div>
-      ${accion}
-    </div>`;
-  }
-
-  // ── Marcar como hecha (la base valida que sea de su cliente y de responsable "cliente") ──
-  $('p-fases').addEventListener('click', async ev => {
-    const btn = ev.target.closest('.btn-hecha');
-    if (!btn) return;
-    const e = etapas.find(x => x.id === btn.dataset.id);
-    if (!e) return;
-    if (!confirm('¿Confirmás que completaste esta etapa?\n\n' + e.tarea)) return;
-    btn.disabled = true; btn.textContent = 'Guardando…';
-    const { error } = await sb.rpc('portal_completar_etapa', { p_tarea_id: e.id });
-    if (error) {
-      toast(error.message || 'No se pudo marcar la etapa.');
-      btn.disabled = false; btn.textContent = 'Marcar como hecha';
-      return;
-    }
-    toast('¡Listo! Avisamos al equipo.');
-    await cargarEtapas();
-  });
-
-  // ───────────── Pestañas ─────────────
-  document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => irATab(b.dataset.tab)));
-  function irATab(cual) {
-    $('tab-impl').hidden = cual !== 'impl';
-    $('tab-info').hidden = cual !== 'info';
-    $('tab-b-impl').classList.toggle('on', cual === 'impl');
-    $('tab-b-info').classList.toggle('on', cual === 'info');
-    if (cual === 'info') cargarEmpresas();
-  }
-
-  // ───────────── Información requerida: empresas ─────────────
-  // Campos de la sección 1 del Word "Información requerida para implementación".
-  const CAMPOS_EMPRESA = [
-    { k: 'cuit',                label: 'CUIT' },
-    { k: 'domicilio',           label: 'Domicilio (recibos)' },
-    { k: 'tipo_empleador',      label: 'Tipo de empleador' },
-    { k: 'obra_social',         label: 'Obra social general' },
-    { k: 'art',                 label: 'ART' },
-    { k: 'actividad_principal', label: 'Actividad principal' },
-    { k: 'convenios',           label: 'Convenios' },
-    { k: 'cant_legajos',        label: 'Cantidad de legajos' }
-  ];
-  // Tipos de empleador (el número es el código que usa Salario). Se guarda "N - Descripción".
-  const TIPOS_EMPLEADOR = [
-    '1 - Decreto 814/1 Art.2 Inc.B',
-    '2 - Serv.Eventuales Art.2 Inc.B',
-    '3 - Provincias u Otros',
-    '4 - Decreto 814/1 Art.2 Inc.A',
-    '5 - Serv.Eventuales Art.2 Inc.A',
-    '6 - Ley N° 22.016',
-    '7 - Enseñanza Privada',
-    '8 - Domesticos'
-  ];
-  function cargarOpcionesTipo(valorActual) {
-    const sel = $('f-tipo');
-    // Solo las 8 opciones. El texto "Seleccioná una opción" se muestra al inicio pero
-    // está oculto en la lista desplegable (no es una opción elegible).
-    sel.innerHTML = '<option value="" disabled hidden>Seleccioná una opción</option>' +
-      TIPOS_EMPLEADOR.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
-    // Un valor viejo escrito a mano que no esté en la lista se descarta
-    sel.value = TIPOS_EMPLEADOR.includes(valorActual) ? valorActual : '';
-  }
-
-  let empresas = [];
-  let empresaEditando = null;   // fila que se está editando (null = alta)
-  let editandoPrincipal = false;
-
-  async function cargarEmpresas() {
-    const { data, error } = await sb.from('cliente_empresas').select('*').order('created_at');
-    if (error) { toast('No se pudieron cargar las empresas. Probá recargar la página.'); return; }
-    empresas = data || [];
-    renderEmpresas();
-  }
-
-  const _vacioDato = v => v === null || v === undefined || String(v).trim() === '';
-  const empresaCompleta = e => CAMPOS_EMPRESA.every(c => !_vacioDato(e[c.k]));
-
-  function htmlEmpresa(e, principal) {
-    const completa = empresaCompleta(e);
-    const datos = CAMPOS_EMPRESA.map(c => {
-      const v = e[c.k];
-      return `<div><span>${esc(c.label)}</span>${_vacioDato(v) ? '<i class="vacio-dato">Sin completar</i>' : esc(v)}</div>`;
-    }).join('');
-    return `<div class="emp">
-      <div class="emp-top">
-        <div class="emp-nombre">${esc(e.razon_social)}</div>
-        <span class="estado-chip ${completa ? 'estado-ok' : 'estado-falta'}">${completa ? 'Completa' : 'Faltan datos'}</span>
+  <div class="itab-p" id="itp-docs">
+    <div class="pg-wrap">
+      <div class="pg-head"><div><span class="eye">Implementación</span><h1>Tus <em>documentos</em></h1><p>Lo que necesitamos de vos para configurar Salario, y el material que te compartimos.</p></div>
+        <button class="btn" id="d-subir" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>Subir archivos</button></div>
+      <div class="pg-panel ck" id="d-check"></div>
+      <div class="pg-2">
+        <div class="pg-panel" id="d-propios"></div>
+        <div class="pg-panel" id="d-equipo"></div>
       </div>
-      <div class="emp-datos">${datos}</div>
-      <div class="emp-acciones">
-        <button class="btn btn-sec btn-peq" data-accion="editar" data-id="${esc(e.id)}" type="button">Editar datos</button>
-        ${principal ? '' : `<button class="btn btn-sec btn-peq btn-peligro" data-accion="borrar" data-id="${esc(e.id)}" type="button">Quitar</button>`}
+    </div>
+  </div>
+</section>
+
+<!-- ───────────── MI EMPRESA ───────────── -->
+<section class="view" id="v-empresa">
+  <div class="pr">
+    <div class="pr-ban">
+      <div class="pr-av" id="pc-av">··</div>
+      <div class="pr-id">
+        <span class="pr-lbl">Perfil del cliente</span>
+        <h1 id="pc-nombre"></h1>
+        <p><span id="pc-email"></span><span class="pr-tipo" id="pc-tipo"></span></p>
       </div>
-    </div>`;
-  }
+      <div class="pr-st" id="perfil-datos"></div>
+    </div>
+    <div class="pr-grid">
+      <section class="pr-p pr-p--datos"><div class="pr-ph"><h2>Mis datos</h2><p>La información de tu empresa que usamos para configurar Salario.</p></div><div class="ep pf-c" id="e-datos"></div></section>
+      <section class="pr-p"><div class="pr-ph"><h2>Usuarios de Salario</h2><p>Las personas de tu equipo que van a usar el sistema.</p></div><div class="ep pf-c" id="e-usuarios"></div></section>
+      <section class="pr-p"><div class="pr-ph"><h2>Archivos</h2><p>Lo que subiste y el material que te compartimos.</p></div><div class="ep pf-c" id="e-archivos"></div></section>
+    </div>
+  </div>
+</section>
 
-  function renderEmpresas() {
-    const principal = empresas.find(e => e.es_principal);
-    $('i-principal').innerHTML = principal
-      ? htmlEmpresa(principal, true)
-      : `<div class="emp"><div class="emp-top"><div class="emp-nombre">${esc(miCliente.razon_social || miCliente.nombre)}<small>Todavía no cargaste los datos de tu empresa</small></div><span class="estado-chip estado-falta">Faltan datos</span></div>
-         <div class="emp-acciones"><button class="btn btn-naranja btn-peq" style="width:auto" data-accion="principal" type="button">Completar datos</button></div></div>`;
+<!-- ───────────── DOCUMENTOS ───────────── -->
 
-    const otras = empresas.filter(e => !e.es_principal);
-    $('i-otras').innerHTML = otras.length
-      ? otras.map(e => htmlEmpresa(e, false)).join('')
-      : '<div class="card vacio" style="padding:22px">Todavía no agregaste otras empresas.</div>';
-  }
 
-  $('tab-info').addEventListener('click', ev => {
-    const b = ev.target.closest('[data-accion]');
-    if (!b) return;
-    const e = empresas.find(x => x.id === b.dataset.id);
-    if (b.dataset.accion === 'principal') abrirFormulario(null, true);
-    else if (b.dataset.accion === 'editar' && e) abrirFormulario(e, !!e.es_principal);
-    else if (b.dataset.accion === 'borrar' && e) borrarEmpresa(e);
-  });
-  $('i-agregar').addEventListener('click', () => abrirFormulario(null, false));
+<!-- ───────────── AYUDA ───────────── -->
+<section class="view" id="v-consultas">
+  <div class="wrap" style="margin-top:22px">
+    <span class="eye">Soporte</span><h1 class="pg-h1">Mis <em>registros</em></h1>
+    <p class="muted" style="margin-bottom:16px">Todo lo que nos consultaste por soporte, con su respuesta.</p>
+    <div class="cons-kpi" id="cons-kpi"></div>
+    <div class="cons-tools">
+      <input id="cons-q" type="search" placeholder="Buscar en tus consultas…" autocomplete="off" />
+      <select id="cons-cat"><option value="">Todas las categorías</option></select>
+      <select id="cons-res"><option value="">Todos los estados</option><option value="si">Resueltas</option><option value="parcial">Parcialmente</option><option value="no">Sin resolver</option></select>
+    </div>
+    <div id="cons-lista"></div>
+  </div>
+</section>
+<section class="view" id="v-config">
+  <div class="cf">
+    <span class="eye">Tu portal</span>
+    <h1 class="pg-h1">Tu <em>configuración</em></h1>
+    <p class="cf-sub">Elegí cómo querés ver Salario Gestión. El cambio se guarda en este navegador.</p>
+    <div class="cf-panel">
+      <div class="cf-ph"><b>Tema</b><span>Claro u oscuro, el que te resulte más cómodo</span></div>
+      <div class="cf-tiles">
+        <button id="t-claro" type="button" class="cf-t on"><span class="cf-prev cf-prev--c"><i></i><b></b><b></b><b></b></span><span class="cf-n">Claro<em></em></span></button>
+        <button id="t-oscuro" type="button" class="cf-t"><span class="cf-prev cf-prev--o"><i></i><b></b><b></b><b></b></span><span class="cf-n">Oscuro<em></em></span></button>
+      </div>
+    </div>
+  </div>
+</section>
+<section class="view" id="v-ayuda">
+  <div class="ay">
+    <div class="ay-hero">
+      <span class="chip c-or">Centro de ayuda</span>
+      <h1>¿En qué podemos ayudarte?</h1>
+      <p>Buscá tu duda entre las preguntas frecuentes o escribinos: respondemos de lunes a viernes de 09:00 a 17:00.</p>
+      <label class="ay-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input id="ay-q" type="search" placeholder="Buscar, por ejemplo: relevamiento, accesos, reunión…" autocomplete="off" /></label>
+    </div>
+    <div class="ay-acc">
+      <button class="ay-a" type="button" id="ay-chat"><span class="ay-ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z"/></svg></span><span><b>Chatear con nosotros</b><small>Hablá con el equipo por WhatsApp</small></span></button>
+      <button class="ay-a" type="button" data-ir="reunion"><span class="ay-ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></span><span><b>Mi reunión de inicio</b><small>Ver o cambiar los horarios</small></span></button>
+      <button class="ay-a" type="button" data-ir="docs"><span class="ay-ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5"/></svg></span><span><b>Mis documentos</b><small>Archivos que subiste y material nuestro</small></span></button>
+    </div>
+    <div class="ay-cols">
+      <div class="ay-faq">
+        <h2>Preguntas frecuentes</h2>
+        <details class="ay-q"><summary><span class="ay-n">01</span><span class="ay-qt">¿Cuánto dura la implementación?</span><i></i></summary><p>Depende del tamaño de tu empresa. Al arrancar te mostramos la fecha estimada de fin y la vamos actualizando en cada tarea.</p></details>
+        <details class="ay-q"><summary><span class="ay-n">02</span><span class="ay-qt">¿Qué datos necesito tener a mano?</span><i></i></summary><p>Los datos de tus empresas, un PDF de liquidación reciente y, si tenés, tu Excel de control.</p></details>
+        <details class="ay-q"><summary><span class="ay-n">03</span><span class="ay-qt">¿Qué hago si no sé responder algo del relevamiento?</span><i></i></summary><p>Usá “Omitir” y contanos el motivo (por ejemplo, “lo tiene que confirmar el estudio contable”). Lo vemos juntos en la reunión de inicio.</p></details>
+        <details class="ay-q"><summary><span class="ay-n">04</span><span class="ay-qt">¿Puedo cambiar algo después de enviarlo?</span><i></i></summary><p>Sí, hasta la reunión de inicio podés corregir tus datos. Después, avisanos desde Dudas y notas para que lo actualicemos.</p></details>
+        <details class="ay-q"><summary><span class="ay-n">05</span><span class="ay-qt">¿Cómo se crean los accesos de mi equipo?</span><i></i></summary><p>Con los nombres que cargás, nuestro equipo de programación crea cada usuario con su clave y te avisamos.</p></details>
+        <div class="ay-nada" id="ay-nada" hidden>No encontramos nada con esa búsqueda. Escribinos y te ayudamos.</div>
+      </div>
+      <aside class="ay-eq">
+        <div class="ay-av">SG</div>
+        <h3>Equipo de implementación</h3>
+        <p>Salario Gestión</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Lunes a viernes de 09:00 a 17:00</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z"/></svg>Las dudas de una tarea quedan registradas en “Dudas y notas”</li>
+        </ul>
+        <button class="btn" type="button" id="ay-chat2">Escribinos ahora</button>
+      </aside>
+    </div>
+  </div>
+</section>
 
-  // ── Formulario ──
-  const F = { razon: 'f-razon', cuit: 'f-cuit', legajos: 'f-legajos', domicilio: 'f-domicilio',
-              tipo: 'f-tipo', os: 'f-os', art: 'f-art', act: 'f-act', conv: 'f-conv' };
+</div><!-- /vista-portal -->
 
-  // ── Buscador con lista: se busca por código o por texto; si no está, se puede agregar ──
-  // Lo elegido se guarda como "código - descripción" (mismo formato que el resto de los datos).
-  // Sin tildes, en minúsculas y sin puntos/comas: "O.S. U.T.H.G.R.A." se encuentra escribiendo "uthgra"
-  const _norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9\s]/g, '');
+<!-- Ventana: quién completó el relevamiento (aprobación) -->
+<div class="modal-fondo" id="ap-fondo" hidden>
+  <form class="modal" id="ap-modal" autocomplete="off" novalidate>
+    <div class="ap-ico">✓</div>
+    <h3 class="ap-t">Relevamiento finalizado</h3>
+    <p class="ap-s">Completaste todas las partes. Para finalizar, indicanos quién lo completó.</p>
+    <div class="ap-nota"><span class="ap-nota__i">i</span><p>En la reunión de inicio repasamos las respuestas con vos y ajustamos lo que haga falta.</p></div>
+    <div id="ap-error" class="msg-error" hidden></div>
+    <label class="ap-l" for="ap-nom2">¿Quién completó el relevamiento?</label>
+    <input id="ap-nom2" class="ap-in" maxlength="120" placeholder="Nombre y apellido" />
+    <div class="ap-acc">
+      <button class="btn sec" id="ap-cancelar" type="button">Cancelar</button>
+      <button class="btn" id="ap-ok" type="submit">Aprobar relevamiento</button>
+    </div>
+  </form>
+</div>
 
-  function crearBuscador(contId, lista, etiqueta) {
-    const cont = $(contId), input = cont.querySelector('input');
-    const items = lista.map(([cod, desc]) => ({ cod, desc, texto: cod + ' - ' + desc, n: _norm(cod + ' ' + desc) }));
-    const caja = document.createElement('div');
-    caja.className = 'cb-lista'; caja.hidden = true; cont.appendChild(caja);
-    let valor = '', filtrados = [], activo = -1;
+<!-- Ventana para cargar / editar una empresa -->
+<div class="modal-fondo" id="m-fondo" hidden>
+  <form class="modal" id="m-form" autocomplete="off" novalidate>
+    <h3 id="m-titulo">Datos de la empresa</h3>
+    <p class="sub" id="m-sub"></p>
+    <div id="m-error" class="msg-error" hidden></div>
+    <div id="m-nombre-w"><label for="f-nombre">Nombre de la empresa</label><input id="f-nombre" maxlength="200" placeholder="Cómo la conocen (si es distinto a la razón social)" /></div>
+    <label for="f-razon">Razón social *</label><input id="f-razon" maxlength="200" />
+    <label for="f-cuit">CUIT</label><input id="f-cuit" inputmode="numeric" placeholder="20-12345678-9" maxlength="13" />
+    <p class="muted sm" id="m-ro" style="margin-top:10px" hidden></p>
+    <div id="m-extra">
+    <label for="f-legajos">Cantidad de legajos</label><input id="f-legajos" type="number" min="0" step="1" inputmode="numeric" />
+    <label for="f-domicilio">Domicilio (para el encabezado de los recibos)</label><input id="f-domicilio" maxlength="250" />
+    <label for="f-tipo">Tipo de empleador</label><select id="f-tipo"></select>
+    <label for="f-os">Obra social general</label>
+    <div class="cb" id="cb-os"><input id="f-os" maxlength="300" autocomplete="off" placeholder="Buscá por código o nombre" /></div>
+    <label for="f-art">ART</label>
+    <div class="cb" id="cb-art"><input id="f-art" maxlength="300" autocomplete="off" placeholder="Buscá por código o nombre" /></div>
+    <label for="f-act">Actividad principal (código CLAE de ARCA)</label>
+    <div class="cb" id="cb-act"><input id="f-act" maxlength="300" autocomplete="off" placeholder="Buscá por código o descripción" /></div>
+    <label for="f-conv">Convenios (separados por coma)</label>
+    <textarea id="f-conv" maxlength="1000"></textarea>
+    </div>
+    <div class="modal-acciones">
+      <button class="btn sec" id="m-cancelar" type="button">Cancelar</button>
+      <button class="btn" id="m-guardar" type="submit">Guardar</button>
+    </div>
+  </form>
+</div>
 
-    function fijar(v) { valor = v || ''; input.value = valor; }
-    function cerrar() { caja.hidden = true; activo = -1; }
+<!-- Ventana para subir archivos con selector de tipo -->
+<div class="modal-fondo" id="s-fondo" hidden>
+  <div class="modal" id="s-modal">
+    <h3>¿Qué estás subiendo?</h3>
+    <p class="sub">Elegí el tipo para que quede ordenado y lo encontremos rápido.</p>
+    <div id="s-error" class="msg-error" hidden></div>
+    <div class="tipo-grid" id="s-tipos"></div>
+    <div class="tip" id="s-ayuda" style="margin:12px 0 0"></div>
+    <div id="s-emp-w" hidden><label for="s-emp">Empresa</label><select id="s-emp"></select></div>
+    <label for="s-file">Archivos</label>
+    <input type="file" id="s-file" multiple />
+    <div class="modal-acciones">
+      <button class="btn sec" id="s-cancelar" type="button">Cancelar</button>
+      <button class="btn" id="s-subir" type="button">Subir</button>
+    </div>
+  </div>
+</div>
 
-    function buscar() {
-      const palabras = _norm(input.value).split(/\s+/).filter(Boolean);
-      filtrados = items.filter(it => palabras.every(p => it.n.includes(p))).slice(0, 60);
-      activo = filtrados.length ? 0 : -1;
-      dibujar();
-    }
-    function dibujar() {
-      const op = filtrados.map((it, i) =>
-        `<div class="cb-op${i === activo ? ' sel' : ''}" data-i="${i}"><b>${esc(it.cod)}</b> ${esc(it.desc)}</div>`).join('');
-      caja.innerHTML = (op || '<div class="cb-vacio">No hay coincidencias.</div>') +
-        `<div class="cb-op cb-mas" data-mas="1">+ No la encuentro: agregar ${esc(etiqueta)}</div>`;
-      caja.hidden = false;
-    }
-    function elegir(i) { fijar(filtrados[i].texto); cerrar(); }
+<input type="file" id="i-file" hidden />
+<div class="toast" id="toast"></div>
 
-    function formularioNuevo() {
-      caja.innerHTML = `<div class="cb-nuevo">
-        <p>Cargá el código y la descripción tal como figuran en ARCA.</p>
-        <input data-n="cod" inputmode="numeric" maxlength="10" placeholder="Código (solo números)" />
-        <input data-n="desc" maxlength="250" placeholder="Descripción" />
-        <div class="cb-nuevo-bot"><button type="button" class="btn btn-gris" data-n="cancelar">Cancelar</button><button type="button" class="btn btn-naranja" data-n="usar">Usar</button></div>
-      </div>`;
-      caja.hidden = false;
-      caja.querySelector('[data-n=cod]').focus();
-    }
-
-    // mousedown (no click) para elegir antes de que el campo pierda el foco
-    caja.addEventListener('mousedown', ev => {
-      const op = ev.target.closest('.cb-op');
-      if (op && op.dataset.mas) { ev.preventDefault(); formularioNuevo(); return; }
-      if (op) { ev.preventDefault(); elegir(Number(op.dataset.i)); return; }
-      const b = ev.target.closest('[data-n]');
-      if (!b || b.tagName !== 'BUTTON') return;   // clic dentro de los campos de texto: no hacer nada
-      ev.preventDefault();
-      if (b.dataset.n === 'cancelar') { cerrar(); return; }
-      const cod = caja.querySelector('[data-n=cod]').value.trim().replace(/\D/g, '');
-      const desc = caja.querySelector('[data-n=desc]').value.trim();
-      if (!cod || !desc) { toast('Completá el código (solo números) y la descripción.'); return; }
-      fijar(cod + ' - ' + desc); cerrar();
-    });
-    input.addEventListener('focus', () => { input.select(); buscar(); });
-    input.addEventListener('input', buscar);
-    input.addEventListener('keydown', ev => {
-      if (caja.hidden) return;
-      if (ev.key === 'ArrowDown') { ev.preventDefault(); if (filtrados.length) { activo = (activo + 1) % filtrados.length; dibujar(); } }
-      else if (ev.key === 'ArrowUp') { ev.preventDefault(); if (filtrados.length) { activo = (activo - 1 + filtrados.length) % filtrados.length; dibujar(); } }
-      else if (ev.key === 'Enter') { if (activo >= 0 && filtrados[activo]) { ev.preventDefault(); elegir(activo); } }
-      else if (ev.key === 'Escape') { ev.stopPropagation(); cerrar(); input.value = valor; }
-    });
-    // Al salir del campo, si el texto no es una opción elegida se vuelve al último valor válido
-    input.addEventListener('blur', () => {
-      setTimeout(() => {
-        if (caja.contains(document.activeElement)) return;   // está cargando una nueva
-        cerrar(); input.value = valor;
-      }, 120);
-    });
-    return { set: fijar, get: () => valor };
-  }
-
-  const CB = {
-    os:  crearBuscador('cb-os',  PORTAL_LISTAS.obrasSociales, 'obra social'),
-    art: crearBuscador('cb-art', PORTAL_LISTAS.art,           'ART'),
-    act: crearBuscador('cb-act', PORTAL_LISTAS.clae,          'actividad')
-  };
-
-  function abrirFormulario(e, principal) {
-    empresaEditando = e; editandoPrincipal = principal;
-    // Alta de la empresa principal: se pre-completa con lo que ya sabemos del cliente
-    const base = e || (principal ? { razon_social: miCliente.razon_social || miCliente.nombre, cuit: miCliente.cuit } : {});
-    $('m-titulo').textContent = principal ? 'Datos de tu empresa' : (e ? 'Editar empresa' : 'Agregar empresa');
-    $('m-sub').textContent = principal ? 'Estos datos se usan para configurar tu sistema.' : 'Datos de la empresa para la que liquidás sueldos.';
-    $(F.razon).value = base.razon_social || '';
-    $(F.cuit).value = base.cuit || '';
-    $(F.legajos).value = base.cant_legajos ?? '';
-    $(F.domicilio).value = base.domicilio || '';
-    cargarOpcionesTipo(base.tipo_empleador || '');
-    CB.os.set(base.obra_social || '');
-    CB.art.set(base.art || '');
-    CB.act.set(base.actividad_principal || '');
-    $(F.conv).value = base.convenios || '';
-    formError('');
-    $('m-fondo').hidden = false;
-    $(F.razon).focus();
-  }
-  function cerrarFormulario() { $('m-fondo').hidden = true; empresaEditando = null; }
-  function formError(t) { const x = $('m-error'); x.textContent = t || ''; x.hidden = !t; }
-  $('m-cancelar').addEventListener('click', cerrarFormulario);
-  $('m-fondo').addEventListener('mousedown', ev => { if (ev.target === $('m-fondo')) cerrarFormulario(); });
-  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !$('m-fondo').hidden) cerrarFormulario(); });
-
-  // CUIT: 11 dígitos y dígito verificador (módulo 11). Se guarda como XX-XXXXXXXX-X.
-  function cuitDigitosOk(d) {
-    const pesos = [5,4,3,2,7,6,5,4,3,2];
-    const suma = pesos.reduce((a, p, i) => a + p * Number(d[i]), 0);
-    let v = 11 - (suma % 11);
-    if (v === 11) v = 0;
-    return v === Number(d[10]) || v === 10;   // 10 = caso especial (prefijo 23), no se rechaza
-  }
-
-  $('m-form').addEventListener('submit', async ev => {
-    ev.preventDefault();
-    formError('');
-    const razon = $(F.razon).value.trim();
-    if (!razon) { formError('Escribí la razón social.'); $(F.razon).focus(); return; }
-
-    let cuit = $(F.cuit).value.trim();
-    if (cuit) {
-      const d = cuit.replace(/\D/g, '');
-      if (d.length !== 11) { formError('El CUIT tiene que tener 11 números.'); $(F.cuit).focus(); return; }
-      if (!cuitDigitosOk(d) && !confirm('El CUIT parece tener un dígito verificador incorrecto. ¿Querés guardarlo igual?')) return;
-      cuit = d.slice(0, 2) + '-' + d.slice(2, 10) + '-' + d.slice(10);
-    }
-    const leg = $(F.legajos).value.trim();
-    if (leg && (!/^\d+$/.test(leg))) { formError('La cantidad de legajos tiene que ser un número entero.'); return; }
-
-    const fila = {
-      razon_social: razon,
-      cuit: cuit || null,
-      domicilio: $(F.domicilio).value.trim() || null,
-      tipo_empleador: $(F.tipo).value.trim() || null,
-      obra_social: CB.os.get() || null,
-      art: CB.art.get() || null,
-      actividad_principal: CB.act.get() || null,
-      convenios: $(F.conv).value.trim() || null,
-      cant_legajos: leg ? parseInt(leg, 10) : null
-    };
-
-    const btn = $('m-guardar'); btn.disabled = true; btn.textContent = 'Guardando…';
-    const { error } = empresaEditando
-      ? await sb.from('cliente_empresas').update(fila).eq('id', empresaEditando.id)
-      : await sb.from('cliente_empresas').insert({ ...fila, cliente_id: miCliente.id, es_principal: editandoPrincipal });
-    btn.disabled = false; btn.textContent = 'Guardar';
-
-    if (error) {
-      formError(/uq_cliente_empresa_principal|duplicate/i.test(error.message)
-        ? 'Ya hay una empresa principal cargada. Recargá la página.'
-        : 'No se pudo guardar. Probá de nuevo en unos segundos.');
-      return;
-    }
-    cerrarFormulario();
-    toast('Datos guardados.');
-    await cargarEmpresas();
-  });
-
-  async function borrarEmpresa(e) {
-    if (!confirm('¿Querés quitar esta empresa?\n\n' + e.razon_social + '\n\nLos archivos que hayas subido quedan guardados.')) return;
-    const { error } = await sb.from('cliente_empresas').delete().eq('id', e.id);
-    if (error) { toast('No se pudo quitar la empresa.'); return; }
-    toast('Empresa quitada.');
-    await cargarEmpresas();
-  }
-
-  // ── Arranque ──
-  sb.auth.getSession().then(({ data }) => {
-    if (data.session) iniciar(); else mostrar('login');
-  });
-  </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="compartido/config.js"></script>
+<script src="compartido/portal-listas.js?v=1"></script>
+<script src="portal/js/base.js?v=20261130g"></script>
+<script src="portal/js/empresa-datos.js?v=20261129k"></script>
+<script src="portal/js/archivos.js?v=20261120q"></script>
+<script src="portal/js/preparacion.js?v=20261129a"></script>
+<script src="portal/js/implementacion.js?v=20261120q"></script>
+<script src="portal/js/relevamiento.js?v=20261126i"></script>
+<script src="portal/js/documentos.js?v=20261129m"></script>
+<script src="portal/js/reunion.js?v=20261129i"></script>
+<script src="portal/js/implementacion-pre.js?v=20261129b"></script>
+<script src="portal/js/mi-empresa.js?v=20261129p"></script>
+<script src="portal/js/consultas.js?v=20261120q"></script>
+<script src="portal/js/arranque.js?v=20261120q"></script>
 </body>
 </html>
